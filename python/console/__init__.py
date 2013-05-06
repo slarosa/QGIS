@@ -24,3 +24,4 @@ __copyright__ = '(C) 2012, Salvatore Larosa'
 __revision__ = '$Format:%H$'
 
 from console import show_console
+from console_editor import getEditorConsole

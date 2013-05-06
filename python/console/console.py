@@ -24,7 +24,7 @@ from PyQt4.QtGui import *
 from qgis.utils import iface
 from console_sci import ShellScintilla
 from console_output import ShellOutputScintilla
-from console_editor import EditorTabWidget
+from console_editor import EditorWidget
 from console_help import HelpDialog
 from console_settings import optionsDialog
 from qgis.core import QgsApplication
@@ -95,7 +95,7 @@ class PythonConsoleWidget(QWidget):
         self.shell = ShellScintilla(self)
         self.setFocusProxy(self.shell)
         self.shellOut = ShellOutputScintilla(self)
-        self.tabEditorWidget = EditorTabWidget(self)
+        self.tabEditorWidget = EditorWidget(self, pathfile=None)
 
         ##------------ UI -------------------------------
 
@@ -455,10 +455,10 @@ class PythonConsoleWidget(QWidget):
         self.toolBarLayout.setMargin(0)
         self.toolBarLayout.setSpacing(0)
         self.toolBarLayout.addWidget(self.toolBar)
-        self.toolBarEditorLayout = QGridLayout(self.widgetButtonEditor)
-        self.toolBarEditorLayout.setMargin(0)
-        self.toolBarEditorLayout.setSpacing(0)
-        self.toolBarEditorLayout.addWidget(self.toolBarEditor)
+#         self.toolBarEditorLayout = QGridLayout(self.widgetButtonEditor)
+#         self.toolBarEditorLayout.setMargin(0)
+#         self.toolBarEditorLayout.setSpacing(0)
+#         self.toolBarEditorLayout.addWidget(self.toolBarEditor)
 
         ## Layout for the find widget
         self.layoutFind = QGridLayout(self.widgetFind)
@@ -557,7 +557,7 @@ class PythonConsoleWidget(QWidget):
 
     def toggleEditor(self, checked):
         self.splitterObj.show() if checked else self.splitterObj.hide()
-        self.tabEditorWidget.enableToolBarEditor(checked)
+        #self.tabEditorWidget.enableToolBarEditor(checked)
 
     def toggleObjectListWidget(self, checked):
         self.listClassMethod.show() if checked else self.listClassMethod.hide()
@@ -707,7 +707,7 @@ class PythonConsoleWidget(QWidget):
     def saveSettingsConsole(self):
         settings = QSettings()
         #settings.setValue("pythonConsole/geometry", self.saveGeometry())
-        settings.setValue("pythonConsole/splitterObj", self.splitterObj.saveState())
+        settings.setValue("pythonConsole/splitterObj", self.tabEditorWidget.splitterObj.saveState())
         settings.setValue("pythonConsole/splitterEditor", self.splitterEditor.saveState())
 
         self.shell.writeHistoryFile()
@@ -719,7 +719,7 @@ class PythonConsoleWidget(QWidget):
         self.tabListScript = storedTabScripts.toList()
         #self.restoreGeometry(settings.value("pythonConsole/geometry").toByteArray())
         self.splitterEditor.restoreState(settings.value("pythonConsole/splitterEditor").toByteArray())
-        self.splitterObj.restoreState(settings.value("pythonConsole/splitterObj").toByteArray())
+        self.tabEditorWidget.splitterObj.restoreState(settings.value("pythonConsole/splitterObj").toByteArray())
 
 if __name__ == '__main__':
     a = QApplication(sys.argv)
