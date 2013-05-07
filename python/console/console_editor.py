@@ -41,43 +41,46 @@ from qgis.gui import QgsFilterLineEdit
 
 def getEditorConsole(pathfile=None):
     parent = iface.mainWindow() if iface else None
-    #widgetContainer = QWidget()
-    #layout = QGridLayout(widgetContainer)
-    #from console import PythonConsoleWidget
-    #findWidget = PythonConsoleWidget().widgetFind
-    editor = EditorWidget(parent, pathfile)
-    #tabName = pathfile.split('/')[-1]
-    #editor.newTabEditor(tabName, filename=pathfile)
-    editor.setWindowTitle('Editor Python Console')
-    #layout.addWidget(findWidget, 1, 0, 1, 1)
-    #layout.addWidget(editor, 0, 0, 1, 1)
-    #widgetContainer.raise_()
-    editor.show()
-    
+    edWid = EditorWidget(parent, pathfile)
+    edWid.setWindowTitle('Python Console - Editor')
+    edWid.setMinimumSize(800, 600)
+
+    if pathfile:
+        edWid.topFrame.hide()
+        tabName = pathfile.split('/')[-1]
+        edWid.editor.newTabEditor(tabName, filename=pathfile)
+    else:
+        edWid.editor.newTabEditor()
+
+    edWid.show()
+
 class EditorWidget(QWidget):
     def __init__(self, parent, pathfile):
         super(EditorWidget, self).__init__(parent=None)
         self.pathfile = pathfile
-        
-        self.splitterObj = QSplitter(self)
-        self.splitterObj.setHandleWidth(3)
-        self.splitterObj.setOrientation(Qt.Horizontal)
-        
-        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.splitterObj.sizePolicy().hasHeightForWidth())
-        self.splitterObj.setSizePolicy(sizePolicy)
-        
+
+        self.editor = EditorTabWidget(self)
+
         self.listClassMethod = QTreeWidget()
         self.listClassMethod.setColumnCount(2)
         self.listClassMethod.setHeaderLabels(['Object', 'Line'])
         self.listClassMethod.setColumnHidden(1, True)
         self.listClassMethod.setAlternatingRowColors(True)
-        
+
+        self.splitterObj = QSplitter(self)
+        self.splitterObj.setHandleWidth(3)
+        self.splitterObj.setOrientation(Qt.Horizontal)
+
+        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.splitterObj.sizePolicy().hasHeightForWidth())
+        self.splitterObj.setSizePolicy(sizePolicy)
+
         self.widgetFind = QWidget()
         self.widgetFind.hide()
         self.listClassMethod.hide()
+
         ## Layout for the find widget
         self.layoutFind = QGridLayout(self.widgetFind)
         self.layoutFind.setContentsMargins(0, 0, 0, 0)
@@ -106,20 +109,69 @@ class EditorWidget(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setMargin(0)
         self.layout.setSpacing(0)
-        self.editor = EditorTabWidget(self)
-        self.editor.topFrame.hide()
-        if pathfile:
-            tabName = self.pathfile.split('/')[-1]
-            self.editor.newTabEditor(tabName, filename=pathfile)
-        else:
-            self.editor.newTabEditor()
-        
+
+
         self.splitterObj.addWidget(self.editor)
         self.splitterObj.addWidget(self.listClassMethod)
-        
+
         self.layout.addWidget(self.splitterObj, 0, 0, 1, 1)
         self.layout.addWidget(self.widgetFind, 1, 0, 1, 1)
-        
+
+        # Layout for top frame (restore tabs)
+        self.layoutTopFrame = QGridLayout(self.editor)
+        self.layoutTopFrame.setContentsMargins(0, 0, 0, 0)
+        spacerItem = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.layoutTopFrame.addItem(spacerItem, 1, 0, 1, 1)
+        self.topFrame = QFrame(self)
+        self.topFrame.setStyleSheet('background-color: rgb(255, 255, 230);')
+        self.topFrame.setFrameShape(QFrame.StyledPanel)
+        self.topFrame.setMinimumHeight(24)
+        self.layoutTopFrame2 = QGridLayout(self.topFrame)
+        self.layoutTopFrame2.setContentsMargins(0, 0, 0, 0)
+        label = QCoreApplication.translate("PythonConsole",
+                                           "Click on button to restore all tabs from last session.")
+        self.label = QLabel(label)
+
+        self.restoreTabsButton = QToolButton()
+        toolTipRestore = QCoreApplication.translate("PythonConsole",
+                                                    "Restore tabs")
+        self.restoreTabsButton.setToolTip(toolTipRestore)
+        self.restoreTabsButton.setIcon(QgsApplication.getThemeIcon("console/iconRestoreTabsConsole.png"))
+        self.restoreTabsButton.setIconSize(QSize(24, 24))
+        self.restoreTabsButton.setAutoRaise(True)
+        self.restoreTabsButton.setCursor(Qt.PointingHandCursor)
+        self.restoreTabsButton.setStyleSheet('QToolButton:hover{border: none } \
+                                              QToolButton:pressed{border: none}')
+
+        self.clButton = QToolButton()
+        toolTipClose = QCoreApplication.translate("PythonConsole",
+                                                  "Close")
+        self.clButton.setToolTip(toolTipClose)
+        self.clButton.setIcon(QgsApplication.getThemeIcon("mIconClose.png"))
+        self.clButton.setIconSize(QSize(18, 18))
+        self.clButton.setCursor(Qt.PointingHandCursor)
+        self.clButton.setStyleSheet('QToolButton:hover{border: none } \
+                                     QToolButton:pressed{border: none}')
+        self.clButton.setAutoRaise(True)
+
+        sizePolicy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        self.topFrame.setSizePolicy(sizePolicy)
+        self.layoutTopFrame.addWidget(self.topFrame, 0, 0, 1, 1)
+        self.layoutTopFrame2.addWidget(self.label, 0, 1, 1, 1)
+        self.layoutTopFrame2.addWidget(self.restoreTabsButton, 0, 0, 1, 1)
+        self.layoutTopFrame2.addWidget(self.clButton, 0, 2, 1, 1)
+
+        self.topFrame.hide()
+        self.connect(self.restoreTabsButton, SIGNAL('clicked()'), self.editor.restoreTabs)
+        self.connect(self.clButton, SIGNAL('clicked()'), self.editor.closeRestore)
+
+        # Restore script of the previuos session
+        if self.editor.tabListScript:
+            self.topFrame.show()
+        else:
+            if self.editor.count() < 1:
+                self.editor.newTabEditor(filename=None)
+
         self.lineEditFind.returnPressed.connect(self._findText)
         self.findNextButton.clicked.connect(self._findNext)
         self.findPrevButton.clicked.connect(self._findPrev)
@@ -132,7 +184,7 @@ class EditorWidget(QWidget):
 
     def findTextEditor(self, checked):
         self.widgetFind.show() if checked else self.widgetFind.hide()
-        
+
     def _findText(self):
         self.editor.currentWidget().newEditor.findText()
 
@@ -150,7 +202,7 @@ class EditorWidget(QWidget):
         else:
             self.findNextButton.setEnabled(False)
             self.findPrevButton.setEnabled(False)
-            
+
     def onClickGoToLine(self, item, column):
         linenr = int(item.text(1))
         itemName = str(item.text(0))
@@ -159,7 +211,7 @@ class EditorWidget(QWidget):
             objName = itemName[0:charPos]
         else:
             objName = itemName
-        self.tabEditorWidget.currentWidget().newEditor.goToLine(objName, linenr)
+        self.editor.currentWidget().newEditor.goToLine(objName, linenr)
 
 class KeyFilter(QObject):
     SHORTCUTS = {
@@ -532,8 +584,8 @@ class Editor(QsciScintilla):
             self.parent.widgetMessageBar(msgText + str(e.args), 0, True)
 
     def hideEditor(self):
-        self.parent.pc.splitterObj.hide()
-        self.parent.pc.showEditorButton.setChecked(False)
+        self.parent.tw.splitterObj.hide()
+        self.parent.tw.showEditorButton.setChecked(False)
 
     def showFindWidget(self):
         wF = self.parent.pc.widgetFind
@@ -647,13 +699,13 @@ class Editor(QsciScintilla):
         if not autoSave:
             if filename is None:
                 if not self.isModified():
-                    self.parent.widgetMessageBar(msgEditorBlank, 0, True)
+                    self.parent.tw.widgetMessageBar(msgEditorBlank, 0, True)
                     return
                 else:
-                    self.parent.widgetMessageBar(msgEditorUnsaved, 0, True)
+                    self.parent.tw.widgetMessageBar(msgEditorUnsaved, 0, True)
                     return
             if self.isModified():
-                self.parent.widgetMessageBar(msgEditorUnsaved, 0, True)
+                self.parent.tw.widgetMessageBar(msgEditorUnsaved, 0, True)
                 return
             else:
                 self._runSubProcess(filename)
@@ -742,7 +794,7 @@ class EditorTab(QWidget):
         sizePolicy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.infoBar.setSizePolicy(sizePolicy)
         self.layout.addWidget(self.infoBar, 0, 0, 1, 1)
-        
+
         ##------------------Toolbar Editor-------------------------------------
 
         ## Action for Open File
@@ -863,7 +915,7 @@ class EditorTab(QWidget):
             bkgrcolor = ['200', '200', '200']
             bordercl = ['155', '155', '155']
 
-        self.toolBarEditor = QToolBar()
+        self.toolBarEditor = QToolBar(self)
         self.toolBarEditor.setStyleSheet('QToolBar{background-color: rgb(%s, %s, %s' % tuple(bkgrcolor) + ');\
                                           border-right: 1px solid rgb(%s, %s, %s' % tuple(bordercl) + ');}')
         self.toolBarEditor.setEnabled(False)
@@ -894,9 +946,11 @@ class EditorTab(QWidget):
 
         self.tabLayout = QGridLayout(self)
         self.tabLayout.setContentsMargins(0, 0, 0, 0)
+        self.tabLayout.setMargin(0)
+        self.tabLayout.setSpacing(0)
         self.tabLayout.addWidget(self.newEditor, 0, 1, 1, 1)
         self.tabLayout.addWidget(self.toolBarEditor, 0, 0, 1, 1)
-        
+
         self.findTextButton.toggled.connect(self.tw.parent.findTextEditor)
         self.objectListButton.toggled.connect(self.tw.parent.toggleObjectListWidget)
         self.commentEditorButton.triggered.connect(self.newEditor.commentCode)
@@ -982,69 +1036,15 @@ class EditorTabWidget(QTabWidget):
     def __init__(self, parent):
         QTabWidget.__init__(self, parent=None)
         self.parent = parent
-        
+
         self.settings = QSettings()
         storedTabScripts = self.settings.value("pythonConsole/tabScripts")
         self.tabListScript = storedTabScripts.toList()
 
         self.idx = -1
-        # Layout for top frame (restore tabs)
-        self.layoutTopFrame = QGridLayout(self)
-        self.layoutTopFrame.setContentsMargins(0, 0, 0, 0)
-        spacerItem = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        self.layoutTopFrame.addItem(spacerItem, 1, 0, 1, 1)
-        self.topFrame = QFrame(self)
-        self.topFrame.setStyleSheet('background-color: rgb(255, 255, 230);')
-        self.topFrame.setFrameShape(QFrame.StyledPanel)
-        self.topFrame.setMinimumHeight(24)
-        self.layoutTopFrame2 = QGridLayout(self.topFrame)
-        self.layoutTopFrame2.setContentsMargins(0, 0, 0, 0)
-        label = QCoreApplication.translate("PythonConsole",
-                                           "Click on button to restore all tabs from last session.")
-        self.label = QLabel(label)
-
-        self.restoreTabsButton = QToolButton()
-        toolTipRestore = QCoreApplication.translate("PythonConsole",
-                                                    "Restore tabs")
-        self.restoreTabsButton.setToolTip(toolTipRestore)
-        self.restoreTabsButton.setIcon(QgsApplication.getThemeIcon("console/iconRestoreTabsConsole.png"))
-        self.restoreTabsButton.setIconSize(QSize(24, 24))
-        self.restoreTabsButton.setAutoRaise(True)
-        self.restoreTabsButton.setCursor(Qt.PointingHandCursor)
-        self.restoreTabsButton.setStyleSheet('QToolButton:hover{border: none } \
-                                              QToolButton:pressed{border: none}')
-
-        self.clButton = QToolButton()
-        toolTipClose = QCoreApplication.translate("PythonConsole",
-                                                  "Close")
-        self.clButton.setToolTip(toolTipClose)
-        self.clButton.setIcon(QgsApplication.getThemeIcon("mIconClose.png"))
-        self.clButton.setIconSize(QSize(18, 18))
-        self.clButton.setCursor(Qt.PointingHandCursor)
-        self.clButton.setStyleSheet('QToolButton:hover{border: none } \
-                                     QToolButton:pressed{border: none}')
-        self.clButton.setAutoRaise(True)
-
-        sizePolicy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
-        self.topFrame.setSizePolicy(sizePolicy)
-        self.layoutTopFrame.addWidget(self.topFrame, 0, 0, 1, 1)
-        self.layoutTopFrame2.addWidget(self.label, 0, 1, 1, 1)
-        self.layoutTopFrame2.addWidget(self.restoreTabsButton, 0, 0, 1, 1)
-        self.layoutTopFrame2.addWidget(self.clButton, 0, 2, 1, 1)
-
-        self.topFrame.hide()
-        self.connect(self.restoreTabsButton, SIGNAL('clicked()'), self.restoreTabs)
-        self.connect(self.clButton, SIGNAL('clicked()'), self.closeRestore)
-
-        # Restore script of the previuos session
-        if self.tabListScript:
-            self.topFrame.show()
-        else:
-            if self.count() < 1:
-                self.newTabEditor(filename=None)
 
         ## Fixes #7653
-        if sys.platform != 'darwin':
+        if sys.platform == 'darwin':
             self.setDocumentMode(True)
 
         self.setMovable(True)
@@ -1176,7 +1176,7 @@ class EditorTabWidget(QTabWidget):
             self.saveScriptFile()
 
     def enableToolBarEditor(self, enable):
-        if self.topFrame.isVisible():
+        if self.parent.topFrame.isVisible():
             enable = False
         if self.currentWidget():
             self.currentWidget().toolBarEditor.setEnabled(enable)
@@ -1282,13 +1282,13 @@ class EditorTabWidget(QTabWidget):
                 self.updateTabListScript(pathFile)
         if self.count() < 1:
             self.newTabEditor(filename=None)
-        self.topFrame.close()
+        self.parent.topFrame.close()
         self.enableToolBarEditor(True)
         self.currentWidget().newEditor.setFocus(Qt.TabFocusReason)
 
     def closeRestore(self):
         self.updateTabListScript('empty')
-        self.topFrame.close()
+        self.parent.topFrame.close()
         self.newTabEditor(filename=None)
         self.enableToolBarEditor(True)
 
@@ -1309,69 +1309,70 @@ class EditorTabWidget(QTabWidget):
             tabWidget = self.widget(self.indexOf(tab))
         else:
             tabWidget = self.widget(tab)
-        if tabWidget.path:
-            pathFile, file = os.path.split(unicode(tabWidget.path))
-            module, ext = os.path.splitext(file)
-            found = False
-            if pathFile not in sys.path:
-                sys.path.append(pathFile)
-                found = True
-            try:
-                reload(pyclbr)
-                dictObject = {}
-                superClassName = []
-                readModule = pyclbr.readmodule(module)
-                readModuleFunction = pyclbr.readmodule_ex(module)
-                for name, class_data in sorted(readModule.items(), key=lambda x:x[1].lineno):
-                    if os.path.normpath(str(class_data.file)) == os.path.normpath(str(tabWidget.path)):
-                        for superClass in class_data.super:
-                            if superClass == 'object':
-                                continue
-                            if isinstance(superClass, basestring):
-                                superClassName.append(superClass)
+        if tabWidget:
+            if tabWidget.path:
+                pathFile, file = os.path.split(unicode(tabWidget.path))
+                module, ext = os.path.splitext(file)
+                found = False
+                if pathFile not in sys.path:
+                    sys.path.append(pathFile)
+                    found = True
+                try:
+                    reload(pyclbr)
+                    dictObject = {}
+                    superClassName = []
+                    readModule = pyclbr.readmodule(module)
+                    readModuleFunction = pyclbr.readmodule_ex(module)
+                    for name, class_data in sorted(readModule.items(), key=lambda x:x[1].lineno):
+                        if os.path.normpath(str(class_data.file)) == os.path.normpath(str(tabWidget.path)):
+                            for superClass in class_data.super:
+                                if superClass == 'object':
+                                    continue
+                                if isinstance(superClass, basestring):
+                                    superClassName.append(superClass)
+                                else:
+                                    superClassName.append(superClass.name)
+                            classItem = QTreeWidgetItem()
+                            if superClassName:
+                                for i in superClassName: super = i
+                                classItem.setText(0, name + ' [' + super + ']')
+                                classItem.setToolTip(0, name + ' [' + super + ']')
                             else:
-                                superClassName.append(superClass.name)
-                        classItem = QTreeWidgetItem()
-                        if superClassName:
-                            for i in superClassName: super = i
-                            classItem.setText(0, name + ' [' + super + ']')
-                            classItem.setToolTip(0, name + ' [' + super + ']')
-                        else:
-                            classItem.setText(0, name)
-                            classItem.setToolTip(0, name)
-                        classItem.setText(1, str(class_data.lineno))
-                        iconClass = QgsApplication.getThemeIcon("console/iconClassTreeWidgetConsole.png")
-                        classItem.setIcon(0, iconClass)
-                        dictObject[name] = class_data.lineno
-                        for meth, lineno in sorted(class_data.methods.items(), key=itemgetter(1)):
-                            methodItem = QTreeWidgetItem()
-                            methodItem.setText(0, meth + ' ')
-                            methodItem.setText(1, str(lineno))
-                            methodItem.setToolTip(0, meth)
-                            iconMeth = QgsApplication.getThemeIcon("console/iconMethodTreeWidgetConsole.png")
-                            methodItem.setIcon(0, iconMeth)
-                            classItem.addChild(methodItem)
-                            dictObject[meth] = lineno
-#                        if found:
-#                            sys.path.remove(os.path.split(unicode(str(class_data.file)))[0])
-                        self.parent.listClassMethod.addTopLevelItem(classItem)
-                for func_name, data in sorted(readModuleFunction.items(), key=lambda x:x[1].lineno):
-                    if isinstance(data, pyclbr.Function) and \
-                        os.path.normpath(str(data.file)) == os.path.normpath(str(tabWidget.path)):
-                        funcItem = QTreeWidgetItem()
-                        funcItem.setText(0, func_name + ' ')
-                        funcItem.setText(1, str(data.lineno))
-                        funcItem.setToolTip(0, func_name)
-                        iconFunc = QgsApplication.getThemeIcon("console/iconFunctionTreeWidgetConsole.png")
-                        funcItem.setIcon(0, iconFunc)
-                        dictObject[func_name] = data.lineno
-                        self.parent.listClassMethod.addTopLevelItem(funcItem)
-                if found:
-                    sys.path.remove(pathFile)
-            except:
-                s = traceback.format_exc()
-                print '## Error: '
-                sys.stderr.write(s)
+                                classItem.setText(0, name)
+                                classItem.setToolTip(0, name)
+                            classItem.setText(1, str(class_data.lineno))
+                            iconClass = QgsApplication.getThemeIcon("console/iconClassTreeWidgetConsole.png")
+                            classItem.setIcon(0, iconClass)
+                            dictObject[name] = class_data.lineno
+                            for meth, lineno in sorted(class_data.methods.items(), key=itemgetter(1)):
+                                methodItem = QTreeWidgetItem()
+                                methodItem.setText(0, meth + ' ')
+                                methodItem.setText(1, str(lineno))
+                                methodItem.setToolTip(0, meth)
+                                iconMeth = QgsApplication.getThemeIcon("console/iconMethodTreeWidgetConsole.png")
+                                methodItem.setIcon(0, iconMeth)
+                                classItem.addChild(methodItem)
+                                dictObject[meth] = lineno
+    #                        if found:
+    #                            sys.path.remove(os.path.split(unicode(str(class_data.file)))[0])
+                            self.parent.listClassMethod.addTopLevelItem(classItem)
+                    for func_name, data in sorted(readModuleFunction.items(), key=lambda x:x[1].lineno):
+                        if isinstance(data, pyclbr.Function) and \
+                            os.path.normpath(str(data.file)) == os.path.normpath(str(tabWidget.path)):
+                            funcItem = QTreeWidgetItem()
+                            funcItem.setText(0, func_name + ' ')
+                            funcItem.setText(1, str(data.lineno))
+                            funcItem.setToolTip(0, func_name)
+                            iconFunc = QgsApplication.getThemeIcon("console/iconFunctionTreeWidgetConsole.png")
+                            funcItem.setIcon(0, iconFunc)
+                            dictObject[func_name] = data.lineno
+                            self.parent.listClassMethod.addTopLevelItem(funcItem)
+                    if found:
+                        sys.path.remove(pathFile)
+                except:
+                    s = traceback.format_exc()
+                    print '## Error: '
+                    sys.stderr.write(s)
 
     def refreshSettingsEditor(self):
         countTab = self.count()
@@ -1380,7 +1381,8 @@ class EditorTabWidget(QTabWidget):
 
     def changeLastDirPath(self, tab):
         tabWidget = self.widget(tab)
-        self.settings.setValue("pythonConsole/lastDirPath", QVariant(tabWidget.path))
+        if tabWidget:
+            self.settings.setValue("pythonConsole/lastDirPath", QVariant(tabWidget.path))
 
     def widgetMessageBar(self, text, level, timed=True):
         messageLevel = [QgsMessageBar.INFO, QgsMessageBar.WARNING, QgsMessageBar.CRITICAL]
@@ -1390,7 +1392,7 @@ class EditorTabWidget(QTabWidget):
             timeout = 0
         currWidget = self.currentWidget()
         currWidget.infoBar.pushMessage(text, messageLevel[level], timeout)
-        
+
     def updateTabListScript(self, script, action=None):
         if script == 'empty':
             self.tabListScript = []
