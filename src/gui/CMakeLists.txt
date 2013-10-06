@@ -65,6 +65,9 @@ qgsblendmodecombobox.cpp
 qgscharacterselectdialog.cpp
 qgscolorbutton.cpp
 qgscolordialog.cpp
+qgscodeeditor.cpp
+qgscodeeditorpython.cpp
+qgscodeeditorsql.cpp
 qgscomposerview.cpp
 qgscomposerruler.cpp
 qgscursors.cpp
@@ -192,6 +195,9 @@ qgsattributeeditor.h
 qgsblendmodecombobox.h
 qgsbusyindicatordialog.h
 qgscharacterselectdialog.h
+qgscodeeditor.h
+qgscodeeditorpython.h
+qgscodeeditorsql.h
 qgscolordialog.h
 qgscomposerview.h
 qgsdatadefinedbutton.h

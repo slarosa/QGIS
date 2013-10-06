@@ -70,19 +70,12 @@
         </layout>
        </item>
        <item>
-        <widget class="CompletionTextEdit" name="editSql">
+        <widget class="QgsCodeEditorSQL" name="editSql" native="true">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
            <verstretch>1</verstretch>
           </sizepolicy>
-         </property>
-         <property name="html">
-          <string notr="true">&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Ubuntu'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
         </widget>
        </item>
@@ -370,9 +363,9 @@ columns</string>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>CompletionTextEdit</class>
-   <extends>QTextEdit</extends>
-   <header>..completer</header>
+   <class>QgsCodeEditorSQL</class>
+   <extends>QWidget</extends>
+   <header location="global">qgis.gui</header>
   </customwidget>
  </customwidgets>
  <tabstops>
