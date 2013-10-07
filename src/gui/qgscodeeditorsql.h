@@ -32,12 +32,12 @@ class GUI_EXPORT QgsCodeEditorSQL : public QgsCodeEditor
     QgsCodeEditorSQL( QWidget *parent = 0 );
     ~QgsCodeEditorSQL();
 
+    void setTitle( QString );
+
   private:
     //QgsCodeEditor *mSciWidget;
     //QWidget *mWidget;
     void setSciLexerSQL();
-
-    void setTitle( QString );
 };
 
 #endif

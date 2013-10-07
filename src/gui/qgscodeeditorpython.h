@@ -32,12 +32,13 @@ class GUI_EXPORT QgsCodeEditorPython : public QgsCodeEditor
     QgsCodeEditorPython( QWidget *parent = 0 );
     ~QgsCodeEditorPython();
 
+    void setTitle( QString );
+
   private:
     //QgsCodeEditor *mSciWidget;
     //QWidget *mWidget;
     void setSciLexerPython();
 
-    void setTitle( QString );
 };
 
 #endif

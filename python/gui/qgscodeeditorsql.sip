@@ -8,6 +8,8 @@ class QgsCodeEditorSQL: QgsCodeEditor
     QgsCodeEditorSQL( QWidget *parent = 0 );
     ~QgsCodeEditorSQL();
 
+    void setTitle( QString );
+
   private:
     void setSciLexerSQL();
 };

@@ -8,6 +8,8 @@ class QgsCodeEditorPython: QgsCodeEditor
     QgsCodeEditorPython( QWidget *parent = 0 );
     ~QgsCodeEditorPython();
 
+    void setTitle( QString );
+
   private:
     void setSciLexerPython();
 };
