@@ -34,7 +34,7 @@ class GUI_EXPORT QgsCodeEditor : public QsciScintilla
     QgsCodeEditor( QWidget *parent = 0, QString title = "" );
     ~QgsCodeEditor();
 
-    void enableMargin();
+    void addMargin();
 
   private:
 

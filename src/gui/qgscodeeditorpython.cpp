@@ -25,7 +25,11 @@
 
 QgsCodeEditorPython::QgsCodeEditorPython( QWidget *parent ) : QgsCodeEditor( parent )
 {
-  enableMargin();
+  if ( !parent )
+  {
+    setTitle( "Qscintilla2 Python Editor" );
+  }
+  addMargin();
   setSciLexerPython();
 }
 
@@ -55,4 +59,9 @@ void QgsCodeEditorPython::setSciLexerPython()
   QString papFile = QgsApplication::pkgDataPath() + "/python/qsci_apis/pyqgis.pap";
   apis->loadPrepared( papFile );
   setLexer( pyLexer );
+}
+
+void QgsCodeEditorPython::setTitle(QString title )
+{
+  setWindowTitle( title );
 }

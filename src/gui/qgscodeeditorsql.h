@@ -36,6 +36,8 @@ class GUI_EXPORT QgsCodeEditorSQL : public QgsCodeEditor
     //QgsCodeEditor *mSciWidget;
     //QWidget *mWidget;
     void setSciLexerSQL();
+
+    void setTitle( QString );
 };
 
 #endif

@@ -8,6 +8,8 @@ class QgsCodeEditor: QsciScintilla
     QgsCodeEditor( QWidget *parent = 0, QString title = "" );
     ~QgsCodeEditor();
 
+    void addMargin();
+
   private:
     void setSciWidget();
 };

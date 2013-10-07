@@ -47,7 +47,7 @@ void QgsCodeEditor::setSciWidget()
   setAutoCompletionSource( QsciScintilla::AcsAPIs );
 }
 
-void QgsCodeEditor::enableMargin()
+void QgsCodeEditor::addMargin()
 {
   QFont marginFont( "Courier", 10 );
   setMarginLineNumbers( 1, true );

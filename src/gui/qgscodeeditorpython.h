@@ -36,6 +36,8 @@ class GUI_EXPORT QgsCodeEditorPython : public QgsCodeEditor
     //QgsCodeEditor *mSciWidget;
     //QWidget *mWidget;
     void setSciLexerPython();
+
+    void setTitle( QString );
 };
 
 #endif

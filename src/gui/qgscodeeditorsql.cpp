@@ -25,6 +25,10 @@
 
 QgsCodeEditorSQL::QgsCodeEditorSQL( QWidget *parent ) : QgsCodeEditor( parent )
 {
+  if ( !parent )
+  {
+    setTitle( "Qscintilla2 SQL Editor" );
+  }
   setSciLexerSQL();
 }
 
@@ -38,4 +42,9 @@ void QgsCodeEditorSQL::setSciLexerSQL()
   sqlLexer->setDefaultFont( QFont( "Sans", 10 ) );
 
   setLexer( sqlLexer );
+}
+
+void QgsCodeEditorSQL::setTitle(QString title )
+{
+  setWindowTitle( title );
 }
