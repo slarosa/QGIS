@@ -10,6 +10,10 @@ class QgsCodeEditorSQL: QgsCodeEditor
 
     void setTitle( QString );
 
+    void showMargin( bool withMargin );
+
+    void showFolding( bool withFolding );
+
   private:
     void setSciLexerSQL();
 };

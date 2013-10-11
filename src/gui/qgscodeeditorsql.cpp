@@ -16,7 +16,6 @@
 #include "qgsapplication.h"
 #include "qgscodeeditorsql.h"
 
-#include <QSettings>
 #include <QWidget>
 #include <QString>
 #include <QFont>
@@ -29,6 +28,8 @@ QgsCodeEditorSQL::QgsCodeEditorSQL( QWidget *parent ) : QgsCodeEditor( parent )
   {
     setTitle( "Qscintilla2 SQL Editor" );
   }
+  enableMargin( true );
+  enableFolding( false );
   setSciLexerSQL();
 }
 
@@ -44,7 +45,17 @@ void QgsCodeEditorSQL::setSciLexerSQL()
   setLexer( sqlLexer );
 }
 
-void QgsCodeEditorSQL::setTitle(QString title )
+void QgsCodeEditorSQL::setTitle( QString title )
 {
   setWindowTitle( title );
+}
+
+void QgsCodeEditorSQL::showMargin( bool withMargin )
+{
+  enableMargin( withMargin );
+}
+
+void QgsCodeEditorSQL::showFolding( bool withFolding )
+{
+  enableFolding( withFolding );
 }

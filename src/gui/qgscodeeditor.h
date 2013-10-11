@@ -31,17 +31,41 @@ class GUI_EXPORT QgsCodeEditor : public QsciScintilla
     Q_OBJECT
 
   public:
-    QgsCodeEditor( QWidget *parent = 0, QString title = "" );
+    /**
+     * Construct a new code editor.
+     *
+     * @param parent The parent QWidget
+     * @param title The title to show in the code editor dialog
+     * @param folding False: Enable margin for code editor
+     * @param margin False: Enable folding for code editor
+     * @note added in 2.1
+     */
+    QgsCodeEditor( QWidget *parent = 0, QString title = "" , bool folding = false, bool margin = false );
     ~QgsCodeEditor();
 
-    void addMargin();
+    /** Enable folding
+     *  @param margin Set margin in the editor
+     */
+    void enableMargin( bool margin );
+
+    /** Enable margin
+     *  @param folding Set folding in the editor
+     */
+    void enableFolding( bool folding );
+
+  protected:
+
+    bool isFixedPitch( const QFont& font );
+
+    QFont getMonospaceFont();
 
   private:
 
     void setSciWidget();
 
     QString mWidgetTitle;
-    //bool mMargin;
+    bool mFolding;
+    bool mMargin;
 };
 
 #endif

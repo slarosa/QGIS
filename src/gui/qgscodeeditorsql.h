@@ -20,7 +20,7 @@
 
 
 /** \ingroup gui
- * A text editor based on QScintilla2. Adds syntax highlghiting and
+ * A SQL editor based on QScintilla2. Adds syntax highlghiting and
  * code autocompletion.
  * \note added in 2.1
  */
@@ -33,6 +33,10 @@ class GUI_EXPORT QgsCodeEditorSQL : public QgsCodeEditor
     ~QgsCodeEditorSQL();
 
     void setTitle( QString );
+
+    void showMargin( bool withMargin );
+
+    void showFolding( bool withFolding );
 
   private:
     //QgsCodeEditor *mSciWidget;

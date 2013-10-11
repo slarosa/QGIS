@@ -16,7 +16,6 @@
 #include "qgsapplication.h"
 #include "qgscodeeditorpython.h"
 
-#include <QSettings>
 #include <QWidget>
 #include <QString>
 #include <QFont>
@@ -29,7 +28,7 @@ QgsCodeEditorPython::QgsCodeEditorPython( QWidget *parent ) : QgsCodeEditor( par
   {
     setTitle( "Qscintilla2 Python Editor" );
   }
-  addMargin();
+  enableMargin( true );
   setSciLexerPython();
 }
 
@@ -39,17 +38,15 @@ QgsCodeEditorPython::~QgsCodeEditorPython()
 
 void QgsCodeEditorPython::setSciLexerPython()
 {
-  QSettings mySettings;
-  QFont fontPythonMacros( mySettings.value( "pythonConsole/fontfamilytextEditor", "Monospace" ).toString() );
-  int fontSizePythonMacros = mySettings.value( "pythonConsole/fontsizeEditor", 10 ).toInt();
-  fontPythonMacros.setPointSize( fontSizePythonMacros );
+  QFont font = getMonospaceFont();
+  font.setPointSize( 10 );
 
   QsciLexerPython* pyLexer = new QsciLexerPython();
-  pyLexer->setDefaultFont( fontPythonMacros );
-  pyLexer->setFont( fontPythonMacros, 1 ); // comment
-  pyLexer->setFont( fontPythonMacros, 3 ); // singlequotes
-  pyLexer->setFont( fontPythonMacros, 4 ); // doublequotes
-  pyLexer->setFont( fontPythonMacros, 6 ); // triplequotes
+  pyLexer->setDefaultFont( font );
+  pyLexer->setFont( font, 1 ); // comment
+  pyLexer->setFont( font, 3 ); // singlequotes
+  pyLexer->setFont( font, 4 ); // doublequotes
+  pyLexer->setFont( font, 6 ); // triplequotes
   pyLexer->setColor( Qt::red, 1 ); // comment color
   pyLexer->setColor( Qt::darkGreen, 5 ); // keyword color
   pyLexer->setColor( Qt::darkBlue, 15 ); // decorator color
@@ -61,7 +58,7 @@ void QgsCodeEditorPython::setSciLexerPython()
   setLexer( pyLexer );
 }
 
-void QgsCodeEditorPython::setTitle(QString title )
+void QgsCodeEditorPython::setTitle( QString title )
 {
   setWindowTitle( title );
 }

@@ -15,14 +15,26 @@
 
 #include "qgscodeeditor.h"
 
+#include <QSettings>
 #include <QWidget>
 #include <QFont>
+#include <QDebug>
 
-QgsCodeEditor::QgsCodeEditor( QWidget *parent, QString title )
-    : QsciScintilla( parent ), 
-    mWidgetTitle( title )//, 
-    //mMargin( true )
+QgsCodeEditor::QgsCodeEditor( QWidget *parent, QString title, bool folding, bool margin )
+    : QsciScintilla( parent ),
+    mWidgetTitle( title ),
+    mFolding( folding ),
+    mMargin( margin )
 {
+  if ( !parent && mWidgetTitle.isEmpty() )
+  {
+    setWindowTitle( "QScintilla2 Text Editor" );
+    setMinimumSize( 500, 300 );
+  }
+  else
+  {
+    setWindowTitle( mWidgetTitle );
+  }
   setSciWidget();
 }
 
@@ -34,8 +46,10 @@ void QgsCodeEditor::setSciWidget()
 {
   setCaretLineVisible( true );
   setCaretLineBackgroundColor( QColor( "#fcf3ed" ) );
-  setFolding( QsciScintilla::PlainFoldStyle );
-  setFoldMarginColors( QColor( "#f4f4f4" ), QColor( "#f4f4f4" ) );
+  // whether margin will be shown
+  enableMargin( mMargin );
+  // whether margin will be shown
+  enableFolding( mFolding );
   // indentation
   setAutoIndent( true );
   setIndentationWidth( 4 );
@@ -47,12 +61,67 @@ void QgsCodeEditor::setSciWidget()
   setAutoCompletionSource( QsciScintilla::AcsAPIs );
 }
 
-void QgsCodeEditor::addMargin()
+void QgsCodeEditor::enableMargin( bool margin )
 {
-  QFont marginFont( "Courier", 10 );
-  setMarginLineNumbers( 1, true );
-  setMarginsFont( marginFont );
-  setMarginWidth( 1, "0000" );
-  setMarginsForegroundColor( QColor( "#3E3EE3" ) );
-  setMarginsBackgroundColor( QColor( "#f9f9f9" ) );
+  if ( margin )
+  {
+    QFont marginFont( "Courier", 10 );
+    setMarginLineNumbers( 1, true );
+    setMarginsFont( marginFont );
+    setMarginWidth( 1, "0000" );
+    setMarginsForegroundColor( QColor( "#3E3EE3" ) );
+    setMarginsBackgroundColor( QColor( "#f9f9f9" ) );
+  }
+  else
+  {
+    //setMarginWidth(0, 0);
+    setMarginWidth( 1, 0 );
+    //setMarginWidth(2, 0);
+  }
+}
+
+void QgsCodeEditor::enableFolding( bool folding )
+{
+  if ( folding )
+  {
+    setFolding( QsciScintilla::PlainFoldStyle );
+    setFoldMarginColors( QColor( "#f4f4f4" ), QColor( "#f4f4f4" ) );
+  }
+  else
+  {
+    setFolding( QsciScintilla::NoFoldStyle );
+  }
+}
+
+// Settings for font and fontsize
+bool QgsCodeEditor::isFixedPitch( const QFont& font )
+{
+  const QFontInfo fi( font );
+  qDebug() << fi.family() << fi.fixedPitch();
+  return fi.fixedPitch();
+}
+
+QFont QgsCodeEditor::getMonospaceFont()
+{
+  QFont font( "monospace" );
+  if ( isFixedPitch( font ) )
+  {
+    return font;
+  }
+  font.setStyleHint( QFont::Monospace );
+  if ( isFixedPitch( font ) )
+  {
+    return font;
+  }
+  font.setStyleHint( QFont::TypeWriter );
+  if ( isFixedPitch( font ) )
+  {
+    return font;
+  }
+  font.setFamily( "courier" );
+  if ( isFixedPitch( font ) )
+  {
+    return font;
+  }
+  return font;
 }

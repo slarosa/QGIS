@@ -20,7 +20,7 @@
 
 
 /** \ingroup gui
- * A text editor based on QScintilla2. Adds syntax highlghiting and
+ * A Python editor based on QScintilla2. Adds syntax highlghiting and
  * code autocompletion.
  * \note added in 2.1
  */
