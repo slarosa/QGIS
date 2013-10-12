@@ -28,8 +28,8 @@ QgsCodeEditorSQL::QgsCodeEditorSQL( QWidget *parent ) : QgsCodeEditor( parent )
   {
     setTitle( "Qscintilla2 SQL Editor" );
   }
-  enableMargin( true );
-  enableFolding( false );
+  enableMargin( false );
+  enableFolding( true );
   setSciLexerSQL();
 }
 

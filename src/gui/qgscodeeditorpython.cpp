@@ -29,6 +29,7 @@ QgsCodeEditorPython::QgsCodeEditorPython( QWidget *parent ) : QgsCodeEditor( par
     setTitle( "Qscintilla2 Python Editor" );
   }
   enableMargin( true );
+  enableFolding( true );
   setSciLexerPython();
 }
 
