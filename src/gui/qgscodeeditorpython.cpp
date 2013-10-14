@@ -15,14 +15,17 @@
 
 #include "qgsapplication.h"
 #include "qgscodeeditorpython.h"
+#include "qgslogger.h"
 
 #include <QWidget>
 #include <QString>
 #include <QFont>
+#include <QFileInfo>
 #include <Qsci/qscilexerpython.h>
 
-
-QgsCodeEditorPython::QgsCodeEditorPython( QWidget *parent ) : QgsCodeEditor( parent )
+QgsCodeEditorPython::QgsCodeEditorPython( QWidget *parent, const QList<QString> &filenames )
+    : QgsCodeEditor( parent ),
+    mAPISFilesList( filenames )
 {
   if ( !parent )
   {
@@ -54,12 +57,54 @@ void QgsCodeEditorPython::setSciLexerPython()
 
   QsciAPIs* apis = new QsciAPIs( pyLexer );
 
-  QString papFile = QgsApplication::pkgDataPath() + "/python/qsci_apis/pyqgis.pap";
-  apis->loadPrepared( papFile );
+  // check if the file is a prepared apis file.
+  //QString mPapFileName = QFileInfo( mAPISFilesList[0] ).fileName();
+  //QString isPapFile = mPapFileName.right( 3 );
+  //QgsDebugMsg( QString( "file extension: %1" ).arg( isPapFile ) );
+
+  if ( mAPISFilesList.isEmpty() )
+  {
+    mPapFile = QgsApplication::pkgDataPath() + "/python/qsci_apis/pyqgis.pap";
+    apis->loadPrepared( mPapFile );
+  }
+  else if ( mAPISFilesList.length() == 1 && mAPISFilesList[0].right( 3 ) == "pap")
+  {
+    if ( !QFileInfo( mAPISFilesList[0] ).exists() )
+    {
+      QgsDebugMsg( QString( "The apis file %1 not found" ).arg( mAPISFilesList[0] ) );
+      return;
+    }
+    mPapFile = mAPISFilesList[0];
+    apis->loadPrepared( mPapFile );
+  }
+  else
+  {
+    for ( int i = 0; i < mAPISFilesList.size(); i++ )
+    {
+      if ( !QFileInfo( mAPISFilesList[i] ).exists() )
+      {
+        QgsDebugMsg( QString( "The apis file %1 was not found" ).arg( mAPISFilesList[i] ) );
+        return;
+      }
+      else
+      {
+        apis->load( mAPISFilesList[i] );
+      }
+    }
+    apis->prepare();
+    pyLexer->setAPIs( apis );
+  }
   setLexer( pyLexer );
 }
 
 void QgsCodeEditorPython::setTitle( QString title )
 {
   setWindowTitle( title );
+}
+
+void QgsCodeEditorPython::loadAPIs( const QList<QString> &filenames )
+{
+  mAPISFilesList = filenames;
+  //QgsDebugMsg( QString( "The apis files: %1" ).arg( mAPISFilesList[0] ) );
+  setSciLexerPython();
 }

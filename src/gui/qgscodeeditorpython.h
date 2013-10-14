@@ -29,15 +29,31 @@ class GUI_EXPORT QgsCodeEditorPython : public QgsCodeEditor
     Q_OBJECT
 
   public:
-    QgsCodeEditorPython( QWidget *parent = 0 );
+    /**
+     * Construct a new Python editor.
+     *
+     * @param parent The parent QWidget
+     * @param filenames The list of apis files to load for the python lexer
+     * @note added in 2.1
+     */
+    QgsCodeEditorPython( QWidget *parent = 0 , const QList<QString> &filenames = QList<QString>() );
     ~QgsCodeEditorPython();
 
+    /** Set the widget title */
     void setTitle( QString );
+
+    /** Load APIs from one or more files
+     * @param filenames The list of apis files to load for the python lexer
+     */
+    void loadAPIs( QList<QString> const &filenames );
 
   private:
     //QgsCodeEditor *mSciWidget;
     //QWidget *mWidget;
     void setSciLexerPython();
+
+    QList<QString> mAPISFilesList;
+    QString mPapFile;
 
 };
 
