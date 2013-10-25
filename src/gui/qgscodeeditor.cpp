@@ -44,8 +44,12 @@ QgsCodeEditor::~QgsCodeEditor()
 
 void QgsCodeEditor::setSciWidget()
 {
+  setUtf8( true );
   setCaretLineVisible( true );
   setCaretLineBackgroundColor( QColor( "#fcf3ed" ) );
+
+  setBraceMatching( QsciScintilla::SloppyBraceMatch );
+  setMatchedBraceBackgroundColor( QColor( "#b7f907" ) );
   // whether margin will be shown
   enableMargin( mMargin );
   // whether margin will be shown

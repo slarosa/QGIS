@@ -31,8 +31,6 @@ QgsCodeEditorPython::QgsCodeEditorPython( QWidget *parent, const QList<QString> 
   {
     setTitle( "Qscintilla2 Python Editor" );
   }
-  enableMargin( true );
-  enableFolding( true );
   setSciLexerPython();
 }
 
@@ -42,6 +40,17 @@ QgsCodeEditorPython::~QgsCodeEditorPython()
 
 void QgsCodeEditorPython::setSciLexerPython()
 {
+  enableMargin( true );
+  enableFolding( true );
+  // current line
+  setCaretWidth( 2 );
+
+  setEdgeMode( QsciScintilla::EdgeLine );
+  setEdgeColumn( 80 );
+  setEdgeColor( QColor( "#FF0000" ) );
+
+  setWhitespaceVisibility( QsciScintilla::WsVisibleAfterIndent );
+
   QFont font = getMonospaceFont();
   font.setPointSize( 10 );
 
@@ -67,7 +76,7 @@ void QgsCodeEditorPython::setSciLexerPython()
     mPapFile = QgsApplication::pkgDataPath() + "/python/qsci_apis/pyqgis.pap";
     apis->loadPrepared( mPapFile );
   }
-  else if ( mAPISFilesList.length() == 1 && mAPISFilesList[0].right( 3 ) == "pap")
+  else if ( mAPISFilesList.length() == 1 && mAPISFilesList[0].right( 3 ) == "pap" )
   {
     if ( !QFileInfo( mAPISFilesList[0] ).exists() )
     {
