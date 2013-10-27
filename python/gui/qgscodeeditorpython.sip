@@ -5,13 +5,13 @@ class QgsCodeEditorPython: QgsCodeEditor
 %End
 
   public:
-    QgsCodeEditorPython( QWidget *parent = 0, const QList<QString> &filenames = QList<QString>() );
+    QgsCodeEditorPython( QWidget *parent /TransferThis/ = 0, const QList<QString> &filenames = QList<QString>() );
     ~QgsCodeEditorPython();
 
     void setTitle( QString );
 
     void loadAPIs(const QList<QString> &filenames );
 
-  private:
-    void setSciLexerPython();
+    void loadScript( const QString &script );
+
 };

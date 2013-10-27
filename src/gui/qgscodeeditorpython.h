@@ -47,6 +47,11 @@ class GUI_EXPORT QgsCodeEditorPython : public QgsCodeEditor
      */
     void loadAPIs( QList<QString> const &filenames );
 
+    /** Load a script file
+     * @param script The script file to load
+     */
+    void loadScript( const QString &script );
+
   private:
     //QgsCodeEditor *mSciWidget;
     //QWidget *mWidget;

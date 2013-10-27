@@ -46,7 +46,7 @@ class GUI_EXPORT QgsCodeEditor : public QsciScintilla
     /** Enable folding
      *  @param margin Set margin in the editor
      */
-    void enableMargin( bool margin );
+    bool enableMargin( bool margin );
 
     /** Enable margin
      *  @param folding Set folding in the editor

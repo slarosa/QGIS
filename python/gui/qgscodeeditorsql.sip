@@ -5,7 +5,7 @@ class QgsCodeEditorSQL: QgsCodeEditor
 %End
 
   public:
-    QgsCodeEditorSQL( QWidget *parent = 0 );
+    QgsCodeEditorSQL( QWidget *parent /TransferThis/ = 0 );
     ~QgsCodeEditorSQL();
 
     void setTitle( QString );
@@ -14,6 +14,4 @@ class QgsCodeEditorSQL: QgsCodeEditor
 
     void showFolding( bool withFolding );
 
-  private:
-    void setSciLexerSQL();
 };

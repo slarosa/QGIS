@@ -21,6 +21,8 @@
 #include <QString>
 #include <QFont>
 #include <QFileInfo>
+#include <QMessageBox>
+#include <QTextStream>
 #include <Qsci/qscilexerpython.h>
 
 QgsCodeEditorPython::QgsCodeEditorPython( QWidget *parent, const QList<QString> &filenames )
@@ -40,8 +42,6 @@ QgsCodeEditorPython::~QgsCodeEditorPython()
 
 void QgsCodeEditorPython::setSciLexerPython()
 {
-  enableMargin( true );
-  enableFolding( true );
   // current line
   setCaretWidth( 2 );
 
@@ -104,6 +104,9 @@ void QgsCodeEditorPython::setSciLexerPython()
     pyLexer->setAPIs( apis );
   }
   setLexer( pyLexer );
+
+  enableMargin( true );
+  enableFolding( true );
 }
 
 void QgsCodeEditorPython::setTitle( QString title )
@@ -115,5 +118,29 @@ void QgsCodeEditorPython::loadAPIs( const QList<QString> &filenames )
 {
   mAPISFilesList = filenames;
   //QgsDebugMsg( QString( "The apis files: %1" ).arg( mAPISFilesList[0] ) );
+  setSciLexerPython();
+}
+
+void QgsCodeEditorPython::loadScript( const QString &script )
+{
+  QgsDebugMsg( QString( "The script file: %1" ).arg( script ) );
+  QFile file( script );
+  if ( !file.open( QIODevice::ReadOnly ) )
+  {
+    QMessageBox::information( 0, "error", file.errorString() );
+  }
+
+  QTextStream in( &file );
+
+  //QString line = in.readAll();
+  //while ( !in.atEnd() )
+  //{
+  //QString line = in.readLine();
+  //QStringList fields = line.split( "," );
+  //QgsCodeEditor::insert( fields );
+  //}
+  setText( in.readAll() );
+  file.close();
+
   setSciLexerPython();
 }

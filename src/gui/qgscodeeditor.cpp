@@ -29,7 +29,7 @@ QgsCodeEditor::QgsCodeEditor( QWidget *parent, QString title, bool folding, bool
   if ( !parent && mWidgetTitle.isEmpty() )
   {
     setWindowTitle( "QScintilla2 Text Editor" );
-    setMinimumSize( 500, 300 );
+    setMinimumSize( 800, 300 );
   }
   else
   {
@@ -65,22 +65,24 @@ void QgsCodeEditor::setSciWidget()
   setAutoCompletionSource( QsciScintilla::AcsAPIs );
 }
 
-void QgsCodeEditor::enableMargin( bool margin )
+bool QgsCodeEditor::enableMargin( bool margin )
 {
   if ( margin )
   {
     QFont marginFont( "Courier", 10 );
     setMarginLineNumbers( 1, true );
     setMarginsFont( marginFont );
-    setMarginWidth( 1, "0000" );
+    setMarginWidth( 1, "00000" );
     setMarginsForegroundColor( QColor( "#3E3EE3" ) );
     setMarginsBackgroundColor( QColor( "#f9f9f9" ) );
+    return true;
   }
   else
   {
-    //setMarginWidth(0, 0);
+    setMarginWidth( 0, 0 );
     setMarginWidth( 1, 0 );
-    //setMarginWidth(2, 0);
+    setMarginWidth( 2, 0 );
+    return false;
   }
 }
 

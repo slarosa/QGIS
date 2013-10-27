@@ -5,10 +5,10 @@ class QgsCodeEditor: QsciScintilla
 %End
 
   public:
-    QgsCodeEditor( QWidget *parent = 0, QString title = "" , bool folding = false, bool margin = false );
+    QgsCodeEditor( QWidget *parent /TransferThis/ = 0, QString title = "" , bool folding = false, bool margin = false );
     ~QgsCodeEditor();
 
-    void enableMargin( bool folding );
+    bool enableMargin( bool margin );
 
-    void enableFolding( bool margin );
+    void enableFolding( bool folding);
 };
