@@ -86,6 +86,7 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WindowFlags fl ) :
   connect( cmbTheme, SIGNAL( textChanged( const QString& ) ), this, SLOT( themeChanged( const QString& ) ) );
 
   connect( mFontFamilyRadioCustom, SIGNAL( toggled( bool ) ), mFontFamilyComboBox, SLOT( setEnabled( bool ) ) );
+  connect( mFontRadioButtonCodeEditor, SIGNAL( toggled( bool ) ), mFontFamilyCodeEditorPy, SLOT( setEnabled( bool ) ) );
 
   connect( cmbIconSize, SIGNAL( activated( const QString& ) ), this, SLOT( iconSizeChanged( const QString& ) ) );
   connect( cmbIconSize, SIGNAL( highlighted( const QString& ) ), this, SLOT( iconSizeChanged( const QString& ) ) );
@@ -759,8 +760,100 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WindowFlags fl ) :
   mOffsetYSpinBox->setValue( settings.value( "/Composer/defaultSnapGridOffsetY", 0 ).toDouble() );
 
   //
+  // Code Editor settings
+  //
+
+  // setting autocompletion
+  QString autoCompletionSourcePy = settings.value( "/CodeEditor/autoCompletionSourcePy", "fromAPIs" ).toString();
+  if ( autoCompletionSourcePy == "fromDoc" )
+  {
+    mCompletionFromDocPy->setChecked( true );
+  }
+  else if ( autoCompletionSourcePy == "fromDocAPIs" )
+  {
+    mCompletionFromDocAPIsPy->setChecked( true );
+  }
+  else //fromAPIs
+  {
+    mCompletionFromAPIsPy->setChecked( true );
+  }
+  // autocompletio trheshold
+  mThresholdCompletionPy->setValue( settings.value( "/CodeEditor/completionThresholdPy", 2 ).toInt() );
+  mCompletionCaseSensitivePy->setChecked( settings.value( "/CodeEditor/completionCaseSensitivePy", false ).toBool() );
+
+  mMonospacedFontCodeEditor->blockSignals( true );
+  mFontFamilyCodeEditorPy->blockSignals( true );
+  mFontFamilyCodeEditorCSS->blockSignals( true );
+  mFontFamilyCodeEditorHTML->blockSignals( true );
+  mFontFamilyCodeEditorSQL->blockSignals( true );
+  mFontRadioButtonCodeEditor->blockSignals( true );
+  //mFontSizeCodeEditorPy->blockSignals( true );
+  //mFontSizeCodeEditorCSS->blockSignals( true );
+  //mFontSizeCodeEditorHTML->blockSignals( true );
+  //mFontSizeCodeEditorSQL->blockSignals( true );
+
+  QString pythonEditorFont = settings.value( "/CodeEditor/pyFont" ).toString();
+  QString cssEditorFont = settings.value( "/CodeEditor/cssFont" ).toString();
+  QString htmlEditorFont = settings.value( "/CodeEditor/htmlFont" ).toString();
+  QString sqlEditorFont = settings.value( "/CodeEditor/sqlFont" ).toString();
+
+  QFont *tempPythonEditorFont = new QFont( pythonEditorFont );
+  if ( tempPythonEditorFont->family() == pythonEditorFont )
+  {
+    mFontFamilyCodeEditorPy->setCurrentFont( *tempPythonEditorFont );
+  }
+  delete tempPythonEditorFont;
+
+  QFont *tempCSSEditorFont = new QFont( cssEditorFont );
+  if ( tempCSSEditorFont->family() == cssEditorFont )
+  {
+    mFontFamilyCodeEditorCSS->setCurrentFont( *tempCSSEditorFont );
+  }
+  delete tempCSSEditorFont;
+
+  QFont *tempHTMLEditorFont = new QFont( htmlEditorFont );
+  if ( tempHTMLEditorFont->family() == htmlEditorFont )
+  {
+    mFontFamilyCodeEditorHTML->setCurrentFont( *tempHTMLEditorFont );
+  }
+  delete tempHTMLEditorFont;
+
+  QFont *tempSQLEditorFont = new QFont( sqlEditorFont );
+  if ( tempSQLEditorFont->family() == sqlEditorFont )
+  {
+    mFontFamilyCodeEditorSQL->setCurrentFont( *tempSQLEditorFont );
+  }
+  delete tempSQLEditorFont;
+
+  //mFontFamilyCodeEditorCSS->setCurrentFont( cssEditorFont );
+  //mFontFamilyCodeEditorHTML->setCurrentFont( htmlEditorFont );
+  //mFontFamilyCodeEditorSQL->setCurrentFont( sqlEditorFont );
+
+  mMonospacedFontCodeEditor->setChecked( settings.value( "/CodeEditor/pyMonospaceFont" ).toBool() );
+  mFontRadioButtonCodeEditor->setChecked( !mMonospacedFontCodeEditor->isChecked() );
+  mFontFamilyCodeEditorPy->setEnabled( !mMonospacedFontCodeEditor->isChecked() );
+
+  // font size
+  mFontSizeCodeEditorPy->setValue( settings.value( "/CodeEditor/pyFontSize", 10 ).toInt() );
+  mFontSizeCodeEditorCSS->setValue( settings.value( "/CodeEditor/cssFontSize", 10 ).toInt() );
+  mFontSizeCodeEditorHTML->setValue( settings.value( "/CodeEditor/htmlFontSize", 10 ).toInt() );
+  mFontSizeCodeEditorSQL->setValue( settings.value( "/CodeEditor/sqlFontSize", 10 ).toInt() );
+
+  mFontFamilyCodeEditorPy->blockSignals( false );
+  mFontFamilyCodeEditorCSS->blockSignals( false );
+  mFontFamilyCodeEditorHTML->blockSignals( false );
+  mFontFamilyCodeEditorSQL->blockSignals( false );
+  mMonospacedFontCodeEditor->blockSignals( false );
+  mFontRadioButtonCodeEditor->blockSignals( false );
+  //mFontSizeCodeEditorPy->blockSignals( false );
+  //mFontSizeCodeEditorCSS->blockSignals( false );
+  //mFontSizeCodeEditorHTML->blockSignals( false );
+  //mFontSizeCodeEditorSQL->blockSignals( false );
+
+  //
   // Locale settings
   //
+
   QString mySystemLocale = QLocale::system().name();
   lblSystemLocale->setText( tr( "Detected active locale on your system: %1" ).arg( mySystemLocale ) );
   QString myUserLocale = settings.value( "locale/userLocale", "" ).toString();
@@ -1349,6 +1442,37 @@ void QgsOptions::saveOptions()
   settings.setValue( "/Composer/defaultSnapTolerancePixels", mSnapToleranceSpinBox->value() );
   settings.setValue( "/Composer/defaultSnapGridOffsetX", mOffsetXSpinBox->value() );
   settings.setValue( "/Composer/defaultSnapGridOffsetY", mOffsetYSpinBox->value() );
+
+  //
+  // Code Editor settings
+  //
+
+  QString autoCompletionSourcePy = "fromAPIs";
+  if ( mCompletionFromDocPy->isChecked() )
+  {
+    autoCompletionSourcePy = "fromDoc";
+  }
+  else if ( mCompletionFromDocAPIsPy->isChecked() )
+  {
+    autoCompletionSourcePy = "fromDocAPIs";
+  }
+  settings.setValue( "/CodeEditor/autoCompletionSourcePy", autoCompletionSourcePy );
+  settings.setValue( "/CodeEditor/completionThresholdPy", mThresholdCompletionPy->value() );
+  settings.setValue( "/CodeEditor/completionCaseSensitivePy", mCompletionCaseSensitivePy->isChecked() );
+
+  settings.setValue( "/CodeEditor/pyMonospaceFont", mMonospacedFontCodeEditor->isChecked() );
+  QString pythonEditorFont = mFontFamilyCodeEditorPy->currentFont().family();
+  QString cssEditorFont = mFontFamilyCodeEditorCSS->currentFont().family();
+  QString htmlEditorFont = mFontFamilyCodeEditorHTML->currentFont().family();
+  QString sqlEditorFont = mFontFamilyCodeEditorSQL->currentFont().family();
+  settings.setValue( "/CodeEditor/pyFont", pythonEditorFont );
+  settings.setValue( "/CodeEditor/cssFont", cssEditorFont );
+  settings.setValue( "/CodeEditor/htmlFont", htmlEditorFont );
+  settings.setValue( "/CodeEditor/sqlFont", sqlEditorFont );
+  settings.setValue( "/CodeEditor/pyFontSize", mFontSizeCodeEditorPy->value() );
+  settings.setValue( "/CodeEditor/cssFontSize", mFontSizeCodeEditorCSS->value() );
+  settings.setValue( "/CodeEditor/htmlFontSize", mFontSizeCodeEditorHTML->value() );
+  settings.setValue( "/CodeEditor/sqlFontSize", mFontSizeCodeEditorSQL->value() );
 
   //
   // Locale settings

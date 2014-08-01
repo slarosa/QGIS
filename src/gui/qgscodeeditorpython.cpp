@@ -22,6 +22,7 @@
 #include <QFont>
 #include <QFileInfo>
 #include <QMessageBox>
+#include <QSettings>
 #include <QTextStream>
 #include <Qsci/qscilexerpython.h>
 
@@ -51,15 +52,27 @@ void QgsCodeEditorPython::setSciLexerPython()
 
   setWhitespaceVisibility( QsciScintilla::WsVisibleAfterIndent );
 
-  QFont font = getMonospaceFont();
-  font.setPointSize( 10 );
+  QSettings settings;
+  bool monospaceFont = settings.value( "/CodeEditor/pyMonospaceFont", false ).toBool();
+  QFont mFont;
+  QString pyFont = settings.value( "/CodeEditor/pyFont" ).toString();
+  if ( !monospaceFont )
+  {
+    mFont.setFamily( pyFont );
+  }
+  else
+  {
+    mFont = getMonospaceFont();
+  }
+
+  mFont.setPointSize( settings.value( "/CodeEditor/pyFontSize", 10 ).toInt() );
 
   QsciLexerPython* pyLexer = new QsciLexerPython();
-  pyLexer->setDefaultFont( font );
-  pyLexer->setFont( font, 1 ); // comment
-  pyLexer->setFont( font, 3 ); // singlequotes
-  pyLexer->setFont( font, 4 ); // doublequotes
-  pyLexer->setFont( font, 6 ); // triplequotes
+  pyLexer->setDefaultFont( mFont );
+  pyLexer->setFont( mFont, 1 ); // comment
+  pyLexer->setFont( mFont, 3 ); // singlequotes
+  pyLexer->setFont( mFont, 4 ); // doublequotes
+  pyLexer->setFont( mFont, 6 ); // triplequotes
   pyLexer->setColor( Qt::red, 1 ); // comment color
   pyLexer->setColor( Qt::darkGreen, 5 ); // keyword color
   pyLexer->setColor( Qt::darkBlue, 15 ); // decorator color

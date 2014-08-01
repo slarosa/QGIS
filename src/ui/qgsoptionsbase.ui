@@ -181,6 +181,18 @@
          </item>
          <item>
           <property name="text">
+           <string>Code Editor</string>
+          </property>
+          <property name="toolTip">
+           <string>Code Editor</string>
+          </property>
+          <property name="icon">
+           <iconset resource="../../images/images.qrc">
+            <normaloff>:/images/themes/default/propertyicons/codeeditor.svg</normaloff>:/images/themes/default/propertyicons/codeeditor.svg</iconset>
+          </property>
+         </item>
+         <item>
+          <property name="text">
            <string>Digitizing</string>
           </property>
           <property name="toolTip">
@@ -283,8 +295,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>610</width>
-                <height>640</height>
+                <width>441</width>
+                <height>612</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_28">
@@ -946,8 +958,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>655</width>
-                <height>862</height>
+                <width>563</width>
+                <height>860</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_22">
@@ -1321,8 +1333,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>531</width>
-                <height>440</height>
+                <width>435</width>
+                <height>418</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_27">
@@ -1631,8 +1643,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>710</width>
-                <height>796</height>
+                <width>608</width>
+                <height>760</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_29">
@@ -2366,8 +2378,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>526</width>
-                <height>327</height>
+                <width>626</width>
+                <height>549</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_25">
@@ -2695,8 +2707,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>684</width>
-                <height>625</height>
+                <width>562</width>
+                <height>652</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_30">
@@ -3191,8 +3203,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>504</width>
-                <height>307</height>
+                <width>400</width>
+                <height>301</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_39">
@@ -3369,6 +3381,470 @@
            </item>
           </layout>
          </widget>
+         <widget class="QWidget" name="mOptionsPageCodeEditor">
+          <layout class="QVBoxLayout" name="verticalLayout_38">
+           <property name="margin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QScrollArea" name="mOptionsScrollArea_13">
+             <property name="frameShape">
+              <enum>QFrame::NoFrame</enum>
+             </property>
+             <property name="widgetResizable">
+              <bool>true</bool>
+             </property>
+             <widget class="QWidget" name="mOptionsScrollAreaContents_13">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>626</width>
+                <height>549</height>
+               </rect>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_40">
+               <item>
+                <widget class="QgsCollapsibleGroupBox" name="groupBox_7">
+                 <property name="title">
+                  <string>Lexers</string>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout_12">
+                  <item row="0" column="0">
+                   <widget class="QTabWidget" name="tabWidget">
+                    <property name="currentIndex">
+                     <number>0</number>
+                    </property>
+                    <widget class="QWidget" name="tab">
+                     <attribute name="title">
+                      <string>Python</string>
+                     </attribute>
+                     <layout class="QGridLayout" name="gridLayout_16">
+                      <item row="0" column="0">
+                       <layout class="QHBoxLayout" name="horizontalLayout_45">
+                        <item>
+                         <widget class="QLabel" name="label_4">
+                          <property name="text">
+                           <string>Font</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <spacer name="horizontalSpacer_47">
+                          <property name="orientation">
+                           <enum>Qt::Horizontal</enum>
+                          </property>
+                          <property name="sizeHint" stdset="0">
+                           <size>
+                            <width>40</width>
+                            <height>20</height>
+                           </size>
+                          </property>
+                         </spacer>
+                        </item>
+                        <item>
+                         <widget class="QRadioButton" name="mMonospacedFontCodeEditor">
+                          <property name="text">
+                           <string>Monospaced font</string>
+                          </property>
+                          <property name="checked">
+                           <bool>true</bool>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <layout class="QHBoxLayout" name="horizontalLayout_37">
+                          <item>
+                           <widget class="QRadioButton" name="mFontRadioButtonCodeEditor">
+                            <property name="text">
+                             <string/>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QFontComboBox" name="mFontFamilyCodeEditorPy">
+                            <property name="enabled">
+                             <bool>false</bool>
+                            </property>
+                            <property name="minimumSize">
+                             <size>
+                              <width>241</width>
+                              <height>0</height>
+                             </size>
+                            </property>
+                            <property name="editable">
+                             <bool>true</bool>
+                            </property>
+                           </widget>
+                          </item>
+                         </layout>
+                        </item>
+                        <item>
+                         <widget class="QLabel" name="label_41">
+                          <property name="text">
+                           <string>Size</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QSpinBox" name="mFontSizeCodeEditorPy">
+                          <property name="minimum">
+                           <number>4</number>
+                          </property>
+                          <property name="maximum">
+                           <number>20</number>
+                          </property>
+                          <property name="value">
+                           <number>10</number>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item row="1" column="0">
+                       <widget class="QgsCollapsibleGroupBox" name="groupBox_25">
+                        <property name="title">
+                         <string>Autocompletion</string>
+                        </property>
+                        <layout class="QGridLayout" name="gridLayout_19">
+                         <item row="0" column="0">
+                          <layout class="QHBoxLayout" name="horizontalLayout_43">
+                           <item>
+                            <widget class="QLabel" name="label_49">
+                             <property name="text">
+                              <string>Threshold</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item>
+                            <widget class="QSpinBox" name="mThresholdCompletionPy">
+                             <property name="value">
+                              <number>2</number>
+                             </property>
+                            </widget>
+                           </item>
+                           <item>
+                            <spacer name="horizontalSpacer_50">
+                             <property name="orientation">
+                              <enum>Qt::Horizontal</enum>
+                             </property>
+                             <property name="sizeHint" stdset="0">
+                              <size>
+                               <width>40</width>
+                               <height>20</height>
+                              </size>
+                             </property>
+                            </spacer>
+                           </item>
+                           <item>
+                            <widget class="QRadioButton" name="mCompletionFromDocPy">
+                             <property name="toolTip">
+                              <string>Get autocompletion from current document</string>
+                             </property>
+                             <property name="text">
+                              <string>from Document</string>
+                             </property>
+                            </widget>
+                           </item>
+                           <item>
+                            <widget class="QRadioButton" name="mCompletionFromAPIsPy">
+                             <property name="toolTip">
+                              <string>Get autocompletion from installed APIs</string>
+                             </property>
+                             <property name="text">
+                              <string>from APIs files</string>
+                             </property>
+                             <property name="checked">
+                              <bool>true</bool>
+                             </property>
+                            </widget>
+                           </item>
+                           <item>
+                            <widget class="QRadioButton" name="mCompletionFromDocAPIsPy">
+                             <property name="toolTip">
+                              <string>Get autocompletion from current document and installed APIs</string>
+                             </property>
+                             <property name="text">
+                              <string>from Doc and APIs</string>
+                             </property>
+                            </widget>
+                           </item>
+                          </layout>
+                         </item>
+                         <item row="1" column="0">
+                          <widget class="QCheckBox" name="mCompletionCaseSensitivePy">
+                           <property name="text">
+                            <string>Case sensitive</string>
+                           </property>
+                           <property name="checked">
+                            <bool>true</bool>
+                           </property>
+                          </widget>
+                         </item>
+                        </layout>
+                       </widget>
+                      </item>
+                      <item row="2" column="0">
+                       <spacer name="verticalSpacer_14">
+                        <property name="orientation">
+                         <enum>Qt::Vertical</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>20</width>
+                          <height>40</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </widget>
+                    <widget class="QWidget" name="tab_3">
+                     <attribute name="title">
+                      <string>CSS</string>
+                     </attribute>
+                     <layout class="QGridLayout" name="gridLayout_17">
+                      <item row="0" column="0">
+                       <layout class="QHBoxLayout" name="horizontalLayout_41">
+                        <item>
+                         <widget class="QLabel" name="label_45">
+                          <property name="text">
+                           <string>Font</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <spacer name="horizontalSpacer_43">
+                          <property name="orientation">
+                           <enum>Qt::Horizontal</enum>
+                          </property>
+                          <property name="sizeHint" stdset="0">
+                           <size>
+                            <width>40</width>
+                            <height>20</height>
+                           </size>
+                          </property>
+                         </spacer>
+                        </item>
+                        <item>
+                         <widget class="QFontComboBox" name="mFontFamilyCodeEditorCSS">
+                          <property name="minimumSize">
+                           <size>
+                            <width>241</width>
+                            <height>0</height>
+                           </size>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QLabel" name="label_46">
+                          <property name="text">
+                           <string>Size</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QSpinBox" name="mFontSizeCodeEditorCSS">
+                          <property name="minimum">
+                           <number>4</number>
+                          </property>
+                          <property name="maximum">
+                           <number>20</number>
+                          </property>
+                          <property name="value">
+                           <number>10</number>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item row="1" column="0">
+                       <spacer name="verticalSpacer_16">
+                        <property name="orientation">
+                         <enum>Qt::Vertical</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>20</width>
+                          <height>40</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </widget>
+                    <widget class="QWidget" name="tab_2">
+                     <attribute name="title">
+                      <string>HTML</string>
+                     </attribute>
+                     <layout class="QGridLayout" name="gridLayout_14">
+                      <item row="0" column="0">
+                       <layout class="QHBoxLayout" name="horizontalLayout_40">
+                        <item>
+                         <widget class="QLabel" name="label_42">
+                          <property name="text">
+                           <string>Font</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <spacer name="horizontalSpacer_48">
+                          <property name="orientation">
+                           <enum>Qt::Horizontal</enum>
+                          </property>
+                          <property name="sizeHint" stdset="0">
+                           <size>
+                            <width>40</width>
+                            <height>20</height>
+                           </size>
+                          </property>
+                         </spacer>
+                        </item>
+                        <item>
+                         <widget class="QFontComboBox" name="mFontFamilyCodeEditorHTML">
+                          <property name="minimumSize">
+                           <size>
+                            <width>241</width>
+                            <height>0</height>
+                           </size>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QLabel" name="label_44">
+                          <property name="text">
+                           <string>Size</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QSpinBox" name="mFontSizeCodeEditorHTML">
+                          <property name="minimum">
+                           <number>4</number>
+                          </property>
+                          <property name="maximum">
+                           <number>20</number>
+                          </property>
+                          <property name="value">
+                           <number>10</number>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item row="1" column="0">
+                       <spacer name="verticalSpacer_13">
+                        <property name="orientation">
+                         <enum>Qt::Vertical</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>20</width>
+                          <height>40</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </widget>
+                    <widget class="QWidget" name="tab_4">
+                     <attribute name="title">
+                      <string>SQL</string>
+                     </attribute>
+                     <layout class="QGridLayout" name="gridLayout_18">
+                      <item row="0" column="0">
+                       <layout class="QHBoxLayout" name="horizontalLayout_42">
+                        <item>
+                         <widget class="QLabel" name="label_47">
+                          <property name="text">
+                           <string>Font</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <spacer name="horizontalSpacer_49">
+                          <property name="orientation">
+                           <enum>Qt::Horizontal</enum>
+                          </property>
+                          <property name="sizeHint" stdset="0">
+                           <size>
+                            <width>40</width>
+                            <height>20</height>
+                           </size>
+                          </property>
+                         </spacer>
+                        </item>
+                        <item>
+                         <widget class="QFontComboBox" name="mFontFamilyCodeEditorSQL">
+                          <property name="minimumSize">
+                           <size>
+                            <width>241</width>
+                            <height>0</height>
+                           </size>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QLabel" name="label_48">
+                          <property name="text">
+                           <string>Size</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QSpinBox" name="mFontSizeCodeEditorSQL">
+                          <property name="minimum">
+                           <number>4</number>
+                          </property>
+                          <property name="maximum">
+                           <number>20</number>
+                          </property>
+                          <property name="value">
+                           <number>10</number>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                      <item row="1" column="0">
+                       <spacer name="verticalSpacer_15">
+                        <property name="orientation">
+                         <enum>Qt::Vertical</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>20</width>
+                          <height>40</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </widget>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_12">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+            </widget>
+           </item>
+          </layout>
+         </widget>
          <widget class="QWidget" name="mOptionsPageDigitizing">
           <layout class="QVBoxLayout" name="verticalLayout_17">
            <property name="margin">
@@ -3387,8 +3863,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>501</width>
-                <height>640</height>
+                <width>408</width>
+                <height>614</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_31">
@@ -3878,8 +4354,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>462</width>
-                <height>372</height>
+                <width>392</width>
+                <height>351</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -4008,8 +4484,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>650</width>
-                <height>707</height>
+                <width>608</width>
+                <height>696</height>
                </rect>
               </property>
               <layout class="QGridLayout" name="gridLayout_15">
@@ -4262,8 +4738,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>300</width>
-                <height>226</height>
+                <width>626</width>
+                <height>549</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_32">
@@ -4352,8 +4828,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>531</width>
-                <height>685</height>
+                <width>418</width>
+                <height>671</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_33">

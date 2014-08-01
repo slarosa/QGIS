@@ -19,6 +19,7 @@
 #include <QWidget>
 #include <QString>
 #include <QFont>
+#include <QSettings>
 #include <Qsci/qscilexerhtml.h>
 
 
@@ -40,8 +41,19 @@ QgsCodeEditorHTML::~QgsCodeEditorHTML()
 
 void QgsCodeEditorHTML::setSciLexerHTML()
 {
-  QsciLexerHTML* lexer = new QsciLexerHTML();
-  lexer->setDefaultFont( QFont( "Sans", 10 ) );
+  QsciLexerHTML* htmlLexer = new QsciLexerHTML();
 
-  setLexer( lexer );
+  QSettings settings;
+  QFont mFont;
+  QString htmlFont = settings.value( "/CodeEditor/htmlFont" ).toString();
+  mFont.setFamily( htmlFont );
+  mFont.setPointSize( settings.value( "/CodeEditor/htmlFontSize", 10 ).toInt() );
+  htmlLexer->setDefaultFont( mFont );
+
+  htmlLexer->setFont( mFont, 0 ); // text
+  htmlLexer->setFont( mFont, 1 ); // tag
+  htmlLexer->setFont( mFont, 3 ); // attribute
+  htmlLexer->setFont( mFont, 5 ); // htmlnumber
+
+  setLexer( htmlLexer );
 }

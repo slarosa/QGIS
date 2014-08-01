@@ -19,6 +19,7 @@
 #include <QWidget>
 #include <QString>
 #include <QFont>
+#include <QSettings>
 #include <Qsci/qscilexercss.h>
 
 
@@ -40,8 +41,19 @@ QgsCodeEditorCSS::~QgsCodeEditorCSS()
 
 void QgsCodeEditorCSS::setSciLexerCSS()
 {
-  QsciLexerCSS* lexer = new QsciLexerCSS();
-  lexer->setDefaultFont( QFont( "Sans", 10 ) );
+  QsciLexerCSS* cssLexer = new QsciLexerCSS();
 
-  setLexer( lexer );
+  QSettings settings;
+  QFont mFont;
+  QString cssFont = settings.value( "/CodeEditor/cssFont" ).toString();
+  mFont.setFamily( cssFont );
+  mFont.setPointSize( settings.value( "/CodeEditor/cssFontSize", 10 ).toInt() );
+  cssLexer->setDefaultFont( mFont );
+
+  cssLexer->setFont( mFont, 0 ); // text
+  cssLexer->setFont( mFont, 1 ); // tag
+  cssLexer->setFont( mFont, 2 ); // class selector
+  cssLexer->setFont( mFont, 10 ); // id selector
+
+  setLexer( cssLexer );
 }

@@ -19,6 +19,7 @@
 #include <QWidget>
 #include <QString>
 #include <QFont>
+#include <QSettings>
 #include <Qsci/qscilexersql.h>
 
 
@@ -41,7 +42,13 @@ QgsCodeEditorSQL::~QgsCodeEditorSQL()
 void QgsCodeEditorSQL::setSciLexerSQL()
 {
   QsciLexerSQL* sqlLexer = new QsciLexerSQL();
-  sqlLexer->setDefaultFont( QFont( "Sans", 10 ) );
+
+  QSettings settings;
+  QFont mFont;
+  QString sqlFont = settings.value( "/CodeEditor/sqlFont" ).toString();
+  mFont.setFamily( sqlFont );
+  mFont.setPointSize( settings.value( "/CodeEditor/sqlFontSize", 10 ).toInt() );
+  sqlLexer->setDefaultFont( mFont );
 
   setLexer( sqlLexer );
 }
