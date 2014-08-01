@@ -246,12 +246,14 @@ class APP_EXPORT QgsOptions : public QgsOptionsDialogBase, private Ui::QgsOption
     void on_mButtonExportColors_clicked();
 
     void on_mButtonRemoveColor_clicked();
-    void on_mTreeCustomColors_itemDoubleClicked( QTreeWidgetItem* item, int column );
     void on_mListWidgetCodeEditorColor_itemClicked( QListWidgetItem* item );
     void changePreviewCodeEditor( int index );
     void removeWidgetCodeEditorPreview();
     void refreshFontPreview( QFont f );
     void refreshFontSizePreview( int size );
+    void on_mMonospacedFontCodeEditor_released();
+    void on_mFontRadioButtonCodeEditor_released();
+    void setColorPythonLexer( const QColor& color );
 
   private:
     QStringList i18nList();

@@ -36,6 +36,7 @@
 #include "qgsrasterpyramidsoptionswidget.h"
 #include "qgsdialog.h"
 #include "qgscomposer.h"
+#include "qgscolorschemeregistry.h"
 #include "qgscodeeditorpython.h"
 #include "qgscodeeditorhtml.h"
 #include "qgscodeeditorcss.h"
@@ -99,6 +100,7 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WindowFlags fl ) :
   connect( mFontSizeCodeEditorCSS, SIGNAL( valueChanged( int ) ), SLOT( refreshFontSizePreview( int ) ) );
   connect( mFontSizeCodeEditorHTML, SIGNAL( valueChanged( int ) ), SLOT( refreshFontSizePreview( int ) ) );
   connect( mFontSizeCodeEditorSQL, SIGNAL( valueChanged( int ) ), SLOT( refreshFontSizePreview( int ) ) );
+  connect( mColorCodeEditorPy, SIGNAL( colorChanged( QColor ) ), SLOT( setColorPythonLexer( QColor ) ) );
 
   connect( cmbIconSize, SIGNAL( activated( const QString& ) ), this, SLOT( iconSizeChanged( const QString& ) ) );
   connect( cmbIconSize, SIGNAL( highlighted( const QString& ) ), this, SLOT( iconSizeChanged( const QString& ) ) );
@@ -1739,7 +1741,22 @@ void QgsOptions::on_mListWidgetCodeEditorColor_itemClicked( QListWidgetItem* ite
 
   QSettings settings;
   const QString& s = item->text();
-  settings.setValue( "/CodeEditor/pyColor_" + s, s );
+  const QColor& color = settings.value( "/CodeEditor/pyColor" + s ).value<QColor>();
+  QgsDebugMsg( QString("%1, %2, %3").arg(color.red()).arg(color.green()).arg(color.blue()) );
+  if ( color.isValid() )
+    mColorCodeEditorPy->setColor( color );
+}
+
+void QgsOptions::setColorPythonLexer( const QColor& color )
+{
+  QgsDebugMsg( QString("%1, %2, %3").arg(color.red()).arg(color.green()).arg(color.blue()) );
+  QListWidgetItem* item = mListWidgetCodeEditorColor->selectedItems().takeAt( 0 );
+  const QString& s = item->text();
+  QgsDebugMsg( s );
+  QSettings settings;
+  removeWidgetCodeEditorPreview();
+  settings.setValue( "/CodeEditor/pyColor" + s, QVariant( color ) );
+  changePreviewCodeEditor( mTabWidgetCodeEditorOptions->currentIndex() );
 }
 
 void QgsOptions::changePreviewCodeEditor( int index )
@@ -1848,6 +1865,16 @@ void QgsOptions::refreshFontSizePreview( int size )
     }
   }
   changePreviewCodeEditor( mTabWidgetCodeEditorOptions->currentIndex() );
+}
+
+void QgsOptions::on_mMonospacedFontCodeEditor_released()
+{
+   refreshFontPreview( QFont("Monospace") );
+}
+
+void QgsOptions::on_mFontRadioButtonCodeEditor_released()
+{
+   refreshFontPreview( mFontComboCodeEditorPy->currentFont() );
 }
 
 void QgsOptions::removeWidgetCodeEditorPreview()

@@ -73,9 +73,11 @@ void QgsCodeEditorPython::setSciLexerPython()
   pyLexer->setFont( mFont, 3 ); // singlequotes
   pyLexer->setFont( mFont, 4 ); // doublequotes
   pyLexer->setFont( mFont, 6 ); // triplequotes
-  pyLexer->setColor( Qt::red, 1 ); // comment color
-  pyLexer->setColor( Qt::darkGreen, 5 ); // keyword color
-  pyLexer->setColor( Qt::darkBlue, 15 ); // decorator color
+  pyLexer->setColor( settings.value( "/CodeEditor/pyColorDefault", QColor( Qt::black ) ).value<QColor>(), 0 ); // default
+  pyLexer->setColor( settings.value( "/CodeEditor/pyColorComment", QColor( Qt::red ) ).value<QColor>(), 1 ); // comment color
+  pyLexer->setColor( settings.value( "/CodeEditor/pyColorKeyword", QColor( Qt::darkGreen ) ).value<QColor>(), 5 ); // keyword color
+  pyLexer->setColor( settings.value( "/CodeEditor/pyColorFunction", QColor( Qt::darkBlue ) ).value<QColor>(), 9 ); // method color
+  pyLexer->setColor( settings.value( "/CodeEditor/pyColorDecorator", QColor( Qt::darkBlue ) ).value<QColor>(), 15 ); // decorator color
 
   QsciAPIs* apis = new QsciAPIs( pyLexer );
 
