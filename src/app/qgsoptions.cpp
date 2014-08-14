@@ -36,7 +36,10 @@
 #include "qgsrasterpyramidsoptionswidget.h"
 #include "qgsdialog.h"
 #include "qgscomposer.h"
-#include "qgscolorschemeregistry.h"
+#include "qgscodeeditorpython.h"
+#include "qgscodeeditorhtml.h"
+#include "qgscodeeditorcss.h"
+#include "qgscodeeditorsql.h"
 
 #include <QInputDialog>
 #include <QFileDialog>
@@ -87,6 +90,8 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WindowFlags fl ) :
 
   connect( mFontFamilyRadioCustom, SIGNAL( toggled( bool ) ), mFontFamilyComboBox, SLOT( setEnabled( bool ) ) );
   connect( mFontRadioButtonCodeEditor, SIGNAL( toggled( bool ) ), mFontFamilyCodeEditorPy, SLOT( setEnabled( bool ) ) );
+  connect( mTabWidgetCodeEditorOptions, SIGNAL( currentChanged( int ) ), this, SLOT( changePreviewCodeEditor( int ) ) );
+  connect( mFontFamilyCodeEditorPy, SIGNAL( currentFontChanged( QFont ) ), SLOT( refreshPreview( QFont ) ) );
 
   connect( cmbIconSize, SIGNAL( activated( const QString& ) ), this, SLOT( iconSizeChanged( const QString& ) ) );
   connect( cmbIconSize, SIGNAL( highlighted( const QString& ) ), this, SLOT( iconSizeChanged( const QString& ) ) );
@@ -762,6 +767,10 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WindowFlags fl ) :
   //
   // Code Editor settings
   //
+
+  // set code editor preview at first tab
+  changePreviewCodeEditor( 0 );
+  mLayoutColor->setEnabled( false );
 
   // setting autocompletion
   QString autoCompletionSourcePy = settings.value( "/CodeEditor/autoCompletionSourcePy", "fromAPIs" ).toString();
@@ -1713,6 +1722,80 @@ void QgsOptions::on_mCustomVariablesChkBx_toggled( bool chkd )
   mCustomVariablesTable->setEnabled( chkd );
 }
 
+void QgsOptions::on_mListWidgetCodeEditorColor_itemClicked( QListWidgetItem* item )
+{
+  mLayoutColor->setEnabled( true );
+
+  QSettings settings;
+  const QString& s = item->text();
+  settings.setValue( "/CodeEditor/pyColor_" + s, s );
+}
+
+void QgsOptions::changePreviewCodeEditor( int index )
+{
+  // set text to preview
+  switch ( index )
+  {
+    case 0: //Python
+    {
+      removeWidgetCodeEditorPreview();
+      QgsCodeEditorPython* mCodeEditorPreviewPy = new QgsCodeEditorPython( mCodeEditorPreview );
+      mCodeEditorPreviewPy->setReadOnly( true );
+      mCodeEditorPreviewPy->setText( "def foo():\n\tpass\n" );
+      mLayoutCodeEditorPreview->addWidget( mCodeEditorPreviewPy );
+      break;
+    }
+    case 1: //CSS
+    {
+      removeWidgetCodeEditorPreview();
+      QgsCodeEditorCSS* mCodeEditorPreviewCSS = new QgsCodeEditorCSS( mCodeEditorPreview );
+      mCodeEditorPreviewCSS->setReadOnly( true );
+      mCodeEditorPreviewCSS->setText( "#foo {\n\ttext-align: center;\n" );
+      mLayoutCodeEditorPreview->addWidget( mCodeEditorPreviewCSS );
+      break;
+    }
+    case 2: //HTML
+    {
+      removeWidgetCodeEditorPreview();
+      QgsCodeEditorHTML* mCodeEditorPreviewHTML = new QgsCodeEditorHTML( mCodeEditorPreview );
+      mCodeEditorPreviewHTML->setReadOnly( true );
+      mCodeEditorPreviewHTML->setText( "<div id='foo'></div>\n\t<h2>QGIS is Rock!</h2>\n" );
+      mLayoutCodeEditorPreview->addWidget( mCodeEditorPreviewHTML );
+      break;
+    }
+    case 3: //SQL
+    {
+      removeWidgetCodeEditorPreview();
+      QgsCodeEditorSQL* mCodeEditorPreviewSQL = new QgsCodeEditorSQL( mCodeEditorPreview );
+      mCodeEditorPreviewSQL->setReadOnly( true );
+      mCodeEditorPreviewSQL->setText( "SELECT * FROM foo WHERE index = 0;" );
+      mLayoutCodeEditorPreview->addWidget( mCodeEditorPreviewSQL );
+      break;
+    }
+  }
+}
+
+void QgsOptions::refreshPreview( QFont f )
+{
+  QgsDebugMsg( f.family() );
+
+  removeWidgetCodeEditorPreview();
+
+  QSettings settings;
+  settings.setValue( "/CodeEditor/pyFont", f.family() );
+
+  changePreviewCodeEditor( mTabWidgetCodeEditorOptions->currentIndex() );
+}
+
+void QgsOptions::removeWidgetCodeEditorPreview()
+{
+  QLayoutItem *child;
+  while (( child = mLayoutCodeEditorPreview->takeAt( 0 ) ) != 0 )
+  {
+    delete child;
+  }
+}
+
 void QgsOptions::addCustomEnvVarRow( QString varName, QString varVal, QString varApply )
 {
   int rowCnt = mCustomVariablesTable->rowCount();
@@ -2204,7 +2287,7 @@ void QgsOptions::saveDefaultDatumTransformations()
 
 void QgsOptions::on_mButtonAddColor_clicked()
 {
-  QColor newColor = QColorDialog::getColor( QColor(), this->parentWidget(), tr( "Select color" ), QColorDialog::ShowAlphaChannel );
+  QColor newColor = QColorDialog::getColor( QColor(), this->parentWidget(), tr( "Select color" ) );
   if ( !newColor.isValid() )
   {
     return;

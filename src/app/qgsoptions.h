@@ -245,6 +245,13 @@ class APP_EXPORT QgsOptions : public QgsOptionsDialogBase, private Ui::QgsOption
     void on_mButtonImportColors_clicked();
     void on_mButtonExportColors_clicked();
 
+    void on_mButtonRemoveColor_clicked();
+    void on_mTreeCustomColors_itemDoubleClicked( QTreeWidgetItem* item, int column );
+    void on_mListWidgetCodeEditorColor_itemClicked( QListWidgetItem* item );
+    void changePreviewCodeEditor( int index );
+    void removeWidgetCodeEditorPreview();
+    void refreshPreview( QFont f );
+
   private:
     QStringList i18nList();
     void initContrastEnhancement( QComboBox *cbox, QString name, QString defaultVal );
