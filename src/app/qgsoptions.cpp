@@ -89,9 +89,16 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WindowFlags fl ) :
   connect( cmbTheme, SIGNAL( textChanged( const QString& ) ), this, SLOT( themeChanged( const QString& ) ) );
 
   connect( mFontFamilyRadioCustom, SIGNAL( toggled( bool ) ), mFontFamilyComboBox, SLOT( setEnabled( bool ) ) );
-  connect( mFontRadioButtonCodeEditor, SIGNAL( toggled( bool ) ), mFontFamilyCodeEditorPy, SLOT( setEnabled( bool ) ) );
+  connect( mFontRadioButtonCodeEditor, SIGNAL( toggled( bool ) ), mFontComboCodeEditorPy, SLOT( setEnabled( bool ) ) );
   connect( mTabWidgetCodeEditorOptions, SIGNAL( currentChanged( int ) ), this, SLOT( changePreviewCodeEditor( int ) ) );
-  connect( mFontFamilyCodeEditorPy, SIGNAL( currentFontChanged( QFont ) ), SLOT( refreshPreview( QFont ) ) );
+  connect( mFontComboCodeEditorPy, SIGNAL( currentFontChanged( QFont ) ), SLOT( refreshFontPreview( QFont ) ) );
+  connect( mFontComboCodeEditorCSS, SIGNAL( currentFontChanged( QFont ) ), SLOT( refreshFontPreview( QFont ) ) );
+  connect( mFontComboCodeEditorHTML, SIGNAL( currentFontChanged( QFont ) ), SLOT( refreshFontPreview( QFont ) ) );
+  connect( mFontComboCodeEditorSQL, SIGNAL( currentFontChanged( QFont ) ), SLOT( refreshFontPreview( QFont ) ) );
+  connect( mFontSizeCodeEditorPy, SIGNAL( valueChanged( int ) ), SLOT( refreshFontSizePreview( int ) ) );
+  connect( mFontSizeCodeEditorCSS, SIGNAL( valueChanged( int ) ), SLOT( refreshFontSizePreview( int ) ) );
+  connect( mFontSizeCodeEditorHTML, SIGNAL( valueChanged( int ) ), SLOT( refreshFontSizePreview( int ) ) );
+  connect( mFontSizeCodeEditorSQL, SIGNAL( valueChanged( int ) ), SLOT( refreshFontSizePreview( int ) ) );
 
   connect( cmbIconSize, SIGNAL( activated( const QString& ) ), this, SLOT( iconSizeChanged( const QString& ) ) );
   connect( cmbIconSize, SIGNAL( highlighted( const QString& ) ), this, SLOT( iconSizeChanged( const QString& ) ) );
@@ -770,7 +777,11 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WindowFlags fl ) :
 
   // set code editor preview at first tab
   changePreviewCodeEditor( 0 );
-  mLayoutColor->setEnabled( false );
+
+  mLayoutColorPy->setEnabled( false );
+  mLayoutColorCSS->setEnabled( false );
+  mLayoutColorHTML->setEnabled( false );
+  mLayoutColorSQL->setEnabled( false );
 
   // setting autocompletion
   QString autoCompletionSourcePy = settings.value( "/CodeEditor/autoCompletionSourcePy", "fromAPIs" ).toString();
@@ -791,10 +802,10 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WindowFlags fl ) :
   mCompletionCaseSensitivePy->setChecked( settings.value( "/CodeEditor/completionCaseSensitivePy", false ).toBool() );
 
   mMonospacedFontCodeEditor->blockSignals( true );
-  mFontFamilyCodeEditorPy->blockSignals( true );
-  mFontFamilyCodeEditorCSS->blockSignals( true );
-  mFontFamilyCodeEditorHTML->blockSignals( true );
-  mFontFamilyCodeEditorSQL->blockSignals( true );
+  mFontComboCodeEditorPy->blockSignals( true );
+  mFontComboCodeEditorCSS->blockSignals( true );
+  mFontComboCodeEditorHTML->blockSignals( true );
+  mFontComboCodeEditorSQL->blockSignals( true );
   mFontRadioButtonCodeEditor->blockSignals( true );
   //mFontSizeCodeEditorPy->blockSignals( true );
   //mFontSizeCodeEditorCSS->blockSignals( true );
@@ -809,28 +820,28 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WindowFlags fl ) :
   QFont *tempPythonEditorFont = new QFont( pythonEditorFont );
   if ( tempPythonEditorFont->family() == pythonEditorFont )
   {
-    mFontFamilyCodeEditorPy->setCurrentFont( *tempPythonEditorFont );
+    mFontComboCodeEditorPy->setCurrentFont( *tempPythonEditorFont );
   }
   delete tempPythonEditorFont;
 
   QFont *tempCSSEditorFont = new QFont( cssEditorFont );
   if ( tempCSSEditorFont->family() == cssEditorFont )
   {
-    mFontFamilyCodeEditorCSS->setCurrentFont( *tempCSSEditorFont );
+    mFontComboCodeEditorCSS->setCurrentFont( *tempCSSEditorFont );
   }
   delete tempCSSEditorFont;
 
   QFont *tempHTMLEditorFont = new QFont( htmlEditorFont );
   if ( tempHTMLEditorFont->family() == htmlEditorFont )
   {
-    mFontFamilyCodeEditorHTML->setCurrentFont( *tempHTMLEditorFont );
+    mFontComboCodeEditorHTML->setCurrentFont( *tempHTMLEditorFont );
   }
   delete tempHTMLEditorFont;
 
   QFont *tempSQLEditorFont = new QFont( sqlEditorFont );
   if ( tempSQLEditorFont->family() == sqlEditorFont )
   {
-    mFontFamilyCodeEditorSQL->setCurrentFont( *tempSQLEditorFont );
+    mFontComboCodeEditorSQL->setCurrentFont( *tempSQLEditorFont );
   }
   delete tempSQLEditorFont;
 
@@ -840,7 +851,7 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WindowFlags fl ) :
 
   mMonospacedFontCodeEditor->setChecked( settings.value( "/CodeEditor/pyMonospaceFont" ).toBool() );
   mFontRadioButtonCodeEditor->setChecked( !mMonospacedFontCodeEditor->isChecked() );
-  mFontFamilyCodeEditorPy->setEnabled( !mMonospacedFontCodeEditor->isChecked() );
+  mFontComboCodeEditorPy->setEnabled( !mMonospacedFontCodeEditor->isChecked() );
 
   // font size
   mFontSizeCodeEditorPy->setValue( settings.value( "/CodeEditor/pyFontSize", 10 ).toInt() );
@@ -848,10 +859,10 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WindowFlags fl ) :
   mFontSizeCodeEditorHTML->setValue( settings.value( "/CodeEditor/htmlFontSize", 10 ).toInt() );
   mFontSizeCodeEditorSQL->setValue( settings.value( "/CodeEditor/sqlFontSize", 10 ).toInt() );
 
-  mFontFamilyCodeEditorPy->blockSignals( false );
-  mFontFamilyCodeEditorCSS->blockSignals( false );
-  mFontFamilyCodeEditorHTML->blockSignals( false );
-  mFontFamilyCodeEditorSQL->blockSignals( false );
+  mFontComboCodeEditorPy->blockSignals( false );
+  mFontComboCodeEditorCSS->blockSignals( false );
+  mFontComboCodeEditorHTML->blockSignals( false );
+  mFontComboCodeEditorSQL->blockSignals( false );
   mMonospacedFontCodeEditor->blockSignals( false );
   mFontRadioButtonCodeEditor->blockSignals( false );
   //mFontSizeCodeEditorPy->blockSignals( false );
@@ -1470,10 +1481,10 @@ void QgsOptions::saveOptions()
   settings.setValue( "/CodeEditor/completionCaseSensitivePy", mCompletionCaseSensitivePy->isChecked() );
 
   settings.setValue( "/CodeEditor/pyMonospaceFont", mMonospacedFontCodeEditor->isChecked() );
-  QString pythonEditorFont = mFontFamilyCodeEditorPy->currentFont().family();
-  QString cssEditorFont = mFontFamilyCodeEditorCSS->currentFont().family();
-  QString htmlEditorFont = mFontFamilyCodeEditorHTML->currentFont().family();
-  QString sqlEditorFont = mFontFamilyCodeEditorSQL->currentFont().family();
+  QString pythonEditorFont = mFontComboCodeEditorPy->currentFont().family();
+  QString cssEditorFont = mFontComboCodeEditorCSS->currentFont().family();
+  QString htmlEditorFont = mFontComboCodeEditorHTML->currentFont().family();
+  QString sqlEditorFont = mFontComboCodeEditorSQL->currentFont().family();
   settings.setValue( "/CodeEditor/pyFont", pythonEditorFont );
   settings.setValue( "/CodeEditor/cssFont", cssEditorFont );
   settings.setValue( "/CodeEditor/htmlFont", htmlEditorFont );
@@ -1724,7 +1735,7 @@ void QgsOptions::on_mCustomVariablesChkBx_toggled( bool chkd )
 
 void QgsOptions::on_mListWidgetCodeEditorColor_itemClicked( QListWidgetItem* item )
 {
-  mLayoutColor->setEnabled( true );
+  mLayoutColorPy->setEnabled( true );
 
   QSettings settings;
   const QString& s = item->text();
@@ -1775,15 +1786,67 @@ void QgsOptions::changePreviewCodeEditor( int index )
   }
 }
 
-void QgsOptions::refreshPreview( QFont f )
+void QgsOptions::refreshFontPreview( QFont f )
 {
-  QgsDebugMsg( f.family() );
+  //QgsDebugMsg( f.family() );
+  QSettings settings;
 
   removeWidgetCodeEditorPreview();
+  switch ( mTabWidgetCodeEditorOptions->currentIndex() )
+  {
+    case 0: //Python
+    {
+      settings.setValue( "/CodeEditor/pyFont", f.family() );
+      break;
+    }
+    case 1: //CSS
+    {
+      settings.setValue( "/CodeEditor/cssFont", f.family() );
+      break;
+    }
+    case 2: //HTML
+    {
+      settings.setValue( "/CodeEditor/htmlFont", f.family() );
+      break;
+    }
+    case 3: //SQL
+    {
+      settings.setValue( "/CodeEditor/sqlFont", f.family() );
+      break;
+    }
+  }
+  changePreviewCodeEditor( mTabWidgetCodeEditorOptions->currentIndex() );
+}
 
+void QgsOptions::refreshFontSizePreview( int size )
+{
+  //QgsDebugMsg( f.family() );
   QSettings settings;
-  settings.setValue( "/CodeEditor/pyFont", f.family() );
 
+  removeWidgetCodeEditorPreview();
+  switch ( mTabWidgetCodeEditorOptions->currentIndex() )
+  {
+    case 0: //Python
+    {
+      settings.setValue( "/CodeEditor/pyFontSize", size );
+      break;
+    }
+    case 1: //CSS
+    {
+      settings.setValue( "/CodeEditor/cssFontSize", size );
+      break;
+    }
+    case 2: //HTML
+    {
+      settings.setValue( "/CodeEditor/htmlFontSize", size );
+      break;
+    }
+    case 3: //SQL
+    {
+      settings.setValue( "/CodeEditor/sqlFontSize", size );
+      break;
+    }
+  }
   changePreviewCodeEditor( mTabWidgetCodeEditorOptions->currentIndex() );
 }
 
@@ -2287,7 +2350,7 @@ void QgsOptions::saveDefaultDatumTransformations()
 
 void QgsOptions::on_mButtonAddColor_clicked()
 {
-  QColor newColor = QColorDialog::getColor( QColor(), this->parentWidget(), tr( "Select color" ) );
+  QColor newColor = QColorDialog::getColor( QColor(), this->parentWidget(), tr( "Select color" ), QColorDialog::ShowAlphaChannel );
   if ( !newColor.isValid() )
   {
     return;

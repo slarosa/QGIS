@@ -250,7 +250,8 @@ class APP_EXPORT QgsOptions : public QgsOptionsDialogBase, private Ui::QgsOption
     void on_mListWidgetCodeEditorColor_itemClicked( QListWidgetItem* item );
     void changePreviewCodeEditor( int index );
     void removeWidgetCodeEditorPreview();
-    void refreshPreview( QFont f );
+    void refreshFontPreview( QFont f );
+    void refreshFontSizePreview( int size );
 
   private:
     QStringList i18nList();
