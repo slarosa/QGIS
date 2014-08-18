@@ -90,6 +90,7 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WindowFlags fl ) :
   connect( cmbTheme, SIGNAL( textChanged( const QString& ) ), this, SLOT( themeChanged( const QString& ) ) );
 
   connect( mFontFamilyRadioCustom, SIGNAL( toggled( bool ) ), mFontFamilyComboBox, SLOT( setEnabled( bool ) ) );
+
   connect( mFontRadioButtonCodeEditor, SIGNAL( toggled( bool ) ), mFontComboCodeEditorPy, SLOT( setEnabled( bool ) ) );
   connect( mTabWidgetCodeEditorOptions, SIGNAL( currentChanged( int ) ), this, SLOT( changePreviewCodeEditor( int ) ) );
   connect( mFontComboCodeEditorPy, SIGNAL( currentFontChanged( QFont ) ), SLOT( refreshFontPreview( QFont ) ) );
@@ -101,6 +102,11 @@ QgsOptions::QgsOptions( QWidget *parent, Qt::WindowFlags fl ) :
   connect( mFontSizeCodeEditorHTML, SIGNAL( valueChanged( int ) ), SLOT( refreshFontSizePreview( int ) ) );
   connect( mFontSizeCodeEditorSQL, SIGNAL( valueChanged( int ) ), SLOT( refreshFontSizePreview( int ) ) );
   connect( mColorCodeEditorPy, SIGNAL( colorChanged( QColor ) ), SLOT( setColorPythonLexer( QColor ) ) );
+  connect( mColorCodeEditorCSS, SIGNAL( colorChanged( QColor ) ), SLOT( setColorCSSLexer( QColor ) ) );
+  connect( mColorCodeEditorHTML, SIGNAL( colorChanged( QColor ) ), SLOT( setColorHTMLLexer( QColor ) ) );
+  connect( mColorCodeEditorSQL, SIGNAL( colorChanged( QColor ) ), SLOT( setColorSQLLexer( QColor ) ) );
+  connect( mCheckBoxBoldCodeEditorPy, SIGNAL( toggled( bool ) ), SLOT( setFontBoldPreview( bool ) ) );
+  connect( mCheckBoxItalicCodeEditorPy, SIGNAL( toggled( bool ) ), SLOT( setFontItalicPreview( bool ) ) );
 
   connect( cmbIconSize, SIGNAL( activated( const QString& ) ), this, SLOT( iconSizeChanged( const QString& ) ) );
   connect( cmbIconSize, SIGNAL( highlighted( const QString& ) ), this, SLOT( iconSizeChanged( const QString& ) ) );
@@ -1735,47 +1741,123 @@ void QgsOptions::on_mCustomVariablesChkBx_toggled( bool chkd )
   mCustomVariablesTable->setEnabled( chkd );
 }
 
-void QgsOptions::on_mListWidgetCodeEditorColor_itemClicked( QListWidgetItem* item )
+void QgsOptions::on_mListWidgetCodeEditorColorPy_itemClicked( QListWidgetItem* item )
 {
   mLayoutColorPy->setEnabled( true );
 
   QSettings settings;
   const QString& s = item->text();
   const QColor& color = settings.value( "/CodeEditor/pyColor" + s ).value<QColor>();
-  QgsDebugMsg( QString("%1, %2, %3").arg(color.red()).arg(color.green()).arg(color.blue()) );
+  //QgsDebugMsg( QString("%1, %2, %3").arg(color.red()).arg(color.green()).arg(color.blue()) );
   if ( color.isValid() )
     mColorCodeEditorPy->setColor( color );
+  mCheckBoxBoldCodeEditorPy->setChecked( settings.value( "/CodeEditor/pyFontBold" + s, false ).toBool() );
+  mCheckBoxItalicCodeEditorPy->setChecked( settings.value( "/CodeEditor/pyFontItalic" + s, false ).toBool() );
+}
+
+void QgsOptions::on_mListWidgetCodeEditorColorCSS_itemClicked( QListWidgetItem* item )
+{
+  mLayoutColorCSS->setEnabled( true );
+
+  QSettings settings;
+  const QString& s = item->text();
+  const QColor& color = settings.value( "/CodeEditor/cssColor" + s ).value<QColor>();
+  //QgsDebugMsg( QString("%1, %2, %3").arg(color.red()).arg(color.green()).arg(color.blue()) );
+  if ( color.isValid() )
+    mColorCodeEditorCSS->setColor( color );
+}
+
+void QgsOptions::on_mListWidgetCodeEditorColorHTML_itemClicked( QListWidgetItem* item )
+{
+  mLayoutColorHTML->setEnabled( true );
+
+  QSettings settings;
+  const QString& s = item->text();
+  const QColor& color = settings.value( "/CodeEditor/htmlColor" + s ).value<QColor>();
+  //QgsDebugMsg( QString("%1, %2, %3").arg(color.red()).arg(color.green()).arg(color.blue()) );
+  if ( color.isValid() )
+    mColorCodeEditorHTML->setColor( color );
+}
+
+void QgsOptions::on_mListWidgetCodeEditorColorSQL_itemClicked( QListWidgetItem* item )
+{
+  mLayoutColorSQL->setEnabled( true );
+
+  QSettings settings;
+  const QString& s = item->text();
+  const QColor& color = settings.value( "/CodeEditor/sqlColor" + s ).value<QColor>();
+  //QgsDebugMsg( QString("%1, %2, %3").arg(color.red()).arg(color.green()).arg(color.blue()) );
+  if ( color.isValid() )
+    mColorCodeEditorSQL->setColor( color );
 }
 
 void QgsOptions::setColorPythonLexer( const QColor& color )
 {
-  QgsDebugMsg( QString("%1, %2, %3").arg(color.red()).arg(color.green()).arg(color.blue()) );
-  QListWidgetItem* item = mListWidgetCodeEditorColor->selectedItems().takeAt( 0 );
+  //QgsDebugMsg( QString("%1, %2, %3").arg(color.red()).arg(color.green()).arg(color.blue()) );
+  QListWidgetItem* item = mListWidgetCodeEditorColorPy->selectedItems().takeAt( 0 );
   const QString& s = item->text();
-  QgsDebugMsg( s );
+  //QgsDebugMsg( s );
   QSettings settings;
   removeWidgetCodeEditorPreview();
   settings.setValue( "/CodeEditor/pyColor" + s, QVariant( color ) );
   changePreviewCodeEditor( mTabWidgetCodeEditorOptions->currentIndex() );
 }
 
+void QgsOptions::setColorCSSLexer( const QColor& color )
+{
+  //QgsDebugMsg( QString("%1, %2, %3").arg(color.red()).arg(color.green()).arg(color.blue()) );
+  QListWidgetItem* item = mListWidgetCodeEditorColorCSS->selectedItems().takeAt( 0 );
+  const QString& s = item->text();
+  //QgsDebugMsg( s );
+  QSettings settings;
+  removeWidgetCodeEditorPreview();
+  settings.setValue( "/CodeEditor/cssColor" + s, QVariant( color ) );
+  changePreviewCodeEditor( mTabWidgetCodeEditorOptions->currentIndex() );
+}
+
+void QgsOptions::setColorHTMLLexer( const QColor& color )
+{
+  //QgsDebugMsg( QString("%1, %2, %3").arg(color.red()).arg(color.green()).arg(color.blue()) );
+  QListWidgetItem* item = mListWidgetCodeEditorColorHTML->selectedItems().takeAt( 0 );
+  const QString& s = item->text();
+  //QgsDebugMsg( s );
+  QSettings settings;
+  removeWidgetCodeEditorPreview();
+  settings.setValue( "/CodeEditor/htmlColor" + s, QVariant( color ) );
+  changePreviewCodeEditor( mTabWidgetCodeEditorOptions->currentIndex() );
+}
+
+void QgsOptions::setColorSQLLexer( const QColor& color )
+{
+  //QgsDebugMsg( QString("%1, %2, %3").arg(color.red()).arg(color.green()).arg(color.blue()) );
+  QListWidgetItem* item = mListWidgetCodeEditorColorSQL->selectedItems().takeAt( 0 );
+  const QString& s = item->text();
+  //QgsDebugMsg( s );
+  QSettings settings;
+  removeWidgetCodeEditorPreview();
+  settings.setValue( "/CodeEditor/sqlColor" + s, QVariant( color ) );
+  changePreviewCodeEditor( mTabWidgetCodeEditorOptions->currentIndex() );
+}
+
 void QgsOptions::changePreviewCodeEditor( int index )
 {
+  removeWidgetCodeEditorPreview();
   // set text to preview
   switch ( index )
   {
     case 0: //Python
     {
-      removeWidgetCodeEditorPreview();
       QgsCodeEditorPython* mCodeEditorPreviewPy = new QgsCodeEditorPython( mCodeEditorPreview );
       mCodeEditorPreviewPy->setReadOnly( true );
-      mCodeEditorPreviewPy->setText( "def foo():\n\tpass\n" );
+      mCodeEditorPreviewPy->setText( "@qgsfunction\ndef foo():"
+                                     "\n\t'''This is a function'''"
+                                     "\n\t# this is a comment"
+                                     "\n\tpass\n" );
       mLayoutCodeEditorPreview->addWidget( mCodeEditorPreviewPy );
       break;
     }
     case 1: //CSS
     {
-      removeWidgetCodeEditorPreview();
       QgsCodeEditorCSS* mCodeEditorPreviewCSS = new QgsCodeEditorCSS( mCodeEditorPreview );
       mCodeEditorPreviewCSS->setReadOnly( true );
       mCodeEditorPreviewCSS->setText( "#foo {\n\ttext-align: center;\n" );
@@ -1784,7 +1866,6 @@ void QgsOptions::changePreviewCodeEditor( int index )
     }
     case 2: //HTML
     {
-      removeWidgetCodeEditorPreview();
       QgsCodeEditorHTML* mCodeEditorPreviewHTML = new QgsCodeEditorHTML( mCodeEditorPreview );
       mCodeEditorPreviewHTML->setReadOnly( true );
       mCodeEditorPreviewHTML->setText( "<div id='foo'></div>\n\t<h2>QGIS is Rock!</h2>\n" );
@@ -1793,7 +1874,6 @@ void QgsOptions::changePreviewCodeEditor( int index )
     }
     case 3: //SQL
     {
-      removeWidgetCodeEditorPreview();
       QgsCodeEditorSQL* mCodeEditorPreviewSQL = new QgsCodeEditorSQL( mCodeEditorPreview );
       mCodeEditorPreviewSQL->setReadOnly( true );
       mCodeEditorPreviewSQL->setText( "SELECT * FROM foo WHERE index = 0;" );
@@ -1869,12 +1949,12 @@ void QgsOptions::refreshFontSizePreview( int size )
 
 void QgsOptions::on_mMonospacedFontCodeEditor_released()
 {
-   refreshFontPreview( QFont("Monospace") );
+  refreshFontPreview( QFont( "Monospace" ) );
 }
 
 void QgsOptions::on_mFontRadioButtonCodeEditor_released()
 {
-   refreshFontPreview( mFontComboCodeEditorPy->currentFont() );
+  refreshFontPreview( mFontComboCodeEditorPy->currentFont() );
 }
 
 void QgsOptions::removeWidgetCodeEditorPreview()
@@ -1882,8 +1962,29 @@ void QgsOptions::removeWidgetCodeEditorPreview()
   QLayoutItem *child;
   while (( child = mLayoutCodeEditorPreview->takeAt( 0 ) ) != 0 )
   {
+    mLayoutCodeEditorPreview->removeItem( child );
     delete child;
   }
+}
+
+void QgsOptions::setFontItalicPreview( bool isItalic )
+{
+  QListWidgetItem* item = mListWidgetCodeEditorColorPy->selectedItems().takeAt( 0 );
+  const QString& s = item->text();
+  QSettings settings;
+  removeWidgetCodeEditorPreview();
+  settings.setValue( "/CodeEditor/pyFontItalic" + s, isItalic );
+  changePreviewCodeEditor( mTabWidgetCodeEditorOptions->currentIndex() );
+}
+
+void QgsOptions::setFontBoldPreview( bool isBold )
+{
+  QListWidgetItem* item = mListWidgetCodeEditorColorPy->selectedItems().takeAt( 0 );
+  const QString& s = item->text();
+  QSettings settings;
+  removeWidgetCodeEditorPreview();
+  settings.setValue( "/CodeEditor/pyFontBold" + s, isBold );
+  changePreviewCodeEditor( mTabWidgetCodeEditorOptions->currentIndex() );
 }
 
 void QgsOptions::addCustomEnvVarRow( QString varName, QString varVal, QString varApply )

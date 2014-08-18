@@ -53,6 +53,22 @@ void QgsCodeEditorPython::setSciLexerPython()
   setWhitespaceVisibility( QsciScintilla::WsVisibleAfterIndent );
 
   QSettings settings;
+  // autocomplete
+  setAutoCompletionThreshold( settings.value( "/CodeEditor/completionThresholdPy", 2 ).toInt() );
+  QString acs = settings.value( "/CodeEditor/autoCompletionSourcePy", "fromAPIs" ).toString();
+  if ( acs == "fromDoc" )
+  {
+    setAutoCompletionSource( QsciScintilla::AcsDocument );
+  }
+  else if ( acs == "fromDocAPIs" )
+  {
+    setAutoCompletionSource( QsciScintilla::AcsAll );
+  }
+  else
+  {
+    setAutoCompletionSource( QsciScintilla::AcsAPIs );
+  }
+
   bool monospaceFont = settings.value( "/CodeEditor/pyMonospaceFont", false ).toBool();
   QFont mFont;
   QString pyFont = settings.value( "/CodeEditor/pyFont" ).toString();
@@ -66,10 +82,11 @@ void QgsCodeEditorPython::setSciLexerPython()
   }
 
   mFont.setPointSize( settings.value( "/CodeEditor/pyFontSize", 10 ).toInt() );
+  //mFont.setItalic( true );
 
   QsciLexerPython* pyLexer = new QsciLexerPython();
   pyLexer->setDefaultFont( mFont );
-  pyLexer->setFont( mFont, 1 ); // comment
+  pyLexer->setFont( setFontStyle( mFont, false, false ) , 1 ); // comment
   pyLexer->setFont( mFont, 3 ); // singlequotes
   pyLexer->setFont( mFont, 4 ); // doublequotes
   pyLexer->setFont( mFont, 6 ); // triplequotes
@@ -148,4 +165,18 @@ bool QgsCodeEditorPython::loadScript( const QString &script )
 
   setSciLexerPython();
   return true;
+}
+
+QFont QgsCodeEditorPython::setFontStyle( const QFont& font, bool isItalic, bool isBold ) const
+{
+  QFont styledFont = font;
+  if ( isItalic )
+  {
+    styledFont.setItalic( true );
+  }
+  if ( isBold )
+  {
+    styledFont.setBold( true );
+  }
+  return styledFont;
 }

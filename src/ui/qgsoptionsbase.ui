@@ -3421,87 +3421,79 @@
                      </attribute>
                      <layout class="QGridLayout" name="gridLayout_16">
                       <item row="0" column="0">
-                       <layout class="QHBoxLayout" name="horizontalLayout_45">
-                        <item>
-                         <widget class="QLabel" name="label_4">
-                          <property name="text">
-                           <string>Font</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <spacer name="horizontalSpacer_47">
-                          <property name="orientation">
-                           <enum>Qt::Horizontal</enum>
-                          </property>
-                          <property name="sizeHint" stdset="0">
-                           <size>
-                            <width>40</width>
-                            <height>20</height>
-                           </size>
-                          </property>
-                         </spacer>
-                        </item>
-                        <item>
-                         <widget class="QRadioButton" name="mMonospacedFontCodeEditor">
-                          <property name="text">
-                           <string>Monospaced font</string>
-                          </property>
-                          <property name="checked">
-                           <bool>true</bool>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <layout class="QHBoxLayout" name="horizontalLayout_37">
-                          <item>
-                           <widget class="QRadioButton" name="mFontRadioButtonCodeEditor">
-                            <property name="text">
-                             <string/>
-                            </property>
-                           </widget>
-                          </item>
-                          <item>
-                           <widget class="QFontComboBox" name="mFontComboCodeEditorPy">
-                            <property name="enabled">
-                             <bool>false</bool>
-                            </property>
-                            <property name="minimumSize">
-                             <size>
-                              <width>241</width>
-                              <height>0</height>
-                             </size>
-                            </property>
-                            <property name="editable">
-                             <bool>true</bool>
-                            </property>
-                           </widget>
-                          </item>
-                         </layout>
-                        </item>
-                        <item>
-                         <widget class="QLabel" name="label_41">
-                          <property name="text">
-                           <string>Size</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QSpinBox" name="mFontSizeCodeEditorPy">
-                          <property name="minimum">
-                           <number>4</number>
-                          </property>
-                          <property name="maximum">
-                           <number>20</number>
-                          </property>
-                          <property name="value">
-                           <number>10</number>
-                          </property>
-                         </widget>
-                        </item>
-                       </layout>
+                       <widget class="QLabel" name="label_4">
+                        <property name="text">
+                         <string>Font</string>
+                        </property>
+                       </widget>
                       </item>
-                      <item row="1" column="0">
+                      <item row="0" column="1">
+                       <spacer name="horizontalSpacer_47">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>53</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                      <item row="0" column="2">
+                       <widget class="QRadioButton" name="mMonospacedFontCodeEditor">
+                        <property name="text">
+                         <string>Monospaced font</string>
+                        </property>
+                        <property name="checked">
+                         <bool>true</bool>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="3">
+                       <widget class="QRadioButton" name="mFontRadioButtonCodeEditor">
+                        <property name="text">
+                         <string/>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="4">
+                       <widget class="QFontComboBox" name="mFontComboCodeEditorPy">
+                        <property name="enabled">
+                         <bool>false</bool>
+                        </property>
+                        <property name="minimumSize">
+                         <size>
+                          <width>241</width>
+                          <height>0</height>
+                         </size>
+                        </property>
+                        <property name="editable">
+                         <bool>true</bool>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="5">
+                       <widget class="QLabel" name="label_41">
+                        <property name="text">
+                         <string>Size</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="6">
+                       <widget class="QSpinBox" name="mFontSizeCodeEditorPy">
+                        <property name="minimum">
+                         <number>4</number>
+                        </property>
+                        <property name="maximum">
+                         <number>20</number>
+                        </property>
+                        <property name="value">
+                         <number>10</number>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="1" column="0" colspan="7">
                        <widget class="QgsCollapsibleGroupBox" name="groupBox_25">
                         <property name="title">
                          <string>Autocompletion</string>
@@ -3584,14 +3576,14 @@
                         </layout>
                        </widget>
                       </item>
-                      <item row="2" column="0">
+                      <item row="2" column="0" colspan="7">
                        <widget class="QgsCollapsibleGroupBox" name="groupBox_26">
                         <property name="title">
                          <string>Color</string>
                         </property>
                         <layout class="QGridLayout" name="gridLayout_27">
                          <item row="0" column="0">
-                          <widget class="QListWidget" name="mListWidgetCodeEditorColor">
+                          <widget class="QListWidget" name="mListWidgetCodeEditorColorPy">
                            <item>
                             <property name="text">
                              <string>Default</string>
@@ -3647,14 +3639,14 @@
                                </widget>
                               </item>
                               <item>
-                               <widget class="QCheckBox" name="mCheckBoxBoldCodeEditor">
+                               <widget class="QCheckBox" name="mCheckBoxBoldCodeEditorPy">
                                 <property name="text">
                                  <string>Bold</string>
                                 </property>
                                </widget>
                               </item>
                               <item>
-                               <widget class="QCheckBox" name="mCheckBoxItalicCodeEditor">
+                               <widget class="QCheckBox" name="mCheckBoxItalicCodeEditorPy">
                                 <property name="text">
                                  <string>Italic</string>
                                 </property>
@@ -3749,15 +3741,25 @@
                         </property>
                         <layout class="QGridLayout" name="gridLayout_30">
                          <item row="0" column="0">
-                          <widget class="QListWidget" name="mListWidgetCodeEditorColor_2">
+                          <widget class="QListWidget" name="mListWidgetCodeEditorColorCSS">
                            <item>
                             <property name="text">
-                             <string>Keyword</string>
+                             <string>Default</string>
                             </property>
                            </item>
                            <item>
                             <property name="text">
-                             <string>Default</string>
+                             <string>Tag</string>
+                            </property>
+                           </item>
+                           <item>
+                            <property name="text">
+                             <string>ClassSelector</string>
+                            </property>
+                           </item>
+                           <item>
+                            <property name="text">
+                             <string>IdSelector</string>
                             </property>
                            </item>
                           </widget>
@@ -3777,7 +3779,7 @@
                             <item row="0" column="0">
                              <layout class="QVBoxLayout" name="verticalLayout_42">
                               <item>
-                               <widget class="QgsColorButtonV2" name="mColorCodeEditorPy_2">
+                               <widget class="QgsColorButtonV2" name="mColorCodeEditorCSS">
                                 <property name="minimumSize">
                                  <size>
                                   <width>120</width>
@@ -3892,15 +3894,25 @@
                         </property>
                         <layout class="QGridLayout" name="gridLayout_31">
                          <item row="0" column="0">
-                          <widget class="QListWidget" name="mListWidgetCodeEditorColor_3">
+                          <widget class="QListWidget" name="mListWidgetCodeEditorColorHTML">
                            <item>
                             <property name="text">
-                             <string>Keyword</string>
+                             <string>Default</string>
                             </property>
                            </item>
                            <item>
                             <property name="text">
-                             <string>Default</string>
+                             <string>Tag</string>
+                            </property>
+                           </item>
+                           <item>
+                            <property name="text">
+                             <string>Attribute</string>
+                            </property>
+                           </item>
+                           <item>
+                            <property name="text">
+                             <string>Number</string>
                             </property>
                            </item>
                           </widget>
@@ -3920,7 +3932,7 @@
                             <item row="0" column="0">
                              <layout class="QVBoxLayout" name="verticalLayout_43">
                               <item>
-                               <widget class="QgsColorButtonV2" name="mColorCodeEditorPy_3">
+                               <widget class="QgsColorButtonV2" name="mColorCodeEditorHTML">
                                 <property name="minimumSize">
                                  <size>
                                   <width>120</width>
@@ -4035,7 +4047,12 @@
                         </property>
                         <layout class="QGridLayout" name="gridLayout_34">
                          <item row="0" column="0">
-                          <widget class="QListWidget" name="mListWidgetCodeEditorColor_4">
+                          <widget class="QListWidget" name="mListWidgetCodeEditorColorSQL">
+                           <item>
+                            <property name="text">
+                             <string>Default</string>
+                            </property>
+                           </item>
                            <item>
                             <property name="text">
                              <string>Keyword</string>
@@ -4043,7 +4060,12 @@
                            </item>
                            <item>
                             <property name="text">
-                             <string>Default</string>
+                             <string>Number</string>
+                            </property>
+                           </item>
+                           <item>
+                            <property name="text">
+                             <string>Comment</string>
                             </property>
                            </item>
                           </widget>
@@ -4063,7 +4085,7 @@
                             <item row="0" column="0">
                              <layout class="QVBoxLayout" name="verticalLayout_44">
                               <item>
-                               <widget class="QgsColorButtonV2" name="mColorCodeEditorPy_4">
+                               <widget class="QgsColorButtonV2" name="mColorCodeEditorSQL">
                                 <property name="minimumSize">
                                  <size>
                                   <width>120</width>

@@ -246,7 +246,11 @@ class APP_EXPORT QgsOptions : public QgsOptionsDialogBase, private Ui::QgsOption
     void on_mButtonExportColors_clicked();
 
     void on_mButtonRemoveColor_clicked();
-    void on_mListWidgetCodeEditorColor_itemClicked( QListWidgetItem* item );
+
+    void on_mListWidgetCodeEditorColorPy_itemClicked( QListWidgetItem* item );
+    void on_mListWidgetCodeEditorColorCSS_itemClicked( QListWidgetItem* item );
+    void on_mListWidgetCodeEditorColorHTML_itemClicked( QListWidgetItem* item );
+    void on_mListWidgetCodeEditorColorSQL_itemClicked( QListWidgetItem* item );
     void changePreviewCodeEditor( int index );
     void removeWidgetCodeEditorPreview();
     void refreshFontPreview( QFont f );
@@ -254,6 +258,11 @@ class APP_EXPORT QgsOptions : public QgsOptionsDialogBase, private Ui::QgsOption
     void on_mMonospacedFontCodeEditor_released();
     void on_mFontRadioButtonCodeEditor_released();
     void setColorPythonLexer( const QColor& color );
+    void setColorCSSLexer( const QColor& color );
+    void setColorHTMLLexer( const QColor& color );
+    void setColorSQLLexer( const QColor& color );
+    void setFontItalicPreview( bool isItalic );
+    void setFontBoldPreview( bool isBold );
 
   private:
     QStringList i18nList();
