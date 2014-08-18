@@ -255,14 +255,9 @@ class APP_EXPORT QgsOptions : public QgsOptionsDialogBase, private Ui::QgsOption
     void refreshFontSizePreview( int size );
     void on_mMonospacedFontCodeEditor_released();
     void on_mFontRadioButtonCodeEditor_released();
-    void setColorPythonLexer( const QColor& color );
-    void setColorCSSLexer( const QColor& color );
-    void setColorHTMLLexer( const QColor& color );
-    void setColorSQLLexer( const QColor& color );
-    void setFontItalicPreviewPy( bool isItalic );
-    void setFontBoldPreviewPy( bool isBold );
-    void setFontItalicPreviewCSS( bool isItalic );
-    void setFontBoldPreviewCSS( bool isBold );
+    void setColorLexerPreview( const QColor& color );
+    void setFontItalicPreview( bool isItalic );
+    void setFontBoldPreview( bool isBold );
 
   private:
     QStringList i18nList();
