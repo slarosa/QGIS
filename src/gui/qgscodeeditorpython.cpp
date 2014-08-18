@@ -86,7 +86,8 @@ void QgsCodeEditorPython::setSciLexerPython()
 
   QsciLexerPython* pyLexer = new QsciLexerPython();
   pyLexer->setDefaultFont( mFont );
-  pyLexer->setFont( setFontStyle( mFont, false, false ) , 1 ); // comment
+  pyLexer->setFont( setFontStyle( mFont, settings.value( "/CodeEditor/pyFontItalicComment", false ).toBool(),
+                                  settings.value( "/CodeEditor/pyFontBoldComment", false ).toBool() ) , 1 ); // comment
   pyLexer->setFont( mFont, 3 ); // singlequotes
   pyLexer->setFont( mFont, 4 ); // doublequotes
   pyLexer->setFont( mFont, 6 ); // triplequotes

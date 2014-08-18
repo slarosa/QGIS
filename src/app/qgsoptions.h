@@ -245,8 +245,6 @@ class APP_EXPORT QgsOptions : public QgsOptionsDialogBase, private Ui::QgsOption
     void on_mButtonImportColors_clicked();
     void on_mButtonExportColors_clicked();
 
-    void on_mButtonRemoveColor_clicked();
-
     void on_mListWidgetCodeEditorColorPy_itemClicked( QListWidgetItem* item );
     void on_mListWidgetCodeEditorColorCSS_itemClicked( QListWidgetItem* item );
     void on_mListWidgetCodeEditorColorHTML_itemClicked( QListWidgetItem* item );
@@ -261,8 +259,10 @@ class APP_EXPORT QgsOptions : public QgsOptionsDialogBase, private Ui::QgsOption
     void setColorCSSLexer( const QColor& color );
     void setColorHTMLLexer( const QColor& color );
     void setColorSQLLexer( const QColor& color );
-    void setFontItalicPreview( bool isItalic );
-    void setFontBoldPreview( bool isBold );
+    void setFontItalicPreviewPy( bool isItalic );
+    void setFontBoldPreviewPy( bool isBold );
+    void setFontItalicPreviewCSS( bool isItalic );
+    void setFontBoldPreviewCSS( bool isBold );
 
   private:
     QStringList i18nList();

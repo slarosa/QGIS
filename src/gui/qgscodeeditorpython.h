@@ -50,8 +50,8 @@ class GUI_EXPORT QgsCodeEditorPython : public QgsCodeEditor
     bool loadScript( const QString &script );
 
     /** Set the style for il font
-     * @param font THe font
-     * @param isItalic Whether setting the font to ialic
+     * @param font The font
+     * @param isItalic Whether setting the font to italic
      * @param isBold Whether setting the font to bold
      */
     QFont setFontStyle( const QFont& font, bool isItalic, bool isBold ) const;

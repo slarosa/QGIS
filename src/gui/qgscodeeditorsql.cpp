@@ -50,5 +50,16 @@ void QgsCodeEditorSQL::setSciLexerSQL()
   mFont.setPointSize( settings.value( "/CodeEditor/sqlFontSize", 10 ).toInt() );
   sqlLexer->setDefaultFont( mFont );
 
+  sqlLexer->setFont( mFont, 0 ); // default
+  sqlLexer->setFont( mFont, 1 ); // comment
+  sqlLexer->setFont( mFont, 2 ); // commentline
+  sqlLexer->setFont( mFont, 4 ); // number
+  sqlLexer->setFont( mFont, 5 ); // keyword
+  sqlLexer->setColor( settings.value( "/CodeEditor/sqlColorDefault", QColor( Qt::black ) ).value<QColor>(), 0 );
+  sqlLexer->setColor( settings.value( "/CodeEditor/sqlColorComment", QColor( Qt::gray ) ).value<QColor>(), 1 );
+  sqlLexer->setColor( settings.value( "/CodeEditor/sqlColorCommentLine", QColor( Qt::gray ) ).value<QColor>(), 2 );
+  sqlLexer->setColor( settings.value( "/CodeEditor/sqlColorNumber", QColor( Qt::blue ) ).value<QColor>(), 4 );
+  sqlLexer->setColor( settings.value( "/CodeEditor/sqlColorKeyword", QColor( Qt::darkBlue ) ).value<QColor>(), 5 );
+
   setLexer( sqlLexer );
 }

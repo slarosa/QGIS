@@ -54,6 +54,10 @@ void QgsCodeEditorCSS::setSciLexerCSS()
   cssLexer->setFont( mFont, 1 ); // tag
   cssLexer->setFont( mFont, 2 ); // class selector
   cssLexer->setFont( mFont, 10 ); // id selector
+  cssLexer->setColor( settings.value( "/CodeEditor/cssColorDefault", QColor( Qt::black ) ).value<QColor>(), 0 );
+  cssLexer->setColor( settings.value( "/CodeEditor/cssColorTag", QColor( Qt::red ) ).value<QColor>(), 1 );
+  cssLexer->setColor( settings.value( "/CodeEditor/cssColorClassSelector", QColor( Qt::darkGreen ) ).value<QColor>(), 2 );
+  cssLexer->setColor( settings.value( "/CodeEditor/cssColorIdSelector", QColor( Qt::darkBlue ) ).value<QColor>(), 10 );
 
   setLexer( cssLexer );
 }
