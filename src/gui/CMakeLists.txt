@@ -225,6 +225,7 @@ SET(QGIS_GUI_SRCS
   qgsscalewidget.cpp
   qgssearchquerybuilder.cpp
   qgsslider.cpp
+  qgssplashscreen.cpp
   qgssublayersdialog.cpp
   qgssvgannotationitem.cpp
   qgstextannotationitem.cpp
@@ -343,6 +344,7 @@ SET(QGIS_GUI_MOC_HDRS
   qgsscalewidget.h
   qgssearchquerybuilder.h
   qgsslider.h
+  qgssplashscreen.h
   qgssublayersdialog.h
   qgsunitselectionwidget.h
   qgsuserinputdockwidget.h

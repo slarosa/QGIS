@@ -41,6 +41,7 @@
 #include "qgspluginregistry.h"
 #include "qgsmessagelog.h"
 #include "qgspythonrunner.h"
+#include "qgssplashscreen.h"
 
 #include <cstdio>
 #include <stdio.h>
@@ -691,7 +692,7 @@ int main( int argc, char *argv[] )
     gdalShares << QCoreApplication::applicationDirPath().append( "/share/gdal" )
     << appResources.append( "/share/gdal" )
     << appResources.append( "/gdal" );
-    Q_FOREACH ( const QString& gdalShare, gdalShares )
+    Q_FOREACH( const QString& gdalShare, gdalShares )
     {
       if ( QFile::exists( gdalShare ) )
       {
@@ -882,7 +883,7 @@ int main( int argc, char *argv[] )
   //set up splash screen
   QString mySplashPath( QgsCustomization::instance()->splashPath() );
   QPixmap myPixmap( mySplashPath + QString( "splash.png" ) );
-  QSplashScreen *mypSplash = new QSplashScreen( myPixmap );
+  QgsSplashScreen *mypSplash = new QgsSplashScreen( myPixmap );
   if ( mySettings.value( "/qgis/hideSplash" ).toBool() || myHideSplash )
   {
     //splash screen hidden

@@ -113,6 +113,7 @@
 %Include qgsscalevisibilitydialog.sip
 %Include qgsscalewidget.sip
 %Include qgssearchquerybuilder.sip
+%Include qgssplashscreen.sip
 %Include qgssublayersdialog.sip
 %Include qgssvgannotationitem.sip
 %Include qgstextannotationitem.sip

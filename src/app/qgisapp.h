@@ -31,7 +31,6 @@ class QPushButton;
 class QRect;
 class QSettings;
 class QSpinBox;
-class QSplashScreen;
 class QStringList;
 class QToolButton;
 class QTcpSocket;
@@ -66,6 +65,7 @@ class QgsUserInputDockWidget;
 class QgsVectorLayer;
 class QgsVectorLayerTools;
 class QgsDoubleSpinBox;
+class QgsSplashScreen;
 
 class QDomDocument;
 class QNetworkReply;
@@ -124,7 +124,7 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     Q_OBJECT
   public:
     //! Constructor
-    QgisApp( QSplashScreen *splash, bool restorePlugins = true, QWidget *parent = 0, Qt::WindowFlags fl = Qt::Window );
+    QgisApp( QgsSplashScreen *splash, bool restorePlugins = true, QWidget *parent = 0, Qt::WindowFlags fl = Qt::Window );
     //! Constructor for unit tests
     QgisApp();
     //! Destructor
@@ -1566,7 +1566,7 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
     QgisAppInterface *mQgisInterface;
     friend class QgisAppInterface;
 
-    QSplashScreen *mSplash;
+    QgsSplashScreen *mSplash;
     //! list of recently opened/saved project files
     QStringList mRecentProjectPaths;
     //! Print composers of this project, accessible by id string

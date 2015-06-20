@@ -55,7 +55,6 @@
 #include <QRegExp>
 #include <QRegExpValidator>
 #include <QSettings>
-#include <QSplashScreen>
 #include <QStatusBar>
 #include <QStringList>
 #include <QTcpSocket>
@@ -209,6 +208,7 @@
 #include "qgsmessagelogviewer.h"
 #include "qgsdataitem.h"
 #include "qgsmaplayeractionregistry.h"
+#include "qgssplashscreen.h"
 
 #include "qgssublayersdialog.h"
 #include "ogr/qgsopenvectorlayerdialog.h"
@@ -479,7 +479,7 @@ static bool cmpByText_( QAction* a, QAction* b )
 QgisApp *QgisApp::smInstance = 0;
 
 // constructor starts here
-QgisApp::QgisApp( QSplashScreen *splash, bool restorePlugins, QWidget * parent, Qt::WindowFlags fl )
+QgisApp::QgisApp( QgsSplashScreen *splash, bool restorePlugins, QWidget * parent, Qt::WindowFlags fl )
     : QMainWindow( parent, fl )
 #ifdef Q_OS_WIN
     , mSkipNextContextMenuEvent( 0 )
@@ -536,7 +536,8 @@ QgisApp::QgisApp( QSplashScreen *splash, bool restorePlugins, QWidget * parent, 
   //////////
 
   mSplash->showMessage( tr( "Checking database" ), Qt::AlignHCenter | Qt::AlignBottom );
-  qApp->processEvents();
+  mSplash->setProgressValue( 10 );
+
   // Do this early on before anyone else opens it and prevents us copying it
   QString dbError;
   if ( !QgsApplication::createDB( &dbError ) )
@@ -545,10 +546,10 @@ QgisApp::QgisApp( QSplashScreen *splash, bool restorePlugins, QWidget * parent, 
   }
 
   mSplash->showMessage( tr( "Reading settings" ), Qt::AlignHCenter | Qt::AlignBottom );
-  qApp->processEvents();
+  mSplash->setProgressValue( 15 );
 
   mSplash->showMessage( tr( "Setting up the GUI" ), Qt::AlignHCenter | Qt::AlignBottom );
-  qApp->processEvents();
+  mSplash->setProgressValue( 25 );
 
   QSettings settings;
 
@@ -727,17 +728,18 @@ QgisApp::QgisApp( QSplashScreen *splash, bool restorePlugins, QWidget * parent, 
 
   // load providers
   mSplash->showMessage( tr( "Checking provider plugins" ), Qt::AlignHCenter | Qt::AlignBottom );
-  qApp->processEvents();
+  mSplash->setProgressValue( 35 );
   QgsApplication::initQgis();
 
   mSplash->showMessage( tr( "Starting Python" ), Qt::AlignHCenter | Qt::AlignBottom );
-  qApp->processEvents();
+  mSplash->setProgressValue( 50 );
   loadPythonSupport();
 
   // Create the plugin registry and load plugins
   // load any plugins that were running in the last session
   mSplash->showMessage( tr( "Restoring loaded plugins" ), Qt::AlignHCenter | Qt::AlignBottom );
-  qApp->processEvents();
+  mSplash->setProgressValue( 60 );
+
   QgsPluginRegistry::instance()->setQgisInterface( mQgisInterface );
   if ( restorePlugins )
   {
@@ -774,7 +776,7 @@ QgisApp::QgisApp( QSplashScreen *splash, bool restorePlugins, QWidget * parent, 
   setIconSizes( size );
 
   mSplash->showMessage( tr( "Initializing file filters" ), Qt::AlignHCenter | Qt::AlignBottom );
-  qApp->processEvents();
+  mSplash->setProgressValue( 70 );
 
   // now build vector and raster file filters
   mVectorFileFilter = QgsProviderRegistry::instance()->fileVectorFilters();
@@ -802,13 +804,14 @@ QgisApp::QgisApp( QSplashScreen *splash, bool restorePlugins, QWidget * parent, 
   // widgets are all initialised before trying to restore their state.
   //
   mSplash->showMessage( tr( "Restoring window state" ), Qt::AlignHCenter | Qt::AlignBottom );
-  qApp->processEvents();
+  mSplash->setProgressValue( 80 );
   restoreWindowState();
 
   // do main window customization - after window state has been restored, before the window is shown
   QgsCustomization::instance()->updateMainWindow( mToolbarMenu );
 
   mSplash->showMessage( tr( "QGIS Ready!" ), Qt::AlignHCenter | Qt::AlignBottom );
+  mSplash->setProgressValue( 100 );
 
   QgsMessageLog::logMessage( QgsApplication::showSettings(), QString::null, QgsMessageLog::INFO );
 
