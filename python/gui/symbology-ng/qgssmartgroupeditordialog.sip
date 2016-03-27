@@ -5,7 +5,7 @@ class QgsSmartGroupCondition : QWidget
 %End
 
   public:
-    QgsSmartGroupCondition( int id,  QWidget *parent = NULL );
+    QgsSmartGroupCondition( int id,  QWidget *parent /TransferThis/ = NULL );
 
     //! returns the constraint key
     QString constraint();
@@ -14,10 +14,10 @@ class QgsSmartGroupCondition : QWidget
     QString parameter();
 
     //! sets the given constraint
-    void setConstraint( QString constraint );
+    void setConstraint( const QString& constraint );
 
     //! sets the given param
-    void setParameter( QString param );
+    void setParameter( const QString& param );
 
     //! sets the remove button hidden state to 'hide'
     void hideRemoveButton( bool hide );
@@ -36,26 +36,28 @@ class QgsSmartGroupEditorDialog : QDialog
 %End
 
   public:
-    QgsSmartGroupEditorDialog( QgsStyleV2* style, QWidget* parent = NULL );
+    QgsSmartGroupEditorDialog( QgsStyleV2* style, QWidget* parent /TransferThis/ = NULL );
     ~QgsSmartGroupEditorDialog();
 
     //! returns the value from mNameLineEdit
     QString smartgroupName();
 
     //! returns the condition map
-    // QMultiMap<QString, QString> conditionMap();
+    //! @note not available in python bindings
+    // QgsSmartConditionMap conditionMap();
 
     //! returns the AND/OR condition
     QString conditionOperator();
 
     //! sets up the GUI for the given conditionmap
-    // void setConditionMap( QMultiMap<QString, QString> );
+    //! @note not available in python bindings
+    // void setConditionMap( QgsSmartConditionMap );
 
     //! sets the operator AND/OR
-    void setOperator( QString );
+    void setOperator( const QString& );
 
     //! sets the smart group Name
-    void setSmartgroupName( QString );
+    void setSmartgroupName( const QString& );
 
   public slots:
 

@@ -31,9 +31,9 @@ int main( int argc, char ** argv )
   QgsApplication a( argc, argv, true );
 
   // Set up the QSettings environment must be done after qapp is created
-  QCoreApplication::setOrganizationName( "QuantumGIS" );
+  QCoreApplication::setOrganizationName( "QGIS" );
   QCoreApplication::setOrganizationDomain( "qgis.org" );
-  QCoreApplication::setApplicationName( "QGIS" );
+  QCoreApplication::setApplicationName( "QGIS2" );
 
   QString context = QString::null;
   QString myTranslationCode = "";
@@ -45,10 +45,10 @@ int main( int argc, char ** argv )
 
   if ( !QgsApplication::isRunningFromBuildDir() )
   {
-#if defined(Q_WS_MACX)
+#if defined(Q_OS_MACX)
     // If we're on Mac, we have the resource library way above us...
     a.setPkgDataPath( QgsApplication::prefixPath() + "/../../../../" + QString( QGIS_DATA_SUBDIR ) );
-#elif defined(Q_WS_WIN)
+#elif defined(Q_OS_WIN)
     a.setPkgDataPath( QgsApplication::prefixPath() + "/" QGIS_DATA_SUBDIR );
 #else
     a.setPkgDataPath( QgsApplication::prefixPath() + "/../" QGIS_DATA_SUBDIR );
@@ -66,7 +66,7 @@ int main( int argc, char ** argv )
       myTranslationCode = settings.value( "locale/userLocale", "en_US" ).toString();
     }
   }
-  QgsDebugMsg( QString( "Setting translation to %1/qgis_%2" ).arg( i18nPath ).arg( myTranslationCode ) );
+  QgsDebugMsg( QString( "Setting translation to %1/qgis_%2" ).arg( i18nPath, myTranslationCode ) );
 
   /* Translation file for QGIS.
    */

@@ -1,5 +1,6 @@
 
-/** holds data provider key, description, and associated shared library file information
+/** \ingroup core
+ * Holds data provider key, description, and associated shared library file information.
 
    The metadata class is used in a lazy load implementation in
    QgsProviderRegistry.  To save memory, data providers are only actually
@@ -20,23 +21,23 @@ class QgsProviderMetadata
 
     QgsProviderMetadata( const QString & _key, const QString & _description, const QString & _library );
 
-    /** this returns the unique key associated with the provider
+    /** This returns the unique key associated with the provider
 
         This key string is used for the associative container in QgsProviderRegistry
     */
-    const QString & key() const;
+    QString key() const;
 
-    /** this returns descriptive text for the provider
+    /** This returns descriptive text for the provider
 
         This is used to provide a descriptive list of available data providers.
     */
-    const QString & description() const;
+    QString description() const;
 
-    /** this returns the library file name
+    /** This returns the library file name
 
         This is used to QLibrary calls to load the data provider.
     */
-    const QString & library() const;
+    QString library() const;
 
 
 }; // class QgsProviderMetadata

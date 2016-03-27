@@ -17,20 +17,21 @@
 
 #include "qgsnewvectorlayerdialog.h"
 #include "qgsapplication.h"
-//#include "qgisapp.h" // <- for theme icons
 #include "qgis.h"
 #include "qgslogger.h"
 #include "qgscoordinatereferencesystem.h"
-#include "qgsgenericprojectionselector.h"
-#include <QPushButton>
+#include "qgsproviderregistry.h"
+#include "qgsvectordataprovider.h"
+#include "qgsvectorfilewriter.h"
 
+#include <QPushButton>
+#include <QComboBox>
 #include <QLibrary>
 #include <QSettings>
-#include "qgsencodingfiledialog.h"
-#include "qgsproviderregistry.h"
+#include <QFileDialog>
 
 
-QgsNewVectorLayerDialog::QgsNewVectorLayerDialog( QWidget *parent, Qt::WFlags fl )
+QgsNewVectorLayerDialog::QgsNewVectorLayerDialog( QWidget *parent, const Qt::WindowFlags& fl )
     : QDialog( parent, fl )
 {
   setupUi( this );
@@ -38,38 +39,55 @@ QgsNewVectorLayerDialog::QgsNewVectorLayerDialog( QWidget *parent, Qt::WFlags fl
   QSettings settings;
   restoreGeometry( settings.value( "/Windows/NewVectorLayer/geometry" ).toByteArray() );
 
-  // TODO: do it without QgisApp
-  //mAddAttributeButton->setIcon( QgisApp::getThemeIcon( "/mActionNewAttribute.png" ) );
-  //mRemoveAttributeButton->setIcon( QgisApp::getThemeIcon( "/mActionDeleteAttribute.png" ) );
+  mAddAttributeButton->setIcon( QgsApplication::getThemeIcon( "/mActionNewAttribute.png" ) );
+  mRemoveAttributeButton->setIcon( QgsApplication::getThemeIcon( "/mActionDeleteAttribute.png" ) );
   mTypeBox->addItem( tr( "Text data" ), "String" );
   mTypeBox->addItem( tr( "Whole number" ), "Integer" );
   mTypeBox->addItem( tr( "Decimal number" ), "Real" );
+  mTypeBox->addItem( tr( "Date" ), "Date" );
 
   mWidth->setValidator( new QIntValidator( 1, 255, this ) );
   mPrecision->setValidator( new QIntValidator( 0, 15, this ) );
 
   mPointRadioButton->setChecked( true );
   mFileFormatComboBox->addItem( tr( "ESRI Shapefile" ), "ESRI Shapefile" );
-  /* Disabled until provider properly supports editing the created file formats */
-  //mFileFormatComboBox->addItem( tr( "Comma Separated Value" ), "Comma Separated Value" );
-  //mFileFormatComboBox->addItem(tr( "GML"), "GML" );
-  //mFileFormatComboBox->addItem(tr( "Mapinfo File" ), "Mapinfo File" );
+#if 0
+  // Disabled until provider properly supports editing the created file formats
+  mFileFormatComboBox->addItem( tr( "Comma Separated Value" ), "Comma Separated Value" );
+  mFileFormatComboBox->addItem( tr( "GML" ), "GML" );
+  mFileFormatComboBox->addItem( tr( "Mapinfo File" ), "Mapinfo File" );
+#endif
   if ( mFileFormatComboBox->count() == 1 )
   {
     mFileFormatComboBox->setVisible( false );
     mFileFormatLabel->setVisible( false );
   }
 
+  mFileFormatComboBox->setCurrentIndex( 0 );
+
+  mFileEncoding->addItems( QgsVectorDataProvider::availableEncodings() );
+
+  // Use default encoding if none supplied
+  QString enc = QSettings().value( "/UI/encoding", "System" ).toString();
+
+  // The specified decoding is added if not existing alread, and then set current.
+  // This should select it.
+  int encindex = mFileEncoding->findText( enc );
+  if ( encindex < 0 )
+  {
+    mFileEncoding->insertItem( 0, enc );
+    encindex = 0;
+  }
+  mFileEncoding->setCurrentIndex( encindex );
+
   mOkButton = buttonBox->button( QDialogButtonBox::Ok );
 
   mAttributeView->addTopLevelItem( new QTreeWidgetItem( QStringList() << "id" << "Integer" << "10" << "" ) );
 
-  QgsCoordinateReferenceSystem srs;
-  srs.createFromOgcWmsCrs( GEO_EPSG_CRS_AUTHID );
-  srs.validate();
-
-  mCrsId = srs.srsid();
-  leSpatialRefSys->setText( srs.authid() + " - " + srs.description() );
+  QgsCoordinateReferenceSystem defaultCrs;
+  defaultCrs.createFromOgcWmsCrs( settings.value( "/Projections/layerDefaultCrs", GEO_EPSG_CRS_AUTHID ).toString() );
+  defaultCrs.validate();
+  mCrsSelector->setCrs( defaultCrs );
 
   connect( mNameEdit, SIGNAL( textChanged( QString ) ), this, SLOT( nameChanged( QString ) ) );
   connect( mAttributeView, SIGNAL( itemSelectionChanged() ), this, SLOT( selectionChanged() ) );
@@ -82,6 +100,15 @@ QgsNewVectorLayerDialog::~QgsNewVectorLayerDialog()
 {
   QSettings settings;
   settings.setValue( "/Windows/NewVectorLayer/geometry", saveGeometry() );
+}
+
+void QgsNewVectorLayerDialog::on_mFileFormatComboBox_currentIndexChanged( int index )
+{
+  Q_UNUSED( index );
+  if ( mFileFormatComboBox->currentText() == tr( "ESRI Shapefile" ) )
+    mNameEdit->setMaxLength( 10 );
+  else
+    mNameEdit->setMaxLength( 32767 );
 }
 
 void QgsNewVectorLayerDialog::on_mTypeBox_currentIndexChanged( int index )
@@ -135,7 +162,7 @@ QGis::WkbType QgsNewVectorLayerDialog::selectedType() const
 
 int QgsNewVectorLayerDialog::selectedCrsId() const
 {
-  return mCrsId;
+  return mCrsSelector->crs().srsid();
 }
 
 void QgsNewVectorLayerDialog::on_mAddAttributeButton_clicked()
@@ -162,34 +189,15 @@ void QgsNewVectorLayerDialog::on_mRemoveAttributeButton_clicked()
   }
 }
 
-void QgsNewVectorLayerDialog::on_pbnChangeSpatialRefSys_clicked()
-{
-  QgsGenericProjectionSelector *mySelector = new QgsGenericProjectionSelector( this );
-  mySelector->setMessage();
-  mySelector->setSelectedCrsId( pbnChangeSpatialRefSys->text().toInt() );
-  if ( mySelector->exec() )
-  {
-    QgsCoordinateReferenceSystem srs;
-    srs.createFromOgcWmsCrs( mySelector->selectedAuthId() );
-    mCrsId = srs.srsid();
-    leSpatialRefSys->setText( srs.authid() + " - " + srs.description() );
-  }
-  else
-  {
-    QApplication::restoreOverrideCursor();
-  }
-  delete mySelector;
-}
-
 void QgsNewVectorLayerDialog::attributes( QList< QPair<QString, QString> >& at ) const
 {
   QTreeWidgetItemIterator it( mAttributeView );
   while ( *it )
   {
     QTreeWidgetItem *item = *it;
-    QString type = QString( "%1;%2;%3" ).arg( item->text( 1 ) ).arg( item->text( 2 ) ).arg( item->text( 3 ) );
+    QString type = QString( "%1;%2;%3" ).arg( item->text( 1 ), item->text( 2 ), item->text( 3 ) );
     at.push_back( qMakePair( item->text( 0 ), type ) );
-    QgsDebugMsg( QString( "appending %1//%2" ).arg( item->text( 0 ) ).arg( type ) );
+    QgsDebugMsg( QString( "appending %1//%2" ).arg( item->text( 0 ), type ) );
     ++it;
   }
 }
@@ -201,14 +209,19 @@ QString QgsNewVectorLayerDialog::selectedFileFormat() const
   return myType;
 }
 
-void QgsNewVectorLayerDialog::nameChanged( QString name )
+QString QgsNewVectorLayerDialog::selectedFileEncoding() const
 {
-  mAddAttributeButton->setDisabled( name.isEmpty() || mAttributeView->findItems( name, Qt::MatchExactly ).size() > 0 );
+  return mFileEncoding->currentText();
+}
+
+void QgsNewVectorLayerDialog::nameChanged( const QString& name )
+{
+  mAddAttributeButton->setDisabled( name.isEmpty() || !mAttributeView->findItems( name, Qt::MatchExactly ).isEmpty() );
 }
 
 void QgsNewVectorLayerDialog::selectionChanged()
 {
-  mRemoveAttributeButton->setDisabled( mAttributeView->selectedItems().size() == 0 );
+  mRemoveAttributeButton->setDisabled( mAttributeView->selectedItems().isEmpty() );
 }
 
 
@@ -218,55 +231,32 @@ QString QgsNewVectorLayerDialog::runAndCreateLayer( QWidget* parent, QString* pE
   QgsNewVectorLayerDialog geomDialog( parent );
   if ( geomDialog.exec() == QDialog::Rejected )
   {
-    return QString();
+    return "";
   }
 
   QGis::WkbType geometrytype = geomDialog.selectedType();
   QString fileformat = geomDialog.selectedFileFormat();
+  QString enc = geomDialog.selectedFileEncoding();
   int crsId = geomDialog.selectedCrsId();
   QgsDebugMsg( QString( "New file format will be: %1" ).arg( fileformat ) );
 
   QList< QPair<QString, QString> > attributes;
   geomDialog.attributes( attributes );
 
-  QString enc;
-  QString fileName;
-
   QSettings settings;
-  QString lastUsedDir = settings.value( "/UI/lastVectorFileFilterDir", "." ).toString();
-
-  QgsDebugMsg( "Saving vector file dialog without filters: " );
-
-  QgsEncodingFileDialog* openFileDialog =
-    new QgsEncodingFileDialog( parent, tr( "Save As" ), lastUsedDir, "", QString( "" ) );
-
-  openFileDialog->setFileMode( QFileDialog::AnyFile );
-  openFileDialog->setAcceptMode( QFileDialog::AcceptSave );
-  openFileDialog->setConfirmOverwrite( true );
-
-  if ( settings.contains( "/UI/lastVectorFileFilter" ) )
+  QString lastUsedDir = settings.value( "/UI/lastVectorFileFilterDir", QDir::homePath() ).toString();
+  QString filterString = QgsVectorFileWriter::filterForDriver( fileformat );
+  QString fileName = QFileDialog::getSaveFileName( 0, tr( "Save layer as..." ), lastUsedDir, filterString );
+  if ( fileName.isNull() )
   {
-    QString lastUsedFilter = settings.value( "/UI/lastVectorFileFilter", QVariant( QString::null ) ).toString();
-    openFileDialog->selectFilter( lastUsedFilter );
+    return "";
   }
-
-  if ( openFileDialog->exec() == QDialog::Rejected )
-  {
-    delete openFileDialog;
-    return QString();
-  }
-
-  fileName = openFileDialog->selectedFiles().first();
 
   if ( fileformat == "ESRI Shapefile" && !fileName.endsWith( ".shp", Qt::CaseInsensitive ) )
     fileName += ".shp";
 
-  enc = openFileDialog->encoding();
-
-  settings.setValue( "/UI/lastVectorFileFilter", openFileDialog->selectedFilter() );
-  settings.setValue( "/UI/lastVectorFileFilterDir", openFileDialog->directory().absolutePath() );
-
-  delete openFileDialog;
+  settings.setValue( "/UI/lastVectorFileFilterDir", QFileInfo( fileName ).absolutePath() );
+  settings.setValue( "/UI/encoding", enc );
 
   //try to create the new layer with OGRProvider instead of QgsVectorFileWriter
   QgsProviderRegistry * pReg = QgsProviderRegistry::instance();
@@ -288,23 +278,24 @@ QString QgsNewVectorLayerDialog::runAndCreateLayer( QWidget* parent, QString* pE
         QgsCoordinateReferenceSystem srs( crsId, QgsCoordinateReferenceSystem::InternalCrsId );
         if ( !createEmptyDataSource( fileName, fileformat, enc, geometrytype, attributes, &srs ) )
         {
-          return QString();
+          return QString::null;
         }
       }
       else
       {
         QgsDebugMsg( "geometry type not recognised" );
-        return QString();
+        return QString::null;
       }
     }
     else
     {
       QgsDebugMsg( "Resolving newEmptyDataSource(...) failed" );
-      return QString();
+      return QString::null;
     }
   }
 
   if ( pEnc )
     *pEnc = enc;
+
   return fileName;
 }

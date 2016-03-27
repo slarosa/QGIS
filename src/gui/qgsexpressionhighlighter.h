@@ -31,10 +31,10 @@ class GUI_EXPORT QgsExpressionHighlighter : public QSyntaxHighlighter
 
   public:
     QgsExpressionHighlighter( QTextDocument *parent = 0 );
-    void addFields( QStringList fieldList );
+    void addFields( const QStringList& fieldList );
 
   protected:
-    void highlightBlock( const QString &text );
+    void highlightBlock( const QString &text ) override;
 
   private:
     struct HighlightingRule

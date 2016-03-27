@@ -52,10 +52,14 @@ QgsProjectFileTransform::transform QgsProjectFileTransform::transformers[] =
   {PFV( 1, 5, 0 ), PFV( 1, 6, 0 ), &QgsProjectFileTransform::transformNull},
   {PFV( 1, 6, 0 ), PFV( 1, 7, 0 ), &QgsProjectFileTransform::transformNull},
   {PFV( 1, 7, 0 ), PFV( 1, 8, 0 ), &QgsProjectFileTransform::transformNull},
-  {PFV( 1, 8, 0 ), PFV( 1, 9, 0 ), &QgsProjectFileTransform::transform1800to1900}
+  {PFV( 1, 8, 0 ), PFV( 1, 9, 0 ), &QgsProjectFileTransform::transform1800to1900},
+  {PFV( 1, 9, 0 ), PFV( 2, 0, 0 ), &QgsProjectFileTransform::transformNull},
+  {PFV( 2, 0, 0 ), PFV( 2, 1, 0 ), &QgsProjectFileTransform::transformNull},
+  {PFV( 2, 1, 0 ), PFV( 2, 2, 0 ), &QgsProjectFileTransform::transformNull},
+  {PFV( 2, 2, 0 ), PFV( 2, 3, 0 ), &QgsProjectFileTransform::transform2200to2300},
 };
 
-bool QgsProjectFileTransform::updateRevision( QgsProjectVersion newVersion )
+bool QgsProjectFileTransform::updateRevision( const QgsProjectVersion& newVersion )
 {
   Q_UNUSED( newVersion );
   bool returnValue = false;
@@ -351,7 +355,7 @@ void QgsProjectFileTransform::transform0110to1000()
         int fieldNumber = classificationFieldElem.text().toInt();
         if ( fieldNumber >= 0 && fieldNumber < theFields.count() )
         {
-          QDomText fieldName = mDom.createTextNode( theFields[fieldNumber].name() );
+          QDomText fieldName = mDom.createTextNode( theFields.at( fieldNumber ).name() );
           QDomNode nameNode = classificationFieldElem.firstChild();
           classificationFieldElem.replaceChild( fieldName, nameNode );
         }
@@ -440,7 +444,7 @@ void QgsProjectFileTransform::transform1400to1500()
       }
 
       QDomElement classificationElement;
-      if ( vectorClassificationList.size() > 0 ) //we guess it is a vector layer
+      if ( !vectorClassificationList.isEmpty() ) //we guess it is a vector layer
       {
         classificationElement = mDom.createElement( "VectorClassificationItem" );
       }
@@ -584,7 +588,7 @@ void QgsProjectFileTransform::transform1800to1900()
           QDomElement propElem = propList.at( k ).toElement();
           if ( propElem.attribute( "k" ) == "color" || propElem.attribute( "k" ) == "color_border" )
           {
-            propElem.setAttribute( "v", propElem.attribute( "v" ).section( ",", 0, 2 ) + ",255" );
+            propElem.setAttribute( "v", propElem.attribute( "v" ).section( ',', 0, 2 ) + ",255" );
           }
         }
       }
@@ -592,6 +596,17 @@ void QgsProjectFileTransform::transform1800to1900()
   }
 
   QgsDebugMsg( mDom.toString() );
+}
+
+void QgsProjectFileTransform::transform2200to2300()
+{
+  //composer: set placement for all picture items to middle, to mimic <=2.2 behaviour
+  QDomNodeList composerPictureList = mDom.elementsByTagName( "ComposerPicture" );
+  for ( int i = 0; i < composerPictureList.size(); ++i )
+  {
+    QDomElement picture = composerPictureList.at( i ).toElement();
+    picture.setAttribute( "anchorPoint", QString::number( 4 ) );
+  }
 }
 
 void QgsProjectFileTransform::convertRasterProperties( QDomDocument& doc, QDomNode& parentNode,
@@ -774,6 +789,11 @@ void QgsProjectFileTransform::convertRasterProperties( QDomDocument& doc, QDomNo
       green = colorRampEntryElem.attribute( "green" ).toInt();
       blue = colorRampEntryElem.attribute( "blue" ).toInt();
       newPaletteElem.setAttribute( "color", QColor( red, green, blue ).name() );
+      QString label = colorRampEntryElem.attribute( "label" );
+      if ( !label.isEmpty() )
+      {
+        newPaletteElem.setAttribute( "label", label );
+      }
       newColorPaletteElem.appendChild( newPaletteElem );
     }
     rasterRendererElem.appendChild( newColorPaletteElem );
@@ -804,8 +824,8 @@ void QgsProjectFileTransform::convertRasterProperties( QDomDocument& doc, QDomNo
   }
 }
 
-int QgsProjectFileTransform::rasterBandNumber( const QDomElement& rasterPropertiesElem, const QString bandName,
-    QgsRasterLayer* rlayer )
+int QgsProjectFileTransform::rasterBandNumber( const QDomElement &rasterPropertiesElem, const QString &bandName,
+    QgsRasterLayer *rlayer )
 {
   if ( !rlayer )
   {
@@ -816,13 +836,11 @@ int QgsProjectFileTransform::rasterBandNumber( const QDomElement& rasterProperti
   QDomElement rasterBandElem = rasterPropertiesElem.firstChildElement( bandName );
   if ( !rasterBandElem.isNull() )
   {
-    for ( int i = 1; i <= rlayer->bandCount(); i++ )
+    QRegExp re( "(\\d+)" );
+
+    if ( re.indexIn( rasterBandElem.text() ) >= 0 )
     {
-      if ( rlayer->bandName( i ) == rasterBandElem.text() )
-      {
-        band = i;
-        break;
-      }
+      return re.cap( 1 ).toInt();
     }
   }
   return band;

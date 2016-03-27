@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>827</width>
-    <height>759</height>
+    <width>857</width>
+    <height>830</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -42,7 +42,16 @@
        <enum>QFrame::Raised</enum>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
-       <property name="margin">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
         <number>0</number>
        </property>
        <item>
@@ -89,7 +98,7 @@
           </property>
           <property name="icon">
            <iconset resource="../../images/images.qrc">
-            <normaloff>:/images/themes/default/propertyicons/general.png</normaloff>:/images/themes/default/propertyicons/general.png</iconset>
+            <normaloff>:/images/themes/default/propertyicons/general.svg</normaloff>:/images/themes/default/propertyicons/general.svg</iconset>
           </property>
          </item>
          <item>
@@ -101,7 +110,7 @@
           </property>
           <property name="icon">
            <iconset resource="../../images/images.qrc">
-            <normaloff>:/images/themes/default/propertyicons/CRS.png</normaloff>:/images/themes/default/propertyicons/CRS.png</iconset>
+            <normaloff>:/images/themes/default/propertyicons/CRS.svg</normaloff>:/images/themes/default/propertyicons/CRS.svg</iconset>
           </property>
          </item>
          <item>
@@ -149,7 +158,25 @@
           </property>
           <property name="icon">
            <iconset resource="../../images/images.qrc">
-            <normaloff>:/images/themes/default/propertyicons/action.png</normaloff>:/images/themes/default/propertyicons/action.png</iconset>
+            <normaloff>:/images/themes/default/propertyicons/action.svg</normaloff>:/images/themes/default/propertyicons/action.svg</iconset>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Relations</string>
+          </property>
+          <property name="icon">
+           <iconset resource="../../images/images.qrc">
+            <normaloff>:/images/themes/default/relation.svg</normaloff>:/images/themes/default/relation.svg</iconset>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Variables</string>
+          </property>
+          <property name="icon">
+           <iconset resource="../../images/images.qrc">
+            <normaloff>:/images/themes/default/mIconExpression.svg</normaloff>:/images/themes/default/mIconExpression.svg</iconset>
           </property>
          </item>
         </widget>
@@ -170,7 +197,16 @@
        <enum>QFrame::Raised</enum>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_3">
-       <property name="margin">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
         <number>0</number>
        </property>
        <item>
@@ -186,25 +222,18 @@
          </property>
          <widget class="QWidget" name="mProjOpts_01">
           <layout class="QVBoxLayout" name="verticalLayout_6">
-           <property name="margin">
+           <property name="leftMargin">
             <number>0</number>
            </property>
-           <item>
-            <widget class="QLabel" name="label_4">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">font-weight:bold;</string>
-             </property>
-             <property name="text">
-              <string>General</string>
-             </property>
-            </widget>
-           </item>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
            <item>
             <widget class="QScrollArea" name="scrollArea_2">
              <property name="frameShape">
@@ -217,9 +246,9 @@
               <property name="geometry">
                <rect>
                 <x>0</x>
-                <y>-19</y>
-                <width>631</width>
-                <height>686</height>
+                <y>0</y>
+                <width>683</width>
+                <height>779</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_8">
@@ -238,7 +267,7 @@
                   <string notr="true">projgeneral</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_26">
-                  <item row="2" column="2" colspan="2">
+                  <item row="3" column="2" colspan="2">
                    <spacer>
                     <property name="orientation">
                      <enum>Qt::Horizontal</enum>
@@ -251,7 +280,7 @@
                     </property>
                    </spacer>
                   </item>
-                  <item row="2" column="1">
+                  <item row="3" column="1">
                    <widget class="QComboBox" name="cbxAbsolutePath">
                     <item>
                      <property name="text">
@@ -265,7 +294,7 @@
                     </item>
                    </widget>
                   </item>
-                  <item row="1" column="0" colspan="4">
+                  <item row="2" column="0" colspan="4">
                    <layout class="QHBoxLayout" name="horizontalLayout_5">
                     <item>
                      <widget class="QLabel" name="textLabel1">
@@ -284,16 +313,16 @@
                      </widget>
                     </item>
                     <item>
-                     <widget class="QgsColorButton" name="pbnSelectionColor">
+                     <widget class="QgsColorButtonV2" name="pbnSelectionColor">
                       <property name="minimumSize">
                        <size>
-                        <width>100</width>
+                        <width>120</width>
                         <height>0</height>
                        </size>
                       </property>
                       <property name="maximumSize">
                        <size>
-                        <width>100</width>
+                        <width>120</width>
                         <height>16777215</height>
                        </size>
                       </property>
@@ -319,16 +348,16 @@
                      </widget>
                     </item>
                     <item>
-                     <widget class="QgsColorButton" name="pbnCanvasColor">
+                     <widget class="QgsColorButtonV2" name="pbnCanvasColor">
                       <property name="minimumSize">
                        <size>
-                        <width>100</width>
+                        <width>120</width>
                         <height>0</height>
                        </size>
                       </property>
                       <property name="maximumSize">
                        <size>
-                        <width>100</width>
+                        <width>120</width>
                         <height>16777215</height>
                        </size>
                       </property>
@@ -352,7 +381,7 @@
                     </item>
                    </layout>
                   </item>
-                  <item row="2" column="0">
+                  <item row="3" column="0">
                    <widget class="QLabel" name="label_3">
                     <property name="sizePolicy">
                      <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
@@ -368,7 +397,7 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="1" colspan="3">
+                  <item row="1" column="1" colspan="3">
                    <widget class="QLineEdit" name="titleEdit">
                     <property name="toolTip">
                      <string>Descriptive project name</string>
@@ -378,8 +407,40 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="0" column="0">
+                  <item row="1" column="0">
                    <widget class="QLabel" name="label_2">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>Project title</string>
+                    </property>
+                    <property name="buddy">
+                     <cstring>projectFileName</cstring>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_4">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>Project file</string>
+                    </property>
+                    <property name="buddy">
+                     <cstring>titleEdit</cstring>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QLabel" name="projectFileName">
                     <property name="sizePolicy">
                      <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
                       <horstretch>0</horstretch>
@@ -473,7 +534,7 @@
                       </property>
                      </spacer>
                     </item>
-                    <item row="0" column="2">
+                    <item row="0" column="3">
                      <widget class="QRadioButton" name="radDegrees">
                       <property name="sizePolicy">
                        <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
@@ -483,6 +544,19 @@
                       </property>
                       <property name="text">
                        <string>Degree</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="2">
+                     <widget class="QRadioButton" name="radNMiles">
+                      <property name="sizePolicy">
+                       <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+                        <horstretch>0</horstretch>
+                        <verstretch>0</verstretch>
+                       </sizepolicy>
+                      </property>
+                      <property name="text">
+                       <string>Nautical miles</string>
                       </property>
                      </widget>
                     </item>
@@ -515,7 +589,7 @@
                       </property>
                      </widget>
                     </item>
-                    <item row="0" column="3" rowspan="2">
+                    <item row="0" column="4" rowspan="2">
                      <widget class="QGroupBox" name="btnGrpDegreeDisplay">
                       <property name="enabled">
                        <bool>false</bool>
@@ -571,7 +645,16 @@
                      <enum>QFrame::Raised</enum>
                     </property>
                     <layout class="QHBoxLayout" name="horizontalLayout_4">
-                     <property name="margin">
+                     <property name="leftMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="topMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="rightMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="bottomMargin">
                       <number>0</number>
                      </property>
                      <item>
@@ -668,7 +751,7 @@
                       </property>
                       <property name="icon">
                        <iconset resource="../../images/images.qrc">
-                        <normaloff>:/images/themes/default/mActionNewAttribute.png</normaloff>:/images/themes/default/mActionNewAttribute.png</iconset>
+                        <normaloff>:/images/themes/default/symbologyAdd.svg</normaloff>:/images/themes/default/symbologyAdd.svg</iconset>
                       </property>
                      </widget>
                     </item>
@@ -679,7 +762,7 @@
                       </property>
                       <property name="icon">
                        <iconset resource="../../images/images.qrc">
-                        <normaloff>:/images/themes/default/mActionDeleteAttribute.png</normaloff>:/images/themes/default/mActionDeleteAttribute.png</iconset>
+                        <normaloff>:/images/themes/default/symbologyRemove.svg</normaloff>:/images/themes/default/symbologyRemove.svg</iconset>
                       </property>
                      </widget>
                     </item>
@@ -690,7 +773,7 @@
                       </property>
                       <property name="icon">
                        <iconset resource="../../images/images.qrc">
-                        <normaloff>:/images/themes/default/mActionFolder.png</normaloff>:/images/themes/default/mActionFolder.png</iconset>
+                        <normaloff>:/images/themes/default/mActionFileOpen.svg</normaloff>:/images/themes/default/mActionFileOpen.svg</iconset>
                       </property>
                      </widget>
                     </item>
@@ -701,7 +784,7 @@
                       </property>
                       <property name="icon">
                        <iconset resource="../../images/images.qrc">
-                        <normaloff>:/images/themes/default/mActionFileSave.png</normaloff>:/images/themes/default/mActionFileSave.png</iconset>
+                        <normaloff>:/images/themes/default/mActionFileSave.svg</normaloff>:/images/themes/default/mActionFileSave.svg</iconset>
                       </property>
                      </widget>
                     </item>
@@ -744,25 +827,18 @@
          </widget>
          <widget class="QWidget" name="mProjOpts_02">
           <layout class="QVBoxLayout" name="verticalLayout_5">
-           <property name="margin">
+           <property name="leftMargin">
             <number>0</number>
            </property>
-           <item>
-            <widget class="QLabel" name="label_5">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">font-weight:bold;</string>
-             </property>
-             <property name="text">
-              <string>Coordinate Reference System (CRS)</string>
-             </property>
-            </widget>
-           </item>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
            <item>
             <widget class="QScrollArea" name="scrollArea">
              <property name="frameShape">
@@ -776,8 +852,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>646</width>
-                <height>667</height>
+                <width>683</width>
+                <height>779</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_7">
@@ -810,19 +886,18 @@
          </widget>
          <widget class="QWidget" name="mProjOpts_03">
           <layout class="QVBoxLayout" name="verticalLayout_9">
-           <property name="margin">
+           <property name="leftMargin">
             <number>0</number>
            </property>
-           <item>
-            <widget class="QLabel" name="label_6">
-             <property name="styleSheet">
-              <string notr="true">font-weight:bold;</string>
-             </property>
-             <property name="text">
-              <string>Identifiable layers</string>
-             </property>
-            </widget>
-           </item>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
            <item>
             <widget class="QScrollArea" name="scrollArea_3">
              <property name="frameShape">
@@ -836,8 +911,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>646</width>
-                <height>669</height>
+                <width>683</width>
+                <height>779</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_10">
@@ -892,19 +967,18 @@
          </widget>
          <widget class="QWidget" name="mProjOpts_04">
           <layout class="QVBoxLayout" name="verticalLayout_11">
-           <property name="margin">
+           <property name="leftMargin">
             <number>0</number>
            </property>
-           <item>
-            <widget class="QLabel" name="label_7">
-             <property name="styleSheet">
-              <string notr="true">font-weight:bold;</string>
-             </property>
-             <property name="text">
-              <string>Default styles</string>
-             </property>
-            </widget>
-           </item>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
            <item>
             <widget class="QScrollArea" name="scrollArea_4">
              <property name="frameShape">
@@ -918,17 +992,11 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>646</width>
-                <height>669</height>
+                <width>683</width>
+                <height>779</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_12">
-               <property name="topMargin">
-                <number>0</number>
-               </property>
-               <property name="bottomMargin">
-                <number>0</number>
-               </property>
                <item>
                 <widget class="QgsCollapsibleGroupBox" name="groupBox">
                  <property name="title">
@@ -937,7 +1005,7 @@
                  <property name="syncGroup" stdset="0">
                   <string notr="true">projstyles</string>
                  </property>
-                 <layout class="QGridLayout" name="gridLayout_9">
+                 <layout class="QGridLayout" name="gridLayout_11">
                   <property name="leftMargin">
                    <number>9</number>
                   </property>
@@ -1250,17 +1318,71 @@
                 </layout>
                </item>
                <item>
-                <spacer name="verticalSpacer_2">
-                 <property name="orientation">
-                  <enum>Qt::Vertical</enum>
+                <widget class="QgsCollapsibleGroupBox" name="groupBox_7">
+                 <property name="title">
+                  <string>Project colors</string>
                  </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>20</width>
-                   <height>40</height>
-                  </size>
-                 </property>
-                </spacer>
+                 <layout class="QGridLayout" name="gridLayout_12">
+                  <item row="2" column="1">
+                   <widget class="QPushButton" name="mButtonCopyColors">
+                    <property name="text">
+                     <string>Copy colors</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="6" column="1">
+                   <spacer name="verticalSpacer_12">
+                    <property name="orientation">
+                     <enum>Qt::Vertical</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>20</width>
+                      <height>40</height>
+                     </size>
+                    </property>
+                   </spacer>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QPushButton" name="mButtonAddColor">
+                    <property name="text">
+                     <string>Add color</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="1">
+                   <widget class="QPushButton" name="mButtonPasteColors">
+                    <property name="text">
+                     <string>Paste colors</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QPushButton" name="mButtonRemoveColor">
+                    <property name="text">
+                     <string>Remove color</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0" rowspan="8">
+                   <widget class="QgsColorSchemeList" name="mTreeProjectColors" native="true"/>
+                  </item>
+                  <item row="4" column="1">
+                   <widget class="QPushButton" name="mButtonImportColors">
+                    <property name="text">
+                     <string>Import</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="5" column="1">
+                   <widget class="QPushButton" name="mButtonExportColors">
+                    <property name="text">
+                     <string>Export</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
                </item>
               </layout>
              </widget>
@@ -1270,19 +1392,18 @@
          </widget>
          <widget class="QWidget" name="mProjOpts_05">
           <layout class="QVBoxLayout" name="verticalLayout_14">
-           <property name="margin">
+           <property name="leftMargin">
             <number>0</number>
            </property>
-           <item>
-            <widget class="QLabel" name="label_8">
-             <property name="styleSheet">
-              <string notr="true">font-weight:bold;</string>
-             </property>
-             <property name="text">
-              <string>OWS server</string>
-             </property>
-            </widget>
-           </item>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
            <item>
             <widget class="QScrollArea" name="scrollArea_5">
              <property name="frameShape">
@@ -1295,9 +1416,9 @@
               <property name="geometry">
                <rect>
                 <x>0</x>
-                <y>0</y>
-                <width>631</width>
-                <height>1254</height>
+                <y>-854</y>
+                <width>667</width>
+                <height>1633</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_13">
@@ -1310,7 +1431,7 @@
                <item>
                 <widget class="QgsCollapsibleGroupBox" name="grpOWSServiceCapabilities">
                  <property name="title">
-                  <string>Service capabilitities</string>
+                  <string>Service capabilities</string>
                  </property>
                  <property name="checkable">
                   <bool>true</bool>
@@ -1328,16 +1449,6 @@
                   <string notr="true">projowsserver</string>
                  </property>
                  <layout class="QGridLayout" name="gridLayout_6">
-                  <item row="3" column="0">
-                   <widget class="QLabel" name="label_9">
-                    <property name="text">
-                     <string>Person</string>
-                    </property>
-                    <property name="buddy">
-                     <cstring>mWMSContactPerson</cstring>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="0" column="0">
                    <widget class="QLabel" name="label_10">
                     <property name="text">
@@ -1348,8 +1459,80 @@
                     </property>
                    </widget>
                   </item>
+                  <item row="2" column="1">
+                   <widget class="QLineEdit" name="mWMSOnlineResourceLineEdit"/>
+                  </item>
+                  <item row="2" column="0">
+                   <widget class="QLabel" name="mWMSOnlineResourceLabel">
+                    <property name="text">
+                     <string>Online resource</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="0">
+                   <widget class="QLabel" name="label_9">
+                    <property name="text">
+                     <string>Person</string>
+                    </property>
+                    <property name="buddy">
+                     <cstring>mWMSContactPerson</cstring>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="5" column="1">
+                   <widget class="QLineEdit" name="mWMSContactMail"/>
+                  </item>
+                  <item row="3" column="1">
+                   <widget class="QLineEdit" name="mWMSContactPerson"/>
+                  </item>
+                  <item row="5" column="0">
+                   <widget class="QLabel" name="label_13">
+                    <property name="text">
+                     <string>E-Mail</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QLineEdit" name="mWMSContactOrganization"/>
+                  </item>
+                  <item row="6" column="0">
+                   <widget class="QLabel" name="label_12">
+                    <property name="text">
+                     <string>Phone</string>
+                    </property>
+                    <property name="buddy">
+                     <cstring>mWMSContactPhone</cstring>
+                    </property>
+                   </widget>
+                  </item>
                   <item row="0" column="1">
                    <widget class="QLineEdit" name="mWMSTitle"/>
+                  </item>
+                  <item row="7" column="0">
+                   <widget class="QLabel" name="label_15">
+                    <property name="text">
+                     <string>Abstract</string>
+                    </property>
+                    <property name="buddy">
+                     <cstring>mWMSAbstract</cstring>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="6" column="1">
+                   <widget class="QLineEdit" name="mWMSContactPhone"/>
+                  </item>
+                  <item row="7" column="1">
+                   <widget class="QTextEdit" name="mWMSAbstract"/>
+                  </item>
+                  <item row="10" column="0">
+                   <widget class="QLabel" name="mWMSKeywordListLabel">
+                    <property name="text">
+                     <string>Keyword list</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="10" column="1">
+                   <widget class="QLineEdit" name="mWMSKeywordList"/>
                   </item>
                   <item row="1" column="0">
                    <widget class="QLabel" name="label_11">
@@ -1361,62 +1544,14 @@
                     </property>
                    </widget>
                   </item>
-                  <item row="1" column="1">
-                   <widget class="QLineEdit" name="mWMSContactOrganization"/>
-                  </item>
-                  <item row="2" column="0">
-                   <widget class="QLabel" name="mWMSOnlineResourceLabel">
+                  <item row="9" column="0">
+                   <widget class="QLabel" name="mWMSAccessConstraintsLabel">
                     <property name="text">
-                     <string>Online resource</string>
+                     <string>Access constraints</string>
                     </property>
                    </widget>
                   </item>
-                  <item row="2" column="1">
-                   <widget class="QLineEdit" name="mWMSOnlineResourceLineEdit"/>
-                  </item>
-                  <item row="3" column="1">
-                   <widget class="QLineEdit" name="mWMSContactPerson"/>
-                  </item>
-                  <item row="4" column="0">
-                   <widget class="QLabel" name="label_13">
-                    <property name="text">
-                     <string>E-Mail</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="4" column="1">
-                   <widget class="QLineEdit" name="mWMSContactMail"/>
-                  </item>
-                  <item row="5" column="0">
-                   <widget class="QLabel" name="label_12">
-                    <property name="text">
-                     <string>Phone</string>
-                    </property>
-                    <property name="buddy">
-                     <cstring>mWMSContactPhone</cstring>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="5" column="1">
-                   <widget class="QLineEdit" name="mWMSContactPhone"/>
-                  </item>
-                  <item row="6" column="0">
-                   <widget class="QLabel" name="label_15">
-                    <property name="text">
-                     <string>Abstract</string>
-                    </property>
-                    <property name="buddy">
-                     <cstring>mWMSAbstract</cstring>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="6" column="1">
-                   <widget class="QTextEdit" name="mWMSAbstract"/>
-                  </item>
-                  <item row="7" column="1">
-                   <widget class="QLineEdit" name="mWMSFees"/>
-                  </item>
-                  <item row="7" column="0">
+                  <item row="8" column="0">
                    <widget class="QLabel" name="mWMSFeesLabel">
                     <property name="text">
                      <string>Fees</string>
@@ -1424,22 +1559,30 @@
                    </widget>
                   </item>
                   <item row="8" column="1">
-                   <widget class="QLineEdit" name="mWMSAccessConstraints"/>
-                  </item>
-                  <item row="8" column="0">
-                   <widget class="QLabel" name="mWMSAccessConstraintsLabel">
-                    <property name="text">
-                     <string>Access constraints</string>
+                   <widget class="QComboBox" name="mWMSFeesCb">
+                    <property name="editable">
+                     <bool>true</bool>
                     </property>
                    </widget>
                   </item>
                   <item row="9" column="1">
-                   <widget class="QLineEdit" name="mWMSKeywordList"/>
+                   <widget class="QComboBox" name="mWMSAccessConstraintsCb">
+                    <property name="editable">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
                   </item>
-                  <item row="9" column="0">
-                   <widget class="QLabel" name="mWMSKeywordListLabel">
+                  <item row="4" column="0">
+                   <widget class="QLabel" name="label_20">
                     <property name="text">
-                     <string>Keyword list</string>
+                     <string>Position</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="1">
+                   <widget class="QComboBox" name="mWMSContactPositionCb">
+                    <property name="editable">
+                     <bool>true</bool>
                     </property>
                    </widget>
                   </item>
@@ -1449,20 +1592,72 @@
                <item>
                 <widget class="QgsCollapsibleGroupBox" name="grpWMSCapabilities">
                  <property name="title">
-                  <string>WMS capabilitities</string>
+                  <string>WMS capabilities</string>
                  </property>
                  <property name="syncGroup" stdset="0">
                   <string notr="true">projowsserver</string>
                  </property>
-                 <layout class="QGridLayout" name="gridLayout_14">
-                  <item row="2" column="0" colspan="3">
-                   <widget class="QCheckBox" name="mAddWktGeometryCheckBox">
-                    <property name="text">
-                     <string>Add WKT geometry to feature info response</string>
+                 <layout class="QGridLayout" name="gridLayout_13">
+                  <item row="2" column="0">
+                   <widget class="QgsCollapsibleGroupBox" name="mWMSComposerGroupBox">
+                    <property name="title">
+                     <string>Exclude composers</string>
                     </property>
+                    <property name="checkable">
+                     <bool>true</bool>
+                    </property>
+                    <property name="checked">
+                     <bool>false</bool>
+                    </property>
+                    <property name="collapsed" stdset="0">
+                     <bool>false</bool>
+                    </property>
+                    <property name="saveCollapsedState" stdset="0">
+                     <bool>true</bool>
+                    </property>
+                    <layout class="QGridLayout" name="gridLayout_10">
+                     <item row="0" column="0" colspan="3">
+                      <widget class="QListWidget" name="mComposerListWidget"/>
+                     </item>
+                     <item row="1" column="0">
+                      <widget class="QToolButton" name="mAddWMSComposerButton">
+                       <property name="text">
+                        <string/>
+                       </property>
+                       <property name="icon">
+                        <iconset resource="../../images/images.qrc">
+                         <normaloff>:/images/themes/default/symbologyAdd.svg</normaloff>:/images/themes/default/symbologyAdd.svg</iconset>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="1">
+                      <widget class="QToolButton" name="mRemoveWMSComposerButton">
+                       <property name="text">
+                        <string/>
+                       </property>
+                       <property name="icon">
+                        <iconset resource="../../images/images.qrc">
+                         <normaloff>:/images/themes/default/symbologyRemove.svg</normaloff>:/images/themes/default/symbologyRemove.svg</iconset>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="2">
+                      <spacer name="horizontalSpacer_2">
+                       <property name="orientation">
+                        <enum>Qt::Horizontal</enum>
+                       </property>
+                       <property name="sizeHint" stdset="0">
+                        <size>
+                         <width>0</width>
+                         <height>20</height>
+                        </size>
+                       </property>
+                      </spacer>
+                     </item>
+                    </layout>
                    </widget>
                   </item>
-                  <item row="1" column="1" colspan="2">
+                  <item row="2" column="1">
                    <widget class="QgsCollapsibleGroupBox" name="mLayerRestrictionsGroupBox">
                     <property name="title">
                      <string>Exclude layers</string>
@@ -1490,7 +1685,7 @@
                        </property>
                        <property name="icon">
                         <iconset resource="../../images/images.qrc">
-                         <normaloff>:/images/themes/default/symbologyAdd.png</normaloff>:/images/themes/default/symbologyAdd.png</iconset>
+                         <normaloff>:/images/themes/default/symbologyAdd.svg</normaloff>:/images/themes/default/symbologyAdd.svg</iconset>
                        </property>
                       </widget>
                      </item>
@@ -1501,7 +1696,7 @@
                        </property>
                        <property name="icon">
                         <iconset resource="../../images/images.qrc">
-                         <normaloff>:/images/themes/default/symbologyRemove.png</normaloff>:/images/themes/default/symbologyRemove.png</iconset>
+                         <normaloff>:/images/themes/default/symbologyRemove.svg</normaloff>:/images/themes/default/symbologyRemove.svg</iconset>
                        </property>
                       </widget>
                      </item>
@@ -1521,68 +1716,7 @@
                     </layout>
                    </widget>
                   </item>
-                  <item row="3" column="0" colspan="3">
-                   <layout class="QHBoxLayout" name="horizontalLayout_2">
-                    <item>
-                     <widget class="QLabel" name="mWMSUrlLabel">
-                      <property name="text">
-                       <string>Advertised URL</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QLineEdit" name="mWMSUrlLineEdit"/>
-                    </item>
-                   </layout>
-                  </item>
-                  <item row="4" column="0" colspan="3">
-                   <layout class="QGridLayout" name="gridLayout_3">
-                    <item row="1" column="1">
-                     <widget class="QLabel" name="mMaxWidthLabel">
-                      <property name="text">
-                       <string>Width</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="1" column="0">
-                     <spacer name="horizontalSpacer_6">
-                      <property name="orientation">
-                       <enum>Qt::Horizontal</enum>
-                      </property>
-                      <property name="sizeType">
-                       <enum>QSizePolicy::Fixed</enum>
-                      </property>
-                      <property name="sizeHint" stdset="0">
-                       <size>
-                        <width>6</width>
-                        <height>20</height>
-                       </size>
-                      </property>
-                     </spacer>
-                    </item>
-                    <item row="1" column="4">
-                     <widget class="QLineEdit" name="mMaxHeightLineEdit"/>
-                    </item>
-                    <item row="1" column="2">
-                     <widget class="QLineEdit" name="mMaxWidthLineEdit"/>
-                    </item>
-                    <item row="1" column="3">
-                     <widget class="QLabel" name="mMaxHeightLabel">
-                      <property name="text">
-                       <string>Height</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="0" colspan="5">
-                     <widget class="QLabel" name="label_21">
-                      <property name="text">
-                       <string>Maximums for GetMap request</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </item>
-                  <item row="0" column="0">
+                  <item row="1" column="0">
                    <widget class="QgsCollapsibleGroupBox" name="grpWMSExt">
                     <property name="title">
                      <string>Advertised extent</string>
@@ -1691,7 +1825,7 @@
                     </layout>
                    </widget>
                   </item>
-                  <item row="0" column="1" colspan="2">
+                  <item row="1" column="1">
                    <widget class="QgsCollapsibleGroupBox" name="grpWMSList">
                     <property name="title">
                      <string>CRS restrictions</string>
@@ -1713,7 +1847,7 @@
                       <widget class="QToolButton" name="pbnWMSAddSRS">
                        <property name="icon">
                         <iconset resource="../../images/images.qrc">
-                         <normaloff>:/images/themes/default/mActionSignPlus.png</normaloff>:/images/themes/default/mActionSignPlus.png</iconset>
+                         <normaloff>:/images/themes/default/symbologyAdd.svg</normaloff>:/images/themes/default/symbologyAdd.svg</iconset>
                        </property>
                       </widget>
                      </item>
@@ -1731,71 +1865,138 @@
                       <widget class="QToolButton" name="pbnWMSRemoveSRS">
                        <property name="icon">
                         <iconset resource="../../images/images.qrc">
-                         <normaloff>:/images/themes/default/symbologyRemove.png</normaloff>:/images/themes/default/symbologyRemove.png</iconset>
+                         <normaloff>:/images/themes/default/symbologyRemove.svg</normaloff>:/images/themes/default/symbologyRemove.svg</iconset>
                        </property>
                       </widget>
                      </item>
                     </layout>
                    </widget>
                   </item>
-                  <item row="1" column="0">
-                   <widget class="QgsCollapsibleGroupBox" name="mWMSComposerGroupBox">
-                    <property name="title">
-                     <string>Exclude composers</string>
+                  <item row="3" column="0">
+                   <widget class="QCheckBox" name="mWmsUseLayerIDs">
+                    <property name="text">
+                     <string>Use layer ids as names</string>
                     </property>
-                    <property name="checkable">
-                     <bool>true</bool>
-                    </property>
-                    <property name="checked">
-                     <bool>false</bool>
-                    </property>
-                    <property name="collapsed" stdset="0">
-                     <bool>false</bool>
-                    </property>
-                    <property name="saveCollapsedState" stdset="0">
-                     <bool>true</bool>
-                    </property>
-                    <layout class="QGridLayout" name="gridLayout_10">
-                     <item row="0" column="0" colspan="3">
-                      <widget class="QListWidget" name="mComposerListWidget"/>
-                     </item>
-                     <item row="1" column="0">
-                      <widget class="QToolButton" name="mAddWMSComposerButton">
-                       <property name="text">
-                        <string/>
-                       </property>
-                       <property name="icon">
-                        <iconset resource="../../images/images.qrc">
-                         <normaloff>:/images/themes/default/symbologyAdd.png</normaloff>:/images/themes/default/symbologyAdd.png</iconset>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="1" column="1">
-                      <widget class="QToolButton" name="mRemoveWMSComposerButton">
-                       <property name="text">
-                        <string/>
-                       </property>
-                       <property name="icon">
-                        <iconset resource="../../images/images.qrc">
-                         <normaloff>:/images/themes/default/symbologyRemove.png</normaloff>:/images/themes/default/symbologyRemove.png</iconset>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="1" column="2">
-                      <spacer name="horizontalSpacer_2">
-                       <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
-                       </property>
-                       <property name="sizeHint" stdset="0">
-                        <size>
-                         <width>0</width>
-                         <height>20</height>
-                        </size>
-                       </property>
-                      </spacer>
-                     </item>
-                    </layout>
                    </widget>
+                  </item>
+                  <item row="8" column="0" colspan="2">
+                   <layout class="QHBoxLayout" name="horizontalLayout_10">
+                    <item>
+                     <widget class="QLabel" name="mWMSImageQualityLabel">
+                      <property name="text">
+                       <string>Quality for JPEG images ( 10 : smaller image - 100 : best quality )</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QSpinBox" name="mWMSImageQualitySpinBox">
+                      <property name="minimum">
+                       <number>10</number>
+                      </property>
+                      <property name="maximum">
+                       <number>100</number>
+                      </property>
+                      <property name="singleStep">
+                       <number>5</number>
+                      </property>
+                      <property name="value">
+                       <number>90</number>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item row="4" column="0">
+                   <widget class="QCheckBox" name="mAddWktGeometryCheckBox">
+                    <property name="text">
+                     <string>Add geometry to feature response</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="7" column="0" colspan="2">
+                   <layout class="QGridLayout" name="gridLayout_3">
+                    <item row="1" column="1">
+                     <widget class="QLabel" name="mMaxWidthLabel">
+                      <property name="text">
+                       <string>Width</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="1" column="0">
+                     <spacer name="horizontalSpacer_6">
+                      <property name="orientation">
+                       <enum>Qt::Horizontal</enum>
+                      </property>
+                      <property name="sizeType">
+                       <enum>QSizePolicy::Fixed</enum>
+                      </property>
+                      <property name="sizeHint" stdset="0">
+                       <size>
+                        <width>6</width>
+                        <height>20</height>
+                       </size>
+                      </property>
+                     </spacer>
+                    </item>
+                    <item row="1" column="4">
+                     <widget class="QLineEdit" name="mMaxHeightLineEdit"/>
+                    </item>
+                    <item row="1" column="2">
+                     <widget class="QLineEdit" name="mMaxWidthLineEdit"/>
+                    </item>
+                    <item row="1" column="3">
+                     <widget class="QLabel" name="mMaxHeightLabel">
+                      <property name="text">
+                       <string>Height</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="0" colspan="5">
+                     <widget class="QLabel" name="label_21">
+                      <property name="text">
+                       <string>Maximums for GetMap request</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item row="5" column="0" colspan="2">
+                   <layout class="QHBoxLayout" name="grpWMSPrecision">
+                    <item>
+                     <widget class="QLabel" name="label_5">
+                      <property name="text">
+                       <string>GetFeatureInfo geometry precision (decimal places)</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QSpinBox" name="mWMSPrecisionSpinBox">
+                      <property name="minimum">
+                       <number>1</number>
+                      </property>
+                      <property name="maximum">
+                       <number>17</number>
+                      </property>
+                      <property name="value">
+                       <number>8</number>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item row="6" column="0" colspan="2">
+                   <layout class="QHBoxLayout" name="horizontalLayout_2">
+                    <item>
+                     <widget class="QLabel" name="mWMSUrlLabel">
+                      <property name="text">
+                       <string>Advertised URL</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QLineEdit" name="mWMSUrlLineEdit"/>
+                    </item>
+                   </layout>
                   </item>
                  </layout>
                 </widget>
@@ -1809,7 +2010,7 @@
                   </sizepolicy>
                  </property>
                  <property name="title">
-                  <string>WFS capabilitities</string>
+                  <string>WFS capabilities (also influences DXF export)</string>
                  </property>
                  <property name="syncGroup" stdset="0">
                   <string notr="true">projowsserver</string>
@@ -1831,6 +2032,11 @@
                     <column>
                      <property name="text">
                       <string>Published</string>
+                     </property>
+                    </column>
+                    <column>
+                     <property name="text">
+                      <string>Geometry precision (decimal places)</string>
                      </property>
                     </column>
                     <column>
@@ -1864,6 +2070,86 @@
                     </property>
                    </widget>
                   </item>
+                  <item row="3" column="0" colspan="2">
+                   <layout class="QHBoxLayout" name="horizontalLayout_8">
+                    <item>
+                     <widget class="QLabel" name="mWFSUrlLabel">
+                      <property name="text">
+                       <string>Advertised URL</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QLineEdit" name="mWFSUrlLineEdit"/>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QgsCollapsibleGroupBox" name="grpWCSCapabilities">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>3</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="title">
+                  <string>WCS capabilities</string>
+                 </property>
+                 <property name="syncGroup" stdset="0">
+                  <string notr="true">projowsserver</string>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout_9">
+                  <item row="0" column="0" colspan="2">
+                   <widget class="QTableWidget" name="twWCSLayers">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <column>
+                     <property name="text">
+                      <string>Layer</string>
+                     </property>
+                    </column>
+                    <column>
+                     <property name="text">
+                      <string>Published</string>
+                     </property>
+                    </column>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QPushButton" name="pbnWCSLayersUnselectAll">
+                    <property name="text">
+                     <string>Unselect all</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QPushButton" name="pbnWCSLayersSelectAll">
+                    <property name="text">
+                     <string>Select all</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="0" colspan="2">
+                   <layout class="QHBoxLayout" name="horizontalLayout_9">
+                    <item>
+                     <widget class="QLabel" name="mWCSUrlLabel">
+                      <property name="text">
+                       <string>Advertised URL</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QLineEdit" name="mWCSUrlLineEdit"/>
+                    </item>
+                   </layout>
+                  </item>
                  </layout>
                 </widget>
                </item>
@@ -1888,19 +2174,18 @@
          </widget>
          <widget class="QWidget" name="mProjOpts_06">
           <layout class="QVBoxLayout" name="verticalLayout_15">
-           <property name="margin">
+           <property name="leftMargin">
             <number>0</number>
            </property>
-           <item>
-            <widget class="QLabel" name="label_20">
-             <property name="styleSheet">
-              <string notr="true">font-weight:bold;</string>
-             </property>
-             <property name="text">
-              <string>Macros</string>
-             </property>
-            </widget>
-           </item>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
            <item>
             <widget class="QScrollArea" name="scrollArea_6">
              <property name="frameShape">
@@ -1914,8 +2199,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>646</width>
-                <height>669</height>
+                <width>683</width>
+                <height>779</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -1938,20 +2223,49 @@
                  </property>
                  <layout class="QVBoxLayout" name="verticalLayout_16">
                   <item>
-                   <widget class="QPlainTextEdit" name="ptePythonMacros">
-                    <property name="documentTitle">
-                     <string notr="true"/>
-                    </property>
-                    <property name="plainText">
-                     <string/>
-                    </property>
-                   </widget>
+                   <widget class="QgsCodeEditorPython" name="ptePythonMacros" native="true"/>
                   </item>
                  </layout>
                 </widget>
                </item>
               </layout>
              </widget>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="mTabRelations">
+          <layout class="QGridLayout" name="gridLayout_16">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="page">
+          <layout class="QVBoxLayout" name="verticalLayout_23">
+           <item>
+            <widget class="QGroupBox" name="groupBox_4">
+             <property name="title">
+              <string>Expression Variables</string>
+             </property>
+             <layout class="QHBoxLayout" name="horizontalLayout_7">
+              <item>
+               <widget class="QgsVariableEditorWidget" name="mVariableEditor" native="true">
+                <property name="settingGroup" stdset="0">
+                 <string notr="true">projectProperties</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </widget>
            </item>
           </layout>
@@ -1977,7 +2291,16 @@
       <enum>QFrame::Raised</enum>
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout">
-      <property name="margin">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
        <number>0</number>
       </property>
       <item>
@@ -1997,14 +2320,27 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>QgsColorButton</class>
-   <extends>QPushButton</extends>
-   <header>qgscolorbutton.h</header>
-  </customwidget>
-  <customwidget>
    <class>QgsCollapsibleGroupBox</class>
    <extends>QGroupBox</extends>
    <header>qgscollapsiblegroupbox.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QgsColorButtonV2</class>
+   <extends>QToolButton</extends>
+   <header>qgscolorbuttonv2.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QgsColorSchemeList</class>
+   <extends>QWidget</extends>
+   <header location="global">qgscolorschemelist.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QgsCodeEditorPython</class>
+   <extends>QWidget</extends>
+   <header>qgscodeeditorpython.h</header>
    <container>1</container>
   </customwidget>
   <customwidget>
@@ -2013,7 +2349,112 @@
    <header>qgsprojectionselector.h</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>QgsVariableEditorWidget</class>
+   <extends>QWidget</extends>
+   <header location="global">qgsvariableeditorwidget.h</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>mOptionsListWidget</tabstop>
+  <tabstop>scrollArea_2</tabstop>
+  <tabstop>titleEdit</tabstop>
+  <tabstop>pbnSelectionColor</tabstop>
+  <tabstop>pbnCanvasColor</tabstop>
+  <tabstop>cbxAbsolutePath</tabstop>
+  <tabstop>cmbEllipsoid</tabstop>
+  <tabstop>leSemiMajor</tabstop>
+  <tabstop>leSemiMinor</tabstop>
+  <tabstop>radMeters</tabstop>
+  <tabstop>radFeet</tabstop>
+  <tabstop>radNMiles</tabstop>
+  <tabstop>radDegrees</tabstop>
+  <tabstop>radD</tabstop>
+  <tabstop>radDM</tabstop>
+  <tabstop>radDMS</tabstop>
+  <tabstop>radAutomatic</tabstop>
+  <tabstop>radManual</tabstop>
+  <tabstop>spinBoxDP</tabstop>
+  <tabstop>grpProjectScales</tabstop>
+  <tabstop>lstScales</tabstop>
+  <tabstop>pbnAddScale</tabstop>
+  <tabstop>pbnRemoveScale</tabstop>
+  <tabstop>pbnImportScales</tabstop>
+  <tabstop>pbnExportScales</tabstop>
+  <tabstop>scrollArea</tabstop>
+  <tabstop>cbxProjectionEnabled</tabstop>
+  <tabstop>scrollArea_3</tabstop>
+  <tabstop>twIdentifyLayers</tabstop>
+  <tabstop>scrollArea_4</tabstop>
+  <tabstop>cboStyleMarker</tabstop>
+  <tabstop>pbtnStyleMarker</tabstop>
+  <tabstop>cboStyleLine</tabstop>
+  <tabstop>pbtnStyleLine</tabstop>
+  <tabstop>cboStyleFill</tabstop>
+  <tabstop>pbtnStyleFill</tabstop>
+  <tabstop>cboStyleColorRamp</tabstop>
+  <tabstop>pbtnStyleColorRamp</tabstop>
+  <tabstop>mTransparencySlider</tabstop>
+  <tabstop>mTransparencySpinBox</tabstop>
+  <tabstop>cbxStyleRandomColors</tabstop>
+  <tabstop>pbtnStyleManager</tabstop>
+  <tabstop>mButtonAddColor</tabstop>
+  <tabstop>mButtonRemoveColor</tabstop>
+  <tabstop>mButtonCopyColors</tabstop>
+  <tabstop>mButtonPasteColors</tabstop>
+  <tabstop>mButtonImportColors</tabstop>
+  <tabstop>mButtonExportColors</tabstop>
+  <tabstop>scrollArea_5</tabstop>
+  <tabstop>grpOWSServiceCapabilities</tabstop>
+  <tabstop>mWMSTitle</tabstop>
+  <tabstop>mWMSContactOrganization</tabstop>
+  <tabstop>mWMSOnlineResourceLineEdit</tabstop>
+  <tabstop>mWMSContactPerson</tabstop>
+  <tabstop>mWMSContactMail</tabstop>
+  <tabstop>mWMSContactPhone</tabstop>
+  <tabstop>mWMSContactPositionCb</tabstop>
+  <tabstop>mWMSAbstract</tabstop>
+  <tabstop>mWMSFeesCb</tabstop>
+  <tabstop>mWMSAccessConstraintsCb</tabstop>
+  <tabstop>mWMSKeywordList</tabstop>
+  <tabstop>grpWMSExt</tabstop>
+  <tabstop>mWMSExtMinX</tabstop>
+  <tabstop>mWMSExtMinY</tabstop>
+  <tabstop>mWMSExtMaxX</tabstop>
+  <tabstop>mWMSExtMaxY</tabstop>
+  <tabstop>pbnWMSExtCanvas</tabstop>
+  <tabstop>grpWMSList</tabstop>
+  <tabstop>mWMSList</tabstop>
+  <tabstop>pbnWMSAddSRS</tabstop>
+  <tabstop>pbnWMSRemoveSRS</tabstop>
+  <tabstop>pbnWMSSetUsedSRS</tabstop>
+  <tabstop>mWMSComposerGroupBox</tabstop>
+  <tabstop>mComposerListWidget</tabstop>
+  <tabstop>mAddWMSComposerButton</tabstop>
+  <tabstop>mRemoveWMSComposerButton</tabstop>
+  <tabstop>mLayerRestrictionsGroupBox</tabstop>
+  <tabstop>mLayerRestrictionsListWidget</tabstop>
+  <tabstop>mAddLayerRestrictionButton</tabstop>
+  <tabstop>mRemoveLayerRestrictionButton</tabstop>
+  <tabstop>mWmsUseLayerIDs</tabstop>
+  <tabstop>mAddWktGeometryCheckBox</tabstop>
+  <tabstop>mWMSPrecisionSpinBox</tabstop>
+  <tabstop>mWMSUrlLineEdit</tabstop>
+  <tabstop>mMaxWidthLineEdit</tabstop>
+  <tabstop>mMaxHeightLineEdit</tabstop>
+  <tabstop>mWMSImageQualitySpinBox</tabstop>
+  <tabstop>twWFSLayers</tabstop>
+  <tabstop>pbnWFSLayersSelectAll</tabstop>
+  <tabstop>pbnWFSLayersUnselectAll</tabstop>
+  <tabstop>mWFSUrlLineEdit</tabstop>
+  <tabstop>twWCSLayers</tabstop>
+  <tabstop>pbnWCSLayersSelectAll</tabstop>
+  <tabstop>pbnWCSLayersUnselectAll</tabstop>
+  <tabstop>mWCSUrlLineEdit</tabstop>
+  <tabstop>grpPythonMacros</tabstop>
+  <tabstop>scrollArea_6</tabstop>
+ </tabstops>
  <resources>
   <include location="../../images/images.qrc"/>
  </resources>

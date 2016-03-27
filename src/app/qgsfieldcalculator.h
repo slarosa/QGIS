@@ -21,8 +21,8 @@
 
 class QgsVectorLayer;
 
-/**A dialog class that provides calculation of new fields using existing fields, values and a set of operators*/
-class QgsFieldCalculator: public QDialog, private Ui::QgsFieldCalculatorBase
+/** A dialog class that provides calculation of new fields using existing fields, values and a set of operators*/
+class APP_EXPORT QgsFieldCalculator: public QDialog, private Ui::QgsFieldCalculatorBase
 {
     Q_OBJECT
   public:
@@ -32,35 +32,44 @@ class QgsFieldCalculator: public QDialog, private Ui::QgsFieldCalculatorBase
     int changedAttributeId() const { return mAttributeId; }
 
   public slots:
-    void accept();
+    void accept() override;
 
     void on_mNewFieldGroupBox_toggled( bool on );
     void on_mUpdateExistingGroupBox_toggled( bool on );
+    void on_mCreateVirtualFieldCheckbox_stateChanged( int state );
     void on_mOutputFieldNameLineEdit_textChanged( const QString& text );
     void on_mOutputFieldTypeComboBox_activated( int index );
 
     void on_mButtonBox_helpRequested() { QgsContextHelp::run( metaObject()->className() ); }
 
   private slots:
-    /**Sets the ok button enabled / disabled*/
+    /** Sets the ok button enabled / disabled*/
     void setOkButtonState();
 
   private:
-    //default constructor forbidden
+    //! default constructor forbidden
     QgsFieldCalculator();
-    /**Inserts existing fields into the combo box*/
+    /** Inserts existing fields into the combo box*/
     void populateFields();
-    /**Inserts the types supported by the provider into the combo box*/
+    /** Inserts the types supported by the provider into the combo box*/
     void populateOutputFieldTypes();
 
     QgsVectorLayer* mVectorLayer;
-    /**Key: field name, Value: field index*/
+    /** Key: field name, Value: field index*/
     QMap<QString, int> mFieldMap;
 
-    /**idx of changed attribute*/
-    int mAttributeId;
+    /** Create a field based on the definitions */
+    inline QgsField fieldDefinition()
+    {
+      return QgsField( mOutputFieldNameLineEdit->text(),
+                       ( QVariant::Type ) mOutputFieldTypeComboBox->itemData( mOutputFieldTypeComboBox->currentIndex(), Qt::UserRole ).toInt(),
+                       mOutputFieldTypeComboBox->itemData( mOutputFieldTypeComboBox->currentIndex(), Qt::UserRole + 1 ).toString(),
+                       mOutputFieldWidthSpinBox->value(),
+                       mOutputFieldPrecisionSpinBox->value() );
+    }
 
-    bool mExpressionValid;
+    /** Idx of changed attribute*/
+    int mAttributeId;
 };
 
 #endif // QGSFIELDCALCULATOR_H

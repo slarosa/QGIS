@@ -13,10 +13,12 @@
  *                                                                         *
  ***************************************************************************/
 #include "qgsgml.h"
+#include "qgsauthmanager.h"
 #include "qgsrectangle.h"
 #include "qgscoordinatereferencesystem.h"
 #include "qgsgeometry.h"
 #include "qgslogger.h"
+#include "qgsmessagelog.h"
 #include "qgsnetworkaccessmanager.h"
 #include <QBuffer>
 #include <QList>
@@ -39,9 +41,15 @@ QgsGml::QgsGml(
     : QObject()
     , mTypeName( typeName )
     , mGeometryAttribute( geometryAttribute )
+    , mWkbType( NULL )
     , mFinished( false )
+    , mCurrentFeature( 0 )
     , mFeatureCount( 0 )
+    , mCurrentWKB( NULL )
     , mCurrentWKBSize( 0 )
+    , mDimension( 2 )
+    , mCoorMode( QgsGml::coordinate )
+    , mEpsg( 0 )
 {
   mThematicAttributes.clear();
   for ( int i = 0; i < fields.size(); i++ )
@@ -51,7 +59,7 @@ QgsGml::QgsGml(
 
   mEndian = QgsApplication::endian();
 
-  int index = mTypeName.indexOf( ":" );
+  int index = mTypeName.indexOf( ':' );
   if ( index != -1 && index < mTypeName.length() )
   {
     mTypeName = mTypeName.mid( index + 1 );
@@ -62,7 +70,7 @@ QgsGml::~QgsGml()
 {
 }
 
-int QgsGml::getFeatures( const QString& uri, QGis::WkbType* wkbType, QgsRectangle* extent )
+int QgsGml::getFeatures( const QString& uri, QGis::WkbType* wkbType, QgsRectangle* extent, const QString& userName, const QString& password , const QString& authcfg )
 {
   mUri = uri;
   mWkbType = wkbType;
@@ -76,6 +84,22 @@ int QgsGml::getFeatures( const QString& uri, QGis::WkbType* wkbType, QgsRectangl
   mExtent.setMinimal();
 
   QNetworkRequest request( mUri );
+  if ( !authcfg.isEmpty() )
+  {
+    if ( !QgsAuthManager::instance()->updateNetworkRequest( request, authcfg ) )
+    {
+      QgsMessageLog::logMessage(
+        tr( "GML Getfeature network request update failed for authcfg %1" ).arg( authcfg ),
+        tr( "Network" ),
+        QgsMessageLog::CRITICAL
+      );
+      return 1;
+    }
+  }
+  else if ( !userName.isNull() || !password.isNull() )
+  {
+    request.setRawHeader( "Authorization", "Basic " + QString( "%1:%2" ).arg( userName, password ).toAscii().toBase64() );
+  }
   QNetworkReply* reply = QgsNetworkAccessManager::instance()->get( request );
 
   connect( reply, SIGNAL( finished() ), this, SLOT( setFinished() ) );
@@ -83,7 +107,16 @@ int QgsGml::getFeatures( const QString& uri, QGis::WkbType* wkbType, QgsRectangl
 
   //find out if there is a QGIS main window. If yes, display a progress dialog
   QProgressDialog* progressDialog = 0;
-  QWidget* mainWindow = qApp->activeWindow();
+  QWidget* mainWindow = 0;
+  QWidgetList topLevelWidgets = qApp->topLevelWidgets();
+  for ( QWidgetList::iterator it = topLevelWidgets.begin(); it != topLevelWidgets.end(); ++it )
+  {
+    if (( *it )->objectName() == "QgisApp" )
+    {
+      mainWindow = *it;
+      break;
+    }
+  }
   if ( mainWindow )
   {
     progressDialog = new QProgressDialog( tr( "Loading GML data\n%1" ).arg( mTypeName ), tr( "Abort" ), 0, 0, mainWindow );
@@ -102,15 +135,36 @@ int QgsGml::getFeatures( const QString& uri, QGis::WkbType* wkbType, QgsRectangl
       atEnd = 1;
     }
     QByteArray readData = reply->readAll();
-    if ( readData.size() > 0 )
+    if ( !readData.isEmpty() )
     {
-      XML_Parse( p, readData.constData(), readData.size(), atEnd );
+      if ( XML_Parse( p, readData.constData(), readData.size(), atEnd ) == 0 )
+      {
+        XML_Error errorCode = XML_GetErrorCode( p );
+        QString errorString = tr( "Error: %1 on line %2, column %3" )
+                              .arg( XML_ErrorString( errorCode ) )
+                              .arg( XML_GetCurrentLineNumber( p ) )
+                              .arg( XML_GetCurrentColumnNumber( p ) );
+        QgsMessageLog::logMessage( errorString, tr( "WFS" ) );
+      }
     }
     QCoreApplication::processEvents();
   }
 
+  QNetworkReply::NetworkError replyError = reply->error();
+  QString replyErrorString = reply->errorString();
+
   delete reply;
   delete progressDialog;
+
+  if ( replyError )
+  {
+    QgsMessageLog::logMessage(
+      tr( "GML Getfeature network request failed with error: %1" ).arg( replyErrorString ),
+      tr( "Network" ),
+      QgsMessageLog::CRITICAL
+    );
+    return 1;
+  }
 
   if ( *mWkbType != QGis::WKBNoGeometry )
   {
@@ -131,7 +185,6 @@ int QgsGml::getFeatures( const QString& uri, QGis::WkbType* wkbType, QgsRectangl
 
 int QgsGml::getFeatures( const QByteArray &data, QGis::WkbType* wkbType, QgsRectangle* extent )
 {
-  QgsDebugMsg( "Entered" );
   mWkbType = wkbType;
   mExtent.setMinimal();
 
@@ -148,41 +201,59 @@ int QgsGml::getFeatures( const QByteArray &data, QGis::WkbType* wkbType, QgsRect
   return 0;
 }
 
-void QgsGml::setFinished( )
+void QgsGml::setFinished()
 {
   mFinished = true;
 }
 
 void QgsGml::handleProgressEvent( qint64 progress, qint64 totalSteps )
 {
-  emit dataReadProgress( progress );
   if ( totalSteps < 0 )
   {
     totalSteps = 0;
+    progress = 0;
   }
   emit totalStepsUpdate( totalSteps );
+  emit dataReadProgress( progress );
   emit dataProgressAndSteps( progress, totalSteps );
 }
 
 void QgsGml::startElement( const XML_Char* el, const XML_Char** attr )
 {
-  QString elementName( el );
+  QString elementName( QString::fromUtf8( el ) );
+  ParseMode theParseMode( mParseModeStack.isEmpty() ? none : mParseModeStack.top() );
   QStringList splitName =  elementName.split( NS_SEPARATOR );
   QString localName = splitName.last();
   QString ns = splitName.size() > 1 ? splitName.first() : "";
+
   if ( elementName == GML_NAMESPACE + NS_SEPARATOR + "coordinates" )
   {
     mParseModeStack.push( QgsGml::coordinate );
+    mCoorMode = QgsGml::coordinate;
     mStringCash.clear();
     mCoordinateSeparator = readAttribute( "cs", attr );
     if ( mCoordinateSeparator.isEmpty() )
     {
-      mCoordinateSeparator = ",";
+      mCoordinateSeparator = ',';
     }
     mTupleSeparator = readAttribute( "ts", attr );
     if ( mTupleSeparator.isEmpty() )
     {
-      mTupleSeparator = " ";
+      mTupleSeparator = ' ';
+    }
+  }
+  if ( elementName == GML_NAMESPACE + NS_SEPARATOR + "pos"
+       || elementName == GML_NAMESPACE + NS_SEPARATOR + "posList" )
+  {
+    mParseModeStack.push( QgsGml::posList );
+    mCoorMode = QgsGml::posList;
+    mStringCash.clear();
+    QString dimension = readAttribute( "srsDimension", attr );
+    bool ok;
+    mDimension = dimension.toInt( &ok );
+    if ( dimension.isEmpty() || !ok )
+    {
+      mDimension = 2;
     }
   }
   else if ( localName == mGeometryAttribute )
@@ -194,8 +265,9 @@ void QgsGml::startElement( const XML_Char* el, const XML_Char** attr )
   {
     mParseModeStack.push( QgsGml::boundingBox );
   }
-  else if ( localName == mTypeName )
+  else if ( theParseMode == none && localName == mTypeName )
   {
+    Q_ASSERT( !mCurrentFeature );
     mCurrentFeature = new QgsFeature( mFeatureCount );
     QgsAttributes attributes( mThematicAttributes.size() ); //add empty attributes
     mCurrentFeature->setAttributes( attributes );
@@ -203,7 +275,7 @@ void QgsGml::startElement( const XML_Char* el, const XML_Char** attr )
     mCurrentFeatureId = readAttribute( "fid", attr );
   }
 
-  else if ( elementName == GML_NAMESPACE + NS_SEPARATOR + "Box" && mParseModeStack.top() == QgsGml::boundingBox )
+  else if ( theParseMode == boundingBox && elementName == GML_NAMESPACE + NS_SEPARATOR + "Box" )
   {
     //read attribute srsName="EPSG:26910"
     int epsgNr;
@@ -214,92 +286,87 @@ void QgsGml::startElement( const XML_Char* el, const XML_Char** attr )
   }
   else if ( elementName == GML_NAMESPACE + NS_SEPARATOR + "Polygon" )
   {
-    QList<unsigned char*> wkbList;
-    QList<int> wkbSizeList;
-    mCurrentWKBFragments.push_back( wkbList );
-    mCurrentWKBFragmentSizes.push_back( wkbSizeList );
+    mCurrentWKBFragments.push_back( QList<unsigned char*>() );
+    mCurrentWKBFragmentSizes.push_back( QList<int>() );
   }
   else if ( elementName == GML_NAMESPACE + NS_SEPARATOR + "MultiPoint" )
   {
     mParseModeStack.push( QgsGml::multiPoint );
     //we need one nested list for intermediate WKB
-    QList<unsigned char*> wkbList;
-    QList<int> wkbSizeList;
-    mCurrentWKBFragments.push_back( wkbList );
-    mCurrentWKBFragmentSizes.push_back( wkbSizeList );
+    mCurrentWKBFragments.push_back( QList<unsigned char*>() );
+    mCurrentWKBFragmentSizes.push_back( QList<int>() );
   }
   else if ( elementName == GML_NAMESPACE + NS_SEPARATOR + "MultiLineString" )
   {
     mParseModeStack.push( QgsGml::multiLine );
     //we need one nested list for intermediate WKB
-    QList<unsigned char*> wkbList;
-    QList<int> wkbSizeList;
-    mCurrentWKBFragments.push_back( wkbList );
-    mCurrentWKBFragmentSizes.push_back( wkbSizeList );
+    mCurrentWKBFragments.push_back( QList<unsigned char*>() );
+    mCurrentWKBFragmentSizes.push_back( QList<int>() );
   }
   else if ( elementName == GML_NAMESPACE + NS_SEPARATOR + "MultiPolygon" )
   {
     mParseModeStack.push( QgsGml::multiPolygon );
   }
-  else if (( mParseModeStack.size() > 0 ) && ( mParseModeStack.top() == QgsGml::feature ) && ( mThematicAttributes.find( localName ) != mThematicAttributes.end() ) )
+  else if ( theParseMode == feature && mThematicAttributes.contains( localName ) )
   {
     mParseModeStack.push( QgsGml::attribute );
     mAttributeName = localName;
     mStringCash.clear();
   }
+  // QGIS server (2.2) is using:
+  // <Attribute value="My description" name="desc"/>
+  else if ( theParseMode == feature
+            && localName.compare( "attribute", Qt::CaseInsensitive ) == 0 )
+  {
+    QString name = readAttribute( "name", attr );
+    if ( mThematicAttributes.contains( name ) )
+    {
+      QString value = readAttribute( "value", attr );
+      setAttribute( name, value );
+    }
+  }
+
+  if ( mEpsg == 0 && ( localName == "Point" || localName == "MultiPoint" ||
+                       localName == "LineString" || localName == "MultiLineString" ||
+                       localName == "Polygon" || localName == "MultiPolygon" ) )
+  {
+    if ( readEpsgFromAttribute( mEpsg, attr ) != 0 )
+    {
+      QgsDebugMsg( "error, could not get epsg id" );
+    }
+    else
+    {
+      QgsDebugMsg( QString( "mEpsg = %1" ).arg( mEpsg ) );
+    }
+  }
 }
 
 void QgsGml::endElement( const XML_Char* el )
 {
-  QString elementName( el );
+  QString elementName( QString::fromUtf8( el ) );
+  ParseMode theParseMode( mParseModeStack.isEmpty() ? none : mParseModeStack.top() );
   QStringList splitName =  elementName.split( NS_SEPARATOR );
   QString localName = splitName.last();
   QString ns = splitName.size() > 1 ? splitName.first() : "";
-  if ( elementName == GML_NAMESPACE + NS_SEPARATOR + "coordinates" )
-  {
-    if ( !mParseModeStack.empty() )
-    {
-      mParseModeStack.pop();
-    }
-  }
-  else if ( localName == mAttributeName ) //add a thematic attribute to the feature
-  {
-    if ( !mParseModeStack.empty() )
-    {
-      mParseModeStack.pop();
-    }
 
-    //find index with attribute name
-    QMap<QString, QPair<int, QgsField> >::const_iterator att_it = mThematicAttributes.find( mAttributeName );
-    if ( att_it != mThematicAttributes.constEnd() )
-    {
-      QVariant var;
-      switch ( att_it.value().second.type() )
-      {
-        case QVariant::Double:
-          var = QVariant( mStringCash.toDouble() );
-          break;
-        case QVariant::Int:
-          var = QVariant( mStringCash.toInt() );
-          break;
-        case QVariant::LongLong:
-          var = QVariant( mStringCash.toLongLong() );
-          break;
-        default: //string type is default
-          var = QVariant( mStringCash );
-          break;
-      }
-      mCurrentFeature->setAttribute( att_it.value().first, QVariant( mStringCash ) );
-    }
-  }
-  else if ( localName == mGeometryAttribute )
+  if (( theParseMode == coordinate && elementName == GML_NAMESPACE + NS_SEPARATOR + "coordinates" )
+      || ( theParseMode == posList && (
+             elementName == GML_NAMESPACE + NS_SEPARATOR + "pos"
+             || elementName == GML_NAMESPACE + NS_SEPARATOR + "posList" ) ) )
   {
-    if ( !mParseModeStack.empty() )
-    {
-      mParseModeStack.pop();
-    }
+    mParseModeStack.pop();
   }
-  else if ( !mParseModeStack.empty() && mParseModeStack.top() == QgsGml::boundingBox && elementName == GML_NAMESPACE + NS_SEPARATOR + "boundedBy" )
+  else if ( theParseMode == attribute && localName == mAttributeName ) //add a thematic attribute to the feature
+  {
+    mParseModeStack.pop();
+
+    setAttribute( mAttributeName, mStringCash );
+  }
+  else if ( theParseMode == geometry && localName == mGeometryAttribute )
+  {
+    mParseModeStack.pop();
+  }
+  else if ( theParseMode == boundingBox && elementName == GML_NAMESPACE + NS_SEPARATOR + "boundedBy" )
   {
     //create bounding box from mStringCash
     if ( createBBoxFromCoordinateString( mCurrentExtent, mStringCash ) != 0 )
@@ -307,16 +374,17 @@ void QgsGml::endElement( const XML_Char* el )
       QgsDebugMsg( "creation of bounding box failed" );
     }
 
-    if ( !mParseModeStack.empty() )
-    {
-      mParseModeStack.pop();
-    }
+    mParseModeStack.pop();
   }
-  else if ( localName == mTypeName )
+  else if ( theParseMode == feature && localName == mTypeName )
   {
+    Q_ASSERT( mCurrentFeature );
     if ( mCurrentWKBSize > 0 )
     {
-      mCurrentFeature->setGeometryAndOwnership( mCurrentWKB, mCurrentWKBSize );
+      QgsGeometry *g = new QgsGeometry();
+      g->fromWkb( mCurrentWKB, mCurrentWKBSize );
+      mCurrentFeature->setGeometry( g );
+      mCurrentWKB = 0;
     }
     else if ( !mCurrentExtent.isEmpty() )
     {
@@ -333,21 +401,22 @@ void QgsGml::endElement( const XML_Char* el )
     {
       mIdMap.insert( mCurrentFeature->id(), mCurrentFeatureId );
     }
+    mCurrentFeature = 0;
     ++mFeatureCount;
-    if ( !mParseModeStack.empty() )
-    {
-      mParseModeStack.pop();
-    }
+    mParseModeStack.pop();
   }
   else if ( elementName == GML_NAMESPACE + NS_SEPARATOR + "Point" )
   {
     QList<QgsPoint> pointList;
-    if ( pointsFromCoordinateString( pointList, mStringCash ) != 0 )
+    if ( pointsFromString( pointList, mStringCash ) != 0 )
     {
       //error
     }
 
-    if ( mParseModeStack.top() != QgsGml::multiPoint )
+    if ( pointList.isEmpty() )
+      return;  // error
+
+    if ( theParseMode == QgsGml::geometry )
     {
       //directly add WKB point to the feature
       if ( getPointWKB( &mCurrentWKB, &mCurrentWKBSize, *( pointList.begin() ) ) != 0 )
@@ -370,12 +439,16 @@ void QgsGml::endElement( const XML_Char* el )
       {
         //error
       }
-      mCurrentWKBFragments.begin()->push_back( wkb );
-      mCurrentWKBFragmentSizes.begin()->push_back( wkbSize );
-      //wkbList.push_back(wkb);
-      //wkbSizeList.push_back(wkbSize);
-      //mCurrentWKBFragments.push_back(wkbList);
-      //mCurrentWKBFragmentSizes.push_back(wkbSizeList);
+      if ( !mCurrentWKBFragments.isEmpty() )
+      {
+        mCurrentWKBFragments.last().push_back( wkb );
+        mCurrentWKBFragmentSizes.last().push_back( wkbSize );
+      }
+      else
+      {
+        QgsDebugMsg( "No wkb fragments" );
+        delete [] wkb;
+      }
     }
   }
   else if ( elementName == GML_NAMESPACE + NS_SEPARATOR + "LineString" )
@@ -383,11 +456,11 @@ void QgsGml::endElement( const XML_Char* el )
     //add WKB point to the feature
 
     QList<QgsPoint> pointList;
-    if ( pointsFromCoordinateString( pointList, mStringCash ) != 0 )
+    if ( pointsFromString( pointList, mStringCash ) != 0 )
     {
       //error
     }
-    if ( mParseModeStack.top() != QgsGml::multiLine )
+    if ( theParseMode == QgsGml::geometry )
     {
       if ( getLineWKB( &mCurrentWKB, &mCurrentWKBSize, pointList ) != 0 )
       {
@@ -409,18 +482,22 @@ void QgsGml::endElement( const XML_Char* el )
       {
         //error
       }
-      mCurrentWKBFragments.begin()->push_back( wkb );
-      mCurrentWKBFragmentSizes.begin()->push_back( wkbSize );
-      //wkbList.push_back(wkb);
-      //wkbSizeList.push_back(wkbSize);
-      //mCurrentWKBFragments.push_back(wkbList);
-      //mCurrentWKBFragmentSizes.push_back(wkbSizeList);
+      if ( !mCurrentWKBFragments.isEmpty() )
+      {
+        mCurrentWKBFragments.last().push_back( wkb );
+        mCurrentWKBFragmentSizes.last().push_back( wkbSize );
+      }
+      else
+      {
+        QgsDebugMsg( "no wkb fragments" );
+        delete [] wkb;
+      }
     }
   }
-  else if ( elementName == GML_NAMESPACE + NS_SEPARATOR + "LinearRing" )
+  else if (( theParseMode == geometry || theParseMode == multiPolygon ) && elementName == GML_NAMESPACE + NS_SEPARATOR + "LinearRing" )
   {
     QList<QgsPoint> pointList;
-    if ( pointsFromCoordinateString( pointList, mStringCash ) != 0 )
+    if ( pointsFromString( pointList, mStringCash ) != 0 )
     {
       //error
     }
@@ -430,45 +507,45 @@ void QgsGml::endElement( const XML_Char* el )
     {
       //error
     }
-    mCurrentWKBFragments.begin()->push_back( wkb );
-    mCurrentWKBFragmentSizes.begin()->push_back( wkbSize );
+    if ( !mCurrentWKBFragments.isEmpty() )
+    {
+      mCurrentWKBFragments.last().push_back( wkb );
+      mCurrentWKBFragmentSizes.last().push_back( wkbSize );
+    }
+    else
+    {
+      delete[] wkb;
+      QgsDebugMsg( "no wkb fragments" );
+    }
   }
-  else if ( elementName == GML_NAMESPACE + NS_SEPARATOR + "Polygon" )
+  else if (( theParseMode == geometry || theParseMode == multiPolygon ) && elementName == GML_NAMESPACE + NS_SEPARATOR + "Polygon" )
   {
     if ( *mWkbType != QGis::WKBMultiPolygon )//keep multitype in case of geometry type mix
     {
       *mWkbType = QGis::WKBPolygon;
     }
-    if ( mParseModeStack.top() != QgsGml::multiPolygon )
+
+    if ( theParseMode == geometry )
     {
       createPolygonFromFragments();
     }
   }
-  else if ( elementName == GML_NAMESPACE + NS_SEPARATOR + "MultiPoint" )
+  else if ( theParseMode == multiPoint && elementName == GML_NAMESPACE + NS_SEPARATOR + "MultiPoint" )
   {
     *mWkbType = QGis::WKBMultiPoint;
-    if ( !mParseModeStack.empty() )
-    {
-      mParseModeStack.pop();
-    }
+    mParseModeStack.pop();
     createMultiPointFromFragments();
   }
-  else if ( elementName == GML_NAMESPACE + NS_SEPARATOR + "MultiLineString" )
+  else if ( theParseMode == multiLine && elementName == GML_NAMESPACE + NS_SEPARATOR + "MultiLineString" )
   {
     *mWkbType = QGis::WKBMultiLineString;
-    if ( !mParseModeStack.empty() )
-    {
-      mParseModeStack.pop();
-    }
+    mParseModeStack.pop();
     createMultiLineFromFragments();
   }
-  else if ( elementName == GML_NAMESPACE + NS_SEPARATOR + "MultiPolygon" )
+  else if ( theParseMode == multiPolygon && elementName == GML_NAMESPACE + NS_SEPARATOR + "MultiPolygon" )
   {
     *mWkbType = QGis::WKBMultiPolygon;
-    if ( !mParseModeStack.empty() )
-    {
-      mParseModeStack.pop();
-    }
+    mParseModeStack.pop();
     createMultiPolygonFromFragments();
   }
 }
@@ -476,15 +553,42 @@ void QgsGml::endElement( const XML_Char* el )
 void QgsGml::characters( const XML_Char* chars, int len )
 {
   //save chars in mStringCash attribute mode or coordinate mode
-  if ( mParseModeStack.size() == 0 )
+  if ( mParseModeStack.isEmpty() )
   {
     return;
   }
 
   QgsGml::ParseMode theParseMode = mParseModeStack.top();
-  if ( theParseMode == QgsGml::attribute || theParseMode == QgsGml::coordinate )
+  if ( theParseMode == QgsGml::attribute || theParseMode == QgsGml::coordinate || theParseMode == QgsGml::posList )
   {
     mStringCash.append( QString::fromUtf8( chars, len ) );
+  }
+}
+
+void QgsGml::setAttribute( const QString& name, const QString& value )
+{
+  //find index with attribute name
+  QMap<QString, QPair<int, QgsField> >::const_iterator att_it = mThematicAttributes.find( name );
+  if ( att_it != mThematicAttributes.constEnd() )
+  {
+    QVariant var;
+    switch ( att_it.value().second.type() )
+    {
+      case QVariant::Double:
+        var = QVariant( value.toDouble() );
+        break;
+      case QVariant::Int:
+        var = QVariant( value.toInt() );
+        break;
+      case QVariant::LongLong:
+        var = QVariant( value.toLongLong() );
+        break;
+      default: //string type is default
+        var = QVariant( value );
+        break;
+    }
+    Q_ASSERT( mCurrentFeature );
+    mCurrentFeature->setAttribute( att_it.value().first, var );
   }
 }
 
@@ -499,11 +603,11 @@ int QgsGml::readEpsgFromAttribute( int& epsgNr, const XML_Char** attr ) const
       QString epsgNrString;
       if ( epsgString.startsWith( "http" ) ) //e.g. geoserver: "http://www.opengis.net/gml/srs/epsg.xml#4326"
       {
-        epsgNrString = epsgString.section( "#", 1, 1 );
+        epsgNrString = epsgString.section( '#', 1, 1 );
       }
       else //e.g. umn mapserver: "EPSG:4326">
       {
-        epsgNrString = epsgString.section( ":", 1, 1 );
+        epsgNrString = epsgString.section( ':', 1, 1 );
       }
       bool conversionOk;
       int eNr = epsgNrString.toInt( &conversionOk );
@@ -526,9 +630,9 @@ QString QgsGml::readAttribute( const QString& attributeName, const XML_Char** at
   {
     if ( attributeName.compare( attr[i] ) == 0 )
     {
-      return QString( attr[i+1] );
+      return QString::fromUtf8( attr[i+1] );
     }
-    ++i;
+    i += 2;
   }
   return QString();
 }
@@ -580,6 +684,48 @@ int QgsGml::pointsFromCoordinateString( QList<QgsPoint>& points, const QString& 
     points.push_back( QgsPoint( x, y ) );
   }
   return 0;
+}
+
+int QgsGml::pointsFromPosListString( QList<QgsPoint>& points, const QString& coordString, int dimension ) const
+{
+  // coordinates separated by spaces
+  QStringList coordinates = coordString.split( ' ', QString::SkipEmptyParts );
+
+  if ( coordinates.size() % dimension != 0 )
+  {
+    QgsDebugMsg( "Wrong number of coordinates" );
+  }
+
+  int ncoor = coordinates.size() / dimension;
+  for ( int i = 0; i < ncoor; i++ )
+  {
+    bool conversionSuccess;
+    double x = coordinates.value( i * dimension ).toDouble( &conversionSuccess );
+    if ( !conversionSuccess )
+    {
+      continue;
+    }
+    double y = coordinates.value( i * dimension + 1 ).toDouble( &conversionSuccess );
+    if ( !conversionSuccess )
+    {
+      continue;
+    }
+    points.append( QgsPoint( x, y ) );
+  }
+  return 0;
+}
+
+int QgsGml::pointsFromString( QList<QgsPoint>& points, const QString& coordString ) const
+{
+  if ( mCoorMode == QgsGml::coordinate )
+  {
+    return pointsFromCoordinateString( points, coordString );
+  }
+  else if ( mCoorMode == QgsGml::posList )
+  {
+    return pointsFromPosListString( points, coordString, mDimension );
+  }
+  return 1;
 }
 
 int QgsGml::getPointWKB( unsigned char** wkb, int* size, const QgsPoint& point ) const
@@ -817,9 +963,9 @@ int QgsGml::createMultiPolygonFromFragments()
 int QgsGml::totalWKBFragmentSize() const
 {
   int result = 0;
-  foreach ( const QList<int> &list, mCurrentWKBFragmentSizes )
+  Q_FOREACH ( const QList<int> &list, mCurrentWKBFragmentSizes )
   {
-    foreach ( int i, list )
+    Q_FOREACH ( int i, list )
     {
       result += i;
     }
@@ -835,7 +981,7 @@ void QgsGml::calculateExtentFromFeatures()
   }
 
   QgsFeature* currentFeature = 0;
-  QgsGeometry* currentGeometry = 0;
+  const QgsGeometry* currentGeometry = 0;
   bool bboxInitialised = false; //gets true once bbox has been set to the first geometry
 
   for ( int i = 0; i < mFeatures.size(); ++i )
@@ -845,7 +991,7 @@ void QgsGml::calculateExtentFromFeatures()
     {
       continue;
     }
-    currentGeometry = currentFeature->geometry();
+    currentGeometry = currentFeature->constGeometry();
     if ( currentGeometry )
     {
       if ( !bboxInitialised )
@@ -859,4 +1005,14 @@ void QgsGml::calculateExtentFromFeatures()
       }
     }
   }
+}
+
+QgsCoordinateReferenceSystem QgsGml::crs() const
+{
+  QgsCoordinateReferenceSystem crs;
+  if ( mEpsg != 0 )
+  {
+    crs.createFromOgcWmsCrs( QString( "EPSG:%1" ).arg( mEpsg ) );
+  }
+  return crs;
 }

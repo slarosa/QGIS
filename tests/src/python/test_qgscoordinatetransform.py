@@ -8,23 +8,24 @@ the Free Software Foundation; either version 2 of the License, or
 """
 __author__ = '(C) 2012 by Tim Sutton'
 __date__ = '20/08/2012'
-__copyright__ = 'Copyright 2012, The Quantum GIS Project'
+__copyright__ = 'Copyright 2012, The QGIS Project'
 # This will get replaced with a git SHA1 when you do a git archive
 __revision__ = '$Format:%H$'
 
+import qgis
+
 from qgis.core import (QgsRectangle,
                        QgsCoordinateReferenceSystem,
-                       QgsCoordinateTransform,
-                       QGis)
-from utilities import (unitTestDataPath,
-                       getQgisTestApp,
+                       QgsCoordinateTransform
+                       )
+from utilities import (getQgisTestApp,
                        TestCase,
                        unittest
-                       #expectedFailure
                        )
 # Convenience instances in case you may need them
 # not used in this test
 QGISAPP, CANVAS, IFACE, PARENT = getQgisTestApp()
+
 
 class TestQgsCoordinateTransform(TestCase):
 
@@ -39,11 +40,11 @@ class TestQgsCoordinateTransform(TestCase):
         myProjectedExtent = myXForm.transformBoundingBox(myExtent)
         myExpectedExtent = ('150.1509239873580270,-35.7176936443908772 : '
                             '150.1964384662953194,-35.6971885216629090')
-        myExpectedValues = [150.1509239873580270,-35.7176936443908772,
-                            150.1964384662953194,-35.6971885216629090]
+        myExpectedValues = [150.1509239873580270, -35.7176936443908772,
+                            150.1964384662953194, -35.6971885216629090]
         myMessage = ('Expected:\n%s\nGot:\n%s\n' %
-                      ( myExpectedExtent,
-                        myProjectedExtent.toString()))
+                     (myExpectedExtent,
+                      myProjectedExtent.toString()))
 
         self.assertAlmostEqual(myExpectedValues[0], myProjectedExtent.xMinimum(), msg=myMessage)
         self.assertAlmostEqual(myExpectedValues[1], myProjectedExtent.yMinimum(), msg=myMessage)
@@ -52,4 +53,3 @@ class TestQgsCoordinateTransform(TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

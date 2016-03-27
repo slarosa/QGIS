@@ -15,7 +15,7 @@
 
 #include "qgsfeaturestore.h"
 
-QgsFeatureStore::QgsFeatureStore( )
+QgsFeatureStore::QgsFeatureStore()
 {
 }
 
@@ -33,7 +33,23 @@ QgsFeatureStore::QgsFeatureStore( const QgsFields& fields, const QgsCoordinateRe
 {
 }
 
-QgsFeatureStore::~QgsFeatureStore( )
+QgsFeatureStore::~QgsFeatureStore()
 {
 }
 
+void QgsFeatureStore::setFields( const QgsFields & fields )
+{
+  mFields = fields;
+  QgsFeatureList::iterator it = mFeatures.begin();
+  for ( ; it != mFeatures.end(); ++it )
+  {
+    ( *it ).setFields( mFields );
+  }
+}
+
+void QgsFeatureStore::addFeature( const QgsFeature& feature )
+{
+  QgsFeature f( feature );
+  f.setFields( mFields );
+  mFeatures.append( f );
+}

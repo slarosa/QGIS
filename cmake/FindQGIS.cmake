@@ -15,7 +15,7 @@ IF(WIN32)
   #MESSAGE("Searching for QGIS in $ENV{PROGRAMFILES}/QGIS")
   IF (MINGW)
     FIND_PATH(QGIS_PLUGIN_DIR
-      NAMES libdelimitedtextplugin.dll
+      NAMES libspatialqueryplugin.dll
       PATHS
         "$ENV{PROGRAMFILES}/QGIS/plugins"
     )
@@ -38,7 +38,7 @@ IF(WIN32)
 
   IF (MSVC)
     FIND_PATH(QGIS_PLUGIN_DIR
-      NAMES delimitedtextplugin.dll
+      NAMES spatialqueryplugin.dll
       PATHS
         "$ENV{OSGEO4W_ROOT}/apps/qgis/plugins"
         "$ENV{PROGRAMFILES}/QGIS/plugins"
@@ -82,8 +82,9 @@ ELSE(WIN32)
     SET (QGIS_MAC_PATH /Applications/QGIS.app/Contents)
     #MESSAGE("Searching for QGIS in /usr/bin; /usr/local/bin")
     FIND_PATH(QGIS_PLUGIN_DIR
-      NAMES libdelimitedtextplugin.so
+      NAMES libspatialqueryplugin.so
       PATHS
+        ${QGIS_PREFIX_PATH}/lib/qgis/plugins/
         /usr/lib64/qgis/plugins
         /usr/lib/qgis
         /usr/local/lib/qgis/plugins
@@ -94,6 +95,7 @@ ELSE(WIN32)
     FIND_PATH(QGIS_INCLUDE_DIR
       NAMES qgis.h
       PATHS
+        {QGIS_PREFIX_PATH}/include/qgis
         /usr/include/qgis
         /usr/local/include/qgis
         /Library/Frameworks/qgis_core.framework/Headers
@@ -123,6 +125,7 @@ ELSE(WIN32)
     FIND_LIBRARY(QGIS_CORE_LIBRARY
       NAMES qgis_core
       PATHS
+        ${QGIS_PREFIX_PATH}/lib/
         /usr/lib64
         /usr/lib
         /usr/local/lib
@@ -133,6 +136,7 @@ ELSE(WIN32)
     FIND_LIBRARY(QGIS_GUI_LIBRARY
       NAMES qgis_gui
       PATHS
+        ${QGIS_PREFIX_PATH}/lib/
         /usr/lib64
         /usr/lib
         /usr/local/lib
@@ -143,6 +147,7 @@ ELSE(WIN32)
     FIND_LIBRARY(QGIS_ANALYSIS_LIBRARY
       NAMES qgis_analysis
       PATHS
+        ${QGIS_PREFIX_PATH}/lib/
         /usr/lib64
         /usr/lib
         /usr/local/lib

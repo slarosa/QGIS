@@ -26,6 +26,7 @@
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPointer>
+#include <QGroupBox>
 
 
 QIcon QgsDataDefinedButton::mIconDataDefine;
@@ -38,10 +39,67 @@ QIcon QgsDataDefinedButton::mIconDataDefineExpressionError;
 QgsDataDefinedButton::QgsDataDefinedButton( QWidget* parent,
     const QgsVectorLayer* vl,
     const QgsDataDefined* datadefined,
-    DataTypes datatypes,
-    QString description )
+    const DataTypes& datatypes,
+    const QString& description )
     : QToolButton( parent )
+    , mExpressionContextCallback( 0 )
+    , mExpressionContextCallbackContext( 0 )
 {
+  // set up static icons
+  if ( mIconDataDefine.isNull() )
+  {
+    mIconDataDefine = QgsApplication::getThemeIcon( "/mIconDataDefine.svg" );
+    mIconDataDefineOn = QgsApplication::getThemeIcon( "/mIconDataDefineOn.svg" );
+    mIconDataDefineError = QgsApplication::getThemeIcon( "/mIconDataDefineError.svg" );
+    mIconDataDefineExpression = QgsApplication::getThemeIcon( "/mIconDataDefineExpression.svg" );
+    mIconDataDefineExpressionOn = QgsApplication::getThemeIcon( "/mIconDataDefineExpressionOn.svg" );
+    mIconDataDefineExpressionError = QgsApplication::getThemeIcon( "/mIconDataDefineExpressionError.svg" );
+  }
+
+  setFocusPolicy( Qt::StrongFocus );
+
+  // set default tool button icon properties
+  setFixedSize( 30, 26 );
+  setStyleSheet( QString( "QToolButton{ background: none; border: 1px solid rgba(0, 0, 0, 0%);} QToolButton:focus { border: 1px solid palette(highlight); }" ) );
+  setIconSize( QSize( 24, 24 ) );
+  setPopupMode( QToolButton::InstantPopup );
+
+  mDefineMenu = new QMenu( this );
+  connect( mDefineMenu, SIGNAL( aboutToShow() ), this, SLOT( aboutToShowMenu() ) );
+  connect( mDefineMenu, SIGNAL( triggered( QAction* ) ), this, SLOT( menuActionTriggered( QAction* ) ) );
+  setMenu( mDefineMenu );
+
+  mFieldsMenu = new QMenu( this );
+  mActionDataTypes = new QAction( this );
+  // list fields and types in submenu, since there may be many
+  mActionDataTypes->setMenu( mFieldsMenu );
+
+  mActionVariables = new QAction( tr( "Variable" ), this );
+  mVariablesMenu = new QMenu( this );
+  mActionVariables->setMenu( mVariablesMenu );
+
+  mActionActive = new QAction( this );
+  QFont f = mActionActive->font();
+  f.setBold( true );
+  mActionActive->setFont( f );
+
+  mActionDescription = new QAction( tr( "Description..." ), this );
+
+  mActionExpDialog = new QAction( tr( "Edit..." ), this );
+  mActionExpression = 0;
+  mActionPasteExpr = new QAction( tr( "Paste" ), this );
+  mActionCopyExpr = new QAction( tr( "Copy" ), this );
+  mActionClearExpr = new QAction( tr( "Clear" ), this );
+  mActionAssistant = new QAction( tr( "Assistant..." ), this );
+  QFont assistantFont = mActionAssistant->font();
+  assistantFont.setBold( true );
+  mActionAssistant->setFont( assistantFont );
+  mDefineMenu->addAction( mActionAssistant );
+
+  // set up sibling widget connections
+  connect( this, SIGNAL( dataDefinedActivated( bool ) ), this, SLOT( disableEnabledWidgets( bool ) ) );
+  connect( this, SIGNAL( dataDefinedActivated( bool ) ), this, SLOT( checkCheckedWidgets( bool ) ) );
+
   init( vl, datadefined, datatypes, description );
 }
 
@@ -53,8 +111,8 @@ QgsDataDefinedButton::~QgsDataDefinedButton()
 
 void QgsDataDefinedButton::init( const QgsVectorLayer* vl,
                                  const QgsDataDefined* datadefined,
-                                 DataTypes datatypes,
-                                 QString description )
+                                 const DataTypes& datatypes,
+                                 const QString& description )
 {
   mVectorLayer = vl;
   // construct default property if none or incorrect passed in
@@ -62,8 +120,8 @@ void QgsDataDefinedButton::init( const QgsVectorLayer* vl,
   {
     mProperty.insert( "active", "0" );
     mProperty.insert( "useexpr", "0" );
-    mProperty.insert( "expression", "" );
-    mProperty.insert( "field", "" );
+    mProperty.insert( "expression", QString() );
+    mProperty.insert( "field", QString() );
   }
   else
   {
@@ -74,76 +132,41 @@ void QgsDataDefinedButton::init( const QgsVectorLayer* vl,
   }
 
   mDataTypes = datatypes;
+  mFieldNameList.clear();
+  mFieldTypeList.clear();
+
   mInputDescription = description;
-  mFullDescription = QString( "" );
-  mCurrentDefinition = QString( "" );
-
-  mActionExpression = 0;
-
-  if ( mIconDataDefine.isNull() )
-  {
-    mIconDataDefine = QgsApplication::getThemeIcon( "/mIconDataDefine.svg" );
-    mIconDataDefineOn = QgsApplication::getThemeIcon( "/mIconDataDefineOn.svg" );
-    mIconDataDefineError = QgsApplication::getThemeIcon( "/mIconDataDefineError.svg" );
-    mIconDataDefineExpression = QgsApplication::getThemeIcon( "/mIconDataDefineExpression.svg" );
-    mIconDataDefineExpressionOn = QgsApplication::getThemeIcon( "/mIconDataDefineExpressionOn.svg" );
-    mIconDataDefineExpressionError = QgsApplication::getThemeIcon( "/mIconDataDefineExpressionError.svg" );
-  }
-
-  // set default icon properties
-  setFixedSize( 28, 24 );
-  setStyleSheet( QString( "QToolButton{ background: none; border: none;}" ) );
-  setIconSize( QSize( 24, 24 ) );
-  setPopupMode( QToolButton::InstantPopup );
-
-  mDefineMenu = new QMenu( this );
-  connect( mDefineMenu, SIGNAL( aboutToShow() ), this, SLOT( aboutToShowMenu() ) );
-  connect( mDefineMenu, SIGNAL( triggered( QAction* ) ), this, SLOT( menuActionTriggered( QAction* ) ) );
-
-  mFieldsMenu = new QMenu( this );
-
-  mActionActive = new QAction( this );
-  QFont f = mActionActive->font();
-  f.setBold( true );
-  mActionActive->setFont( f );
-
-  mActionDescription = new QAction( tr( "Description..." ), this );
-
-  mActionExpDialog = new QAction( tr( "Edit expression..." ), this );
-
-  mActionCopyExpr = new QAction( tr( "Copy expression" ), this );
+  mFullDescription.clear();
+  mUsageInfo.clear();
+  mCurrentDefinition.clear();
 
   // set up data types string
-  mActionDataTypes = 0;
-  mDataTypesString = QString( "" );
+  mDataTypesString.clear();
 
   QStringList ts;
-  if ( mDataTypes.testFlag( AnyType ) || mDataTypes.testFlag( String ) )
+  if ( mDataTypes.testFlag( String ) )
   {
-    ts << tr( "String" );
+    ts << tr( "string" );
   }
-  if ( mDataTypes.testFlag( AnyType ) || mDataTypes.testFlag( Int ) )
+  if ( mDataTypes.testFlag( Int ) )
   {
-    ts << tr( "Int" );
+    ts << tr( "int" );
   }
-  if ( mDataTypes.testFlag( AnyType ) || mDataTypes.testFlag( Double ) )
+  if ( mDataTypes.testFlag( Double ) )
   {
-    ts << tr( "Double" );
+    ts << tr( "double" );
   }
 
   if ( !ts.isEmpty() )
   {
     mDataTypesString = ts.join( ", " );
-    mActionDataTypes = new QAction( tr( "Field types: " ) + mDataTypesString, this );
-
-    // list fields and types in submenu, since there may be many
-    mActionDataTypes->setMenu( mFieldsMenu );
+    mActionDataTypes->setText( tr( "Field type: " ) + mDataTypesString );
   }
 
   if ( mVectorLayer )
   {
     // store just a list of fields of unknown type or those that match the expected type
-    const QgsFields& fields = mVectorLayer->pendingFields();
+    const QgsFields& fields = mVectorLayer->fields();
     for ( int i = 0; i < fields.count(); ++i )
     {
       const QgsField& f = fields.at( i );
@@ -157,7 +180,7 @@ void QgsDataDefinedButton::init( const QgsVectorLayer* vl,
           fieldType = tr( "string" );
           break;
         case QVariant::Int:
-          fieldMatch = mDataTypes.testFlag( Int );
+          fieldMatch = mDataTypes.testFlag( Int ) || mDataTypes.testFlag( Double );
           fieldType = tr( "integer" );
           break;
         case QVariant::Double:
@@ -177,13 +200,25 @@ void QgsDataDefinedButton::init( const QgsVectorLayer* vl,
     }
   }
 
-  setMenu( mDefineMenu );
-
-  // set up sibling widget connections
-  connect( this, SIGNAL( dataDefinedActivated( bool ) ), this, SLOT( disableEnabledWidgets( bool ) ) );
-  connect( this, SIGNAL( dataDefinedActivated( bool ) ), this, SLOT( checkCheckedWidgets( bool ) ) );
-
   updateGui();
+}
+
+void QgsDataDefinedButton::updateDataDefined( QgsDataDefined *dd ) const
+{
+  if ( !dd )
+    return;
+
+  dd->setActive( isActive() );
+  dd->setExpressionString( getExpression() );
+  dd->setField( getField() );
+  dd->setUseExpression( useExpression() );
+}
+
+QgsDataDefined QgsDataDefinedButton::currentDataDefined() const
+{
+  QgsDataDefined dd;
+  updateDataDefined( &dd );
+  return dd;
 }
 
 void QgsDataDefinedButton::mouseReleaseEvent( QMouseEvent *event )
@@ -208,6 +243,13 @@ void QgsDataDefinedButton::aboutToShowMenu()
 
   bool hasExp = !getExpression().isEmpty();
   bool hasField = !getField().isEmpty();
+  QString ddTitle = tr( "Data defined override" );
+
+  QAction* ddTitleAct = mDefineMenu->addAction( ddTitle );
+  QFont titlefont = ddTitleAct->font();
+  titlefont.setItalic( true );
+  ddTitleAct->setFont( titlefont );
+  ddTitleAct->setEnabled( false );
 
   bool addActiveAction = false;
   if ( useExpression() && hasExp )
@@ -222,36 +264,110 @@ void QgsDataDefinedButton::aboutToShowMenu()
     addActiveAction = mFieldNameList.contains( getField() );
   }
 
-  bool addTopSep = false;
   if ( addActiveAction )
   {
+    ddTitleAct->setText( ddTitle + " (" + ( useExpression() ? tr( "expression" ) : tr( "field" ) ) + ')' );
     mDefineMenu->addAction( mActionActive );
     mActionActive->setText( isActive() ? tr( "Deactivate" ) : tr( "Activate" ) );
     mActionActive->setData( QVariant( isActive() ? false : true ) );
-    addTopSep = true;
   }
 
   if ( !mFullDescription.isEmpty() )
   {
     mDefineMenu->addAction( mActionDescription );
-    addTopSep = true;
   }
 
-  if ( addTopSep )
+  mDefineMenu->addSeparator();
+
+  bool fieldActive = false;
+  if ( !mDataTypesString.isEmpty() )
   {
+    QAction* fieldTitleAct = mDefineMenu->addAction( tr( "Attribute field" ) );
+    fieldTitleAct->setFont( titlefont );
+    fieldTitleAct->setEnabled( false );
+
+    mDefineMenu->addAction( mActionDataTypes );
+
+    mFieldsMenu->clear();
+
+    if ( !mFieldNameList.isEmpty() )
+    {
+
+      for ( int j = 0; j < mFieldNameList.count(); ++j )
+      {
+        QString fldname = mFieldNameList.at( j );
+        QAction* act = mFieldsMenu->addAction( fldname + "    (" + mFieldTypeList.at( j ) + ')' );
+        act->setData( QVariant( fldname ) );
+        if ( getField() == fldname )
+        {
+          act->setCheckable( true );
+          act->setChecked( !useExpression() );
+          fieldActive = !useExpression();
+        }
+      }
+    }
+    else
+    {
+      QAction* act = mFieldsMenu->addAction( tr( "No matching field types found" ) );
+      act->setEnabled( false );
+    }
+
     mDefineMenu->addSeparator();
   }
 
-  mDefineMenu->addAction( mActionExpDialog );
+  mFieldsMenu->menuAction()->setCheckable( true );
+  mFieldsMenu->menuAction()->setChecked( fieldActive );
+
+  QAction* exprTitleAct = mDefineMenu->addAction( tr( "Expression" ) );
+  exprTitleAct->setFont( titlefont );
+  exprTitleAct->setEnabled( false );
+
+  mVariablesMenu->clear();
+  bool variableActive = false;
+  if ( mExpressionContextCallback )
+  {
+    QgsExpressionContext context = mExpressionContextCallback( mExpressionContextCallbackContext );
+    QStringList variables = context.variableNames();
+    Q_FOREACH ( const QString& variable, variables )
+    {
+      if ( context.isReadOnly( variable ) ) //only want to show user-set variables
+        continue;
+      if ( variable.startsWith( '_' ) ) //no hidden variables
+        continue;
+
+      QAction* act = mVariablesMenu->addAction( variable );
+      act->setData( QVariant( variable ) );
+
+      if ( useExpression() && hasExp && getExpression() == '@' + variable )
+      {
+        act->setCheckable( true );
+        act->setChecked( true );
+        variableActive = true;
+      }
+    }
+  }
+
+  if ( mVariablesMenu->actions().isEmpty() )
+  {
+    QAction* act = mVariablesMenu->addAction( tr( "No variables set" ) );
+    act->setEnabled( false );
+  }
+
+  mDefineMenu->addAction( mActionVariables );
+  mVariablesMenu->menuAction()->setCheckable( true );
+  mVariablesMenu->menuAction()->setChecked( variableActive );
 
   if ( hasExp )
   {
     QString expString = getExpression();
-    if ( expString.length() > 100 )
+    if ( expString.length() > 35 )
     {
-      expString.truncate( 100 );
+      expString.truncate( 35 );
       expString.append( "..." );
     }
+
+    expString.prepend( tr( "Current: " ) );
+
     if ( !mActionExpression )
     {
       mActionExpression = new QAction( expString, this );
@@ -261,36 +377,25 @@ void QgsDataDefinedButton::aboutToShowMenu()
     {
       mActionExpression->setText( expString );
     }
-
-    mDefineMenu->addAction( mActionCopyExpr );
     mDefineMenu->addAction( mActionExpression );
-    mActionExpression->setChecked( useExpression() );
+    mActionExpression->setChecked( useExpression() && !variableActive );
+
+    mDefineMenu->addAction( mActionExpDialog );
+    mDefineMenu->addAction( mActionCopyExpr );
+    mDefineMenu->addAction( mActionPasteExpr );
+    mDefineMenu->addAction( mActionClearExpr );
+  }
+  else
+  {
+    mDefineMenu->addAction( mActionExpDialog );
+    mDefineMenu->addAction( mActionPasteExpr );
   }
 
-  if ( mFieldNameList.size() > 0 )
+  if ( mAssistant.data() )
   {
     mDefineMenu->addSeparator();
-
-    if ( mActionDataTypes )
-    {
-      mDefineMenu->addAction( mActionDataTypes );
-    }
-
-    mFieldsMenu->clear();
-
-    for ( int j = 0; j < mFieldNameList.count(); ++j )
-    {
-      QString fldname = mFieldNameList.at( j );
-      QAction* act = mFieldsMenu->addAction( fldname + "    (" + mFieldTypeList.at( j ) + ")" );
-      act->setData( QVariant( fldname ) );
-      if ( getField() == fldname )
-      {
-        act->setCheckable( true );
-        act->setChecked( !useExpression() );
-      }
-    }
+    mDefineMenu->addAction( mActionAssistant );
   }
-
 }
 
 void QgsDataDefinedButton::menuActionTriggered( QAction* action )
@@ -318,13 +423,52 @@ void QgsDataDefinedButton::menuActionTriggered( QAction* action )
   {
     QApplication::clipboard()->setText( getExpression() );
   }
-  else // a field name clicked
+  else if ( action == mActionPasteExpr )
   {
-    if ( getField() != action->text() )
+    QString exprString = QApplication::clipboard()->text();
+    if ( !exprString.isEmpty() )
     {
-      setField( action->data().toString() );
+      setExpression( exprString );
+      setUseExpression( true );
+      setActive( true );
+      updateGui();
     }
-    setUseExpression( false );
+  }
+  else if ( action == mActionClearExpr )
+  {
+    // only deactivate if defined expression is being used
+    if ( isActive() && useExpression() )
+    {
+      setUseExpression( false );
+      setActive( false );
+    }
+    setExpression( QString() );
+    updateGui();
+  }
+  else if ( action == mActionAssistant )
+  {
+    showAssistant();
+  }
+  else if ( mFieldsMenu->actions().contains( action ) )  // a field name clicked
+  {
+    if ( action->isEnabled() )
+    {
+      if ( getField() != action->text() )
+      {
+        setField( action->data().toString() );
+      }
+      setUseExpression( false );
+      setActive( true );
+      updateGui();
+    }
+  }
+  else if ( mVariablesMenu->actions().contains( action ) )  // a variable name clicked
+  {
+    if ( getExpression() != action->text().prepend( "@" ) )
+    {
+      setExpression( action->data().toString().prepend( "@" ) );
+    }
+    setUseExpression( true );
     setActive( true );
     updateGui();
   }
@@ -338,9 +482,30 @@ void QgsDataDefinedButton::showDescriptionDialog()
   mv->exec();
 }
 
+void QgsDataDefinedButton::showAssistant()
+{
+  if ( !mAssistant.data() )
+    return;
+
+  if ( mAssistant->exec() == QDialog::Accepted )
+  {
+    QgsDataDefined dd = mAssistant->dataDefined();
+    setUseExpression( dd.useExpression() );
+    setActive( dd.isActive() );
+    if ( dd.isActive() && dd.useExpression() )
+      setExpression( dd.expressionString() );
+    else if ( dd.isActive() )
+      setField( dd.field() );
+    updateGui();
+  }
+  activateWindow(); // reset focus to parent window
+}
+
 void QgsDataDefinedButton::showExpressionDialog()
 {
-  QgsExpressionBuilderDialog d( const_cast<QgsVectorLayer*>( mVectorLayer ), getExpression() );
+  QgsExpressionContext context = mExpressionContextCallback ? mExpressionContextCallback( mExpressionContextCallbackContext ) : QgsExpressionContext();
+
+  QgsExpressionBuilderDialog d( const_cast<QgsVectorLayer*>( mVectorLayer ), getExpression(), this, "generic", context );
   if ( d.exec() == QDialog::Accepted )
   {
     QString newExp = d.expressionText();
@@ -383,7 +548,7 @@ void QgsDataDefinedButton::updateGui()
     {
       setActive( false );
       icon = mIconDataDefineExpressionError;
-      deftip = tr( "Expression parse error: %1" ).arg( exp.parserErrorString() );
+      deftip = tr( "Parse error: %1" ).arg( exp.parserErrorString() );
       newDef = "";
     }
   }
@@ -411,9 +576,14 @@ void QgsDataDefinedButton::updateGui()
   }
 
   // build full description for tool tip and popup dialog
-  mFullDescription = QString( "" );
+  mFullDescription = tr( "<b><u>Data defined override</u></b><br>" );
 
   mFullDescription += tr( "<b>Active: </b>%1&nbsp;&nbsp;&nbsp;<i>(ctrl|right-click toggles)</i><br>" ).arg( isActive() ? tr( "yes" ) : tr( "no" ) );
+
+  if ( !mUsageInfo.isEmpty() )
+  {
+    mFullDescription += tr( "<b>Usage:</b><br>%1<br>" ).arg( mUsageInfo );
+  }
 
   if ( !mInputDescription.isEmpty() )
   {
@@ -431,7 +601,14 @@ void QgsDataDefinedButton::updateGui()
     deftype = QString( " (%1)" ).arg( useExpression() ? tr( "expression" ) : tr( "field" ) );
   }
 
-  mFullDescription += tr( "<b>Current definition%1:</b><br>%2" ).arg( deftype ).arg( deftip );
+  // truncate long expressions, or tool tip may be too wide for screen
+  if ( deftip.length() > 75 )
+  {
+    deftip.truncate( 75 );
+    deftip.append( "..." );
+  }
+
+  mFullDescription += tr( "<b>Current definition %1:</b><br>%2" ).arg( deftype, deftip );
 
   setToolTip( mFullDescription );
 
@@ -446,7 +623,7 @@ void QgsDataDefinedButton::setActive( bool active )
   }
 }
 
-void QgsDataDefinedButton::registerEnabledWidgets( QList<QWidget*> wdgts )
+void QgsDataDefinedButton::registerEnabledWidgets( const QList<QWidget*>& wdgts )
 {
   for ( int i = 0; i < wdgts.size(); ++i )
   {
@@ -466,6 +643,7 @@ void QgsDataDefinedButton::registerEnabledWidget( QWidget* wdgt )
 QList<QWidget*> QgsDataDefinedButton::registeredEnabledWidgets()
 {
   QList<QWidget*> wdgtList;
+  wdgtList.reserve( mEnabledWidgets.size() );
   for ( int i = 0; i < mEnabledWidgets.size(); ++i )
   {
     wdgtList << mEnabledWidgets.at( i );
@@ -481,7 +659,7 @@ void QgsDataDefinedButton::disableEnabledWidgets( bool disable )
   }
 }
 
-void QgsDataDefinedButton::registerCheckedWidgets( QList<QWidget*> wdgts )
+void QgsDataDefinedButton::registerCheckedWidgets( const QList<QWidget*>& wdgts )
 {
   for ( int i = 0; i < wdgts.size(); ++i )
   {
@@ -501,11 +679,30 @@ void QgsDataDefinedButton::registerCheckedWidget( QWidget* wdgt )
 QList<QWidget*> QgsDataDefinedButton::registeredCheckedWidgets()
 {
   QList<QWidget*> wdgtList;
+  wdgtList.reserve( mCheckedWidgets.size() );
   for ( int i = 0; i < mCheckedWidgets.size(); ++i )
   {
     wdgtList << mCheckedWidgets.at( i );
   }
   return wdgtList;
+}
+
+void QgsDataDefinedButton::registerGetExpressionContextCallback( QgsDataDefinedButton::ExpressionContextCallback fnGetExpressionContext, const void *context )
+{
+  mExpressionContextCallback = fnGetExpressionContext;
+  mExpressionContextCallbackContext = context;
+}
+
+void QgsDataDefinedButton::setAssistant( const QString& title, QgsDataDefinedAssistant *assistant )
+{
+  mActionAssistant->setText( title.isEmpty() ? tr( "Assistant..." ) : title );
+  mAssistant.reset( assistant );
+  mAssistant.data()->setParent( this, Qt::Dialog );
+}
+
+QgsDataDefinedAssistant *QgsDataDefinedButton::assistant()
+{
+  return mAssistant.data();
 }
 
 void QgsDataDefinedButton::checkCheckedWidgets( bool check )
@@ -535,6 +732,11 @@ QString QgsDataDefinedButton::trString()
 {
   // just something to reduce translation redundancy
   return tr( "string " );
+}
+
+QString QgsDataDefinedButton::charDesc()
+{
+  return tr( "single character" );
 }
 
 QString QgsDataDefinedButton::boolDesc()
@@ -570,6 +772,11 @@ QString QgsDataDefinedButton::doubleDesc()
 QString QgsDataDefinedButton::doublePosDesc()
 {
   return tr( "double [&gt;= 0.0]" );
+}
+
+QString QgsDataDefinedButton::double0to1Desc()
+{
+  return tr( "double [0.0-1.0]" );
 }
 
 QString QgsDataDefinedButton::doubleXYDesc()
@@ -619,19 +826,90 @@ QString QgsDataDefinedButton::textVertAlignDesc()
 
 QString QgsDataDefinedButton::penJoinStyleDesc()
 {
-  return trString() + "[<b>Bevel</b>|<b>Miter</b>|<b>Round</b>]";
+  return trString() + "[<b>bevel</b>|<b>miter</b>|<b>round</b>]";
 }
 
 QString QgsDataDefinedButton::blendModesDesc()
 {
-  return trString() + QString( "[<b>Normal</b>|<b>Lighten</b>|<b>Screen</b>|<b>Dodge</b>|<br>"
-                               "<b>Addition</b>|<b>Darken</b>|<b>Multiply</b>|<b>Burn</b>|<b>Overlay</b>|<br>"
-                               "<b>SoftLight</b>|<b>HardLight</b>|<b>Difference</b>|<b>Subtract</b>" );
+  return trString() + QLatin1String( "[<b>Normal</b>|<b>Lighten</b>|<b>Screen</b>|<b>Dodge</b>|<br>"
+                                     "<b>Addition</b>|<b>Darken</b>|<b>Multiply</b>|<b>Burn</b>|<b>Overlay</b>|<br>"
+                                     "<b>SoftLight</b>|<b>HardLight</b>|<b>Difference</b>|<b>Subtract</b>]" );
 }
 
 QString QgsDataDefinedButton::svgPathDesc()
 {
-  return trString() + QString( "[<b>filepath</b>] as<br>"
-                               "<b>''</b>=empty|absolute|search-paths-relative|<br>"
-                               "project-relative|URL" );
+  return trString() + QLatin1String( "[<b>filepath</b>] as<br>"
+                                     "<b>''</b>=empty|absolute|search-paths-relative|<br>"
+                                     "project-relative|URL" );
+}
+
+QString QgsDataDefinedButton::filePathDesc()
+{
+  return tr( "string [<b>filepath</b>]" );
+}
+
+QString QgsDataDefinedButton::paperSizeDesc()
+{
+  return trString() + QLatin1String( "[<b>A5</b>|<b>A4</b>|<b>A3</b>|<b>A2</b>|<b>A1</b>|<b>A0</b>"
+                                     "<b>B5</b>|<b>B4</b>|<b>B3</b>|<b>B2</b>|<b>B1</b>|<b>B0</b>"
+                                     "<b>Legal</b>|<b>Ansi A</b>|<b>Ansi B</b>|<b>Ansi C</b>|<b>Ansi D</b>|<b>Ansi E</b>"
+                                     "<b>Arch A</b>|<b>Arch B</b>|<b>Arch C</b>|<b>Arch D</b>|<b>Arch E</b>|<b>Arch E1</b>]"
+                                   );
+}
+
+QString QgsDataDefinedButton::paperOrientationDesc()
+{
+  return trString() + QLatin1String( "[<b>portrait</b>|<b>landscape</b>]" );
+}
+
+QString QgsDataDefinedButton::horizontalAnchorDesc()
+{
+  return trString() + QLatin1String( "[<b>left</b>|<b>center</b>|<b>right</b>]" );
+}
+
+QString QgsDataDefinedButton::verticalAnchorDesc()
+{
+  return trString() + QLatin1String( "[<b>top</b>|<b>center</b>|<b>bottom</b>]" );
+}
+
+QString QgsDataDefinedButton::gradientTypeDesc()
+{
+  return trString() + QLatin1String( "[<b>linear</b>|<b>radial</b>|<b>conical</b>]" );
+}
+
+QString QgsDataDefinedButton::gradientCoordModeDesc()
+{
+  return trString() + QLatin1String( "[<b>feature</b>|<b>viewport</b>]" );
+}
+
+QString QgsDataDefinedButton::gradientSpreadDesc()
+{
+  return trString() + QLatin1String( "[<b>pad</b>|<b>repeat</b>|<b>reflect</b>]" );
+}
+
+QString QgsDataDefinedButton::lineStyleDesc()
+{
+  return trString() + QLatin1String( "[<b>no</b>|<b>solid</b>|<b>dash</b>|<b>dot</b>|<b>dash dot</b>|<b>dash dot dot</b>]" );
+}
+
+QString QgsDataDefinedButton::capStyleDesc()
+{
+  return trString() + QLatin1String( "[<b>square</b>|<b>flat</b>|<b>round</b>]" );
+}
+
+QString QgsDataDefinedButton::fillStyleDesc()
+{
+  return trString() + QLatin1String( "[<b>solid</b>|<b>horizontal</b>|<b>vertical</b>|<b>cross</b>|<b>b_diagonal</b>|<b>f_diagonal"
+                                     "</b>|<b>diagonal_x</b>|<b>dense1</b>|<b>dense2</b>|<b>dense3</b>|<b>dense4</b>|<b>dense5"
+                                     "</b>|<b>dense6</b>|<b>dense7</b>|<b>no]" );
+}
+
+QString QgsDataDefinedButton::markerStyleDesc()
+{
+  return trString() + QLatin1String( "[<b>circle</b>|<b>rectangle</b>|<b>cross</b>|<b>triangle</b>]" );
+}
+
+QString QgsDataDefinedButton::customDashDesc()
+{
+  return tr( "[<b><dash>;<space></b>] e.g. '8;2;1;2'" );
 }

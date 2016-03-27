@@ -16,22 +16,21 @@
 #include "qgsmaptoolreshape.h"
 #include "qgsgeometry.h"
 #include "qgsmapcanvas.h"
-#include "qgsrubberband.h"
 #include "qgsvectorlayer.h"
-#include <QMessageBox>
+#include "qgisapp.h"
+
 #include <QMouseEvent>
 
-QgsMapToolReshape::QgsMapToolReshape( QgsMapCanvas* canvas ): QgsMapToolCapture( canvas, QgsMapToolCapture::CaptureLine )
+QgsMapToolReshape::QgsMapToolReshape( QgsMapCanvas* canvas )
+    : QgsMapToolCapture( canvas, QgisApp::instance()->cadDockWidget(), QgsMapToolCapture::CaptureLine )
 {
-
 }
 
 QgsMapToolReshape::~QgsMapToolReshape()
 {
-
 }
 
-void QgsMapToolReshape::canvasReleaseEvent( QMouseEvent * e )
+void QgsMapToolReshape::cadCanvasReleaseEvent( QgsMapMouseEvent * e )
 {
   //check if we operate on a vector layer //todo: move this to a function in parent class to avoid duplication
   QgsVectorLayer *vlayer = qobject_cast<QgsVectorLayer *>( mCanvas->currentLayer() );
@@ -49,26 +48,27 @@ void QgsMapToolReshape::canvasReleaseEvent( QMouseEvent * e )
   }
 
   //add point to list and to rubber band
-  int error = addVertex( e->pos() );
-  if ( error == 1 )
-  {
-    //current layer is not a vector layer
-    return;
-  }
-  else if ( error == 2 )
-  {
-    //problem with coordinate transformation
-    QMessageBox::information( 0, tr( "Coordinate transform error" ),
-                              tr( "Cannot transform the point to the layers coordinate system" ) );
-    return;
-  }
-
   if ( e->button() == Qt::LeftButton )
   {
+    int error = addVertex( e->mapPoint() );
+    if ( error == 1 )
+    {
+      //current layer is not a vector layer
+      return;
+    }
+    else if ( error == 2 )
+    {
+      //problem with coordinate transformation
+      emit messageEmitted( tr( "Cannot transform the point to the layers coordinate system" ), QgsMessageBar::WARNING );
+      return;
+    }
+
     startCapturing();
   }
   else if ( e->button() == Qt::RightButton )
   {
+    deleteTempRubberBand();
+
     //find out bounding box of mCaptureList
     if ( size() < 1 )
     {

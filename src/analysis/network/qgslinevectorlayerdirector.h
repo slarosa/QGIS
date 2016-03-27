@@ -33,9 +33,11 @@ class QgsVectorLayer;
 */
 class ANALYSIS_EXPORT QgsLineVectorLayerDirector : public QgsGraphDirector
 {
+    Q_OBJECT
+
   public:
     /**
-     * @param myLayer  source vector layer
+     * @param myLayer source vector layer
      * @param directionFieldId feield contain road direction value
      * @param directDirectionValue value for one-way road
      * @param reverseDirectionValue value for reverse one-way road
@@ -58,13 +60,11 @@ class ANALYSIS_EXPORT QgsLineVectorLayerDirector : public QgsGraphDirector
      */
     void makeGraph( QgsGraphBuilderInterface *builder,
                     const QVector< QgsPoint >& additionalPoints,
-                    QVector< QgsPoint>& tiedPoints ) const;
+                    QVector< QgsPoint>& tiedPoints ) const override;
 
-    QString name() const;
-
+    QString name() const override;
 
   private:
-
     QgsVectorLayer *mVectorLayer;
 
     int mDirectionFieldId;

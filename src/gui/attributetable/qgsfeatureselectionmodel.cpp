@@ -1,17 +1,17 @@
 #include "qgsattributetablemodel.h"
 #include "qgsfeaturemodel.h"
+#include "qgsifeatureselectionmanager.h"
 #include "qgsfeatureselectionmodel.h"
 #include "qgsvectorlayer.h"
 #include <qdebug.h>
 
-QgsFeatureSelectionModel::QgsFeatureSelectionModel( QAbstractItemModel* model, QgsFeatureModel* featureModel, QgsVectorLayer* layer, QObject* parent )
+QgsFeatureSelectionModel::QgsFeatureSelectionModel( QAbstractItemModel* model, QgsFeatureModel* featureModel, QgsIFeatureSelectionManager* featureSelectionManager, QObject* parent )
     : QItemSelectionModel( model, parent )
     , mFeatureModel( featureModel )
-    , mLayer( layer )
     , mSyncEnabled( true )
     , mClearAndSelectBuffer( false )
 {
-  connect( mLayer, SIGNAL( selectionChanged( QgsFeatureIds, QgsFeatureIds, bool ) ), this, SLOT( layerSelectionChanged( QgsFeatureIds, QgsFeatureIds, bool ) ) );
+  setFeatureSelectionManager( featureSelectionManager );
 }
 
 void QgsFeatureSelectionModel::enableSync( bool enable )
@@ -22,12 +22,12 @@ void QgsFeatureSelectionModel::enableSync( bool enable )
   {
     if ( mClearAndSelectBuffer )
     {
-      mLayer->setSelectedFeatures( mSelectedBuffer );
+      mFeatureSelectionManager->setSelectedFeatures( mSelectedBuffer );
     }
     else
     {
-      mLayer->select( mSelectedBuffer );
-      mLayer->deselect( mDeselectedBuffer );
+      mFeatureSelectionManager->select( mSelectedBuffer );
+      mFeatureSelectionManager->deselect( mDeselectedBuffer );
     }
 
     mSelectedBuffer.clear();
@@ -44,7 +44,7 @@ bool QgsFeatureSelectionModel::isSelected( QgsFeatureId fid )
   if ( mDeselectedBuffer.contains( fid ) )
     return false;
 
-  if ( !mClearAndSelectBuffer && mLayer->selectedFeaturesIds().contains( fid ) )
+  if ( !mClearAndSelectBuffer && mFeatureSelectionManager->selectedFeaturesIds().contains( fid ) )
     return true;
 
   return false;
@@ -52,28 +52,28 @@ bool QgsFeatureSelectionModel::isSelected( QgsFeatureId fid )
 
 bool QgsFeatureSelectionModel::isSelected( const QModelIndex &index )
 {
-  return isSelected( index.model()->data( index, QgsAttributeTableModel::FeatureIdRole ).toInt() );
+  return isSelected( index.model()->data( index, QgsAttributeTableModel::FeatureIdRole ).toLongLong() );
 }
 
-void QgsFeatureSelectionModel::selectFeatures( const QItemSelection &selection, QItemSelectionModel::SelectionFlags command )
+void QgsFeatureSelectionModel::selectFeatures( const QItemSelection &selection, const QItemSelectionModel::SelectionFlags& command )
 {
   QgsFeatureIds ids;
 
-  foreach ( const QModelIndex index, selection.indexes() )
+  Q_FOREACH ( const QModelIndex& index, selection.indexes() )
   {
-    QgsFeatureId id = index.model()->data( index, QgsAttributeTableModel::FeatureIdRole ).toInt();
+    QgsFeatureId id = index.model()->data( index, QgsAttributeTableModel::FeatureIdRole ).toLongLong();
 
     ids << id;
   }
 
-  disconnect( mLayer, SIGNAL( selectionChanged( QgsFeatureIds, QgsFeatureIds, bool ) ), this, SLOT( layerSelectionChanged( QgsFeatureIds, QgsFeatureIds, bool ) ) );
+  disconnect( mFeatureSelectionManager, SIGNAL( selectionChanged( QgsFeatureIds, QgsFeatureIds, bool ) ), this, SLOT( layerSelectionChanged( QgsFeatureIds, QgsFeatureIds, bool ) ) );
 
   if ( command.testFlag( QItemSelectionModel::ClearAndSelect ) )
   {
     if ( !mSyncEnabled )
     {
       mClearAndSelectBuffer = true;
-      foreach ( QgsFeatureId id, ids )
+      Q_FOREACH ( QgsFeatureId id, ids )
       {
         if ( !mDeselectedBuffer.remove( id ) )
         {
@@ -83,14 +83,14 @@ void QgsFeatureSelectionModel::selectFeatures( const QItemSelection &selection, 
     }
     else
     {
-      mLayer->setSelectedFeatures( ids );
+      mFeatureSelectionManager->setSelectedFeatures( ids );
     }
   }
   else if ( command.testFlag( QItemSelectionModel::Select ) )
   {
     if ( !mSyncEnabled )
     {
-      foreach ( QgsFeatureId id, ids )
+      Q_FOREACH ( QgsFeatureId id, ids )
       {
         if ( !mDeselectedBuffer.remove( id ) )
         {
@@ -100,14 +100,14 @@ void QgsFeatureSelectionModel::selectFeatures( const QItemSelection &selection, 
     }
     else
     {
-      mLayer->select( ids );
+      mFeatureSelectionManager->select( ids );
     }
   }
   else if ( command.testFlag( QItemSelectionModel::Deselect ) )
   {
     if ( !mSyncEnabled )
     {
-      foreach ( QgsFeatureId id, ids )
+      Q_FOREACH ( QgsFeatureId id, ids )
       {
         if ( !mSelectedBuffer.remove( id ) )
         {
@@ -117,14 +117,14 @@ void QgsFeatureSelectionModel::selectFeatures( const QItemSelection &selection, 
     }
     else
     {
-      mLayer->deselect( ids );
+      mFeatureSelectionManager->deselect( ids );
     }
   }
 
-  connect( mLayer, SIGNAL( selectionChanged( QgsFeatureIds, QgsFeatureIds, bool ) ), this, SLOT( layerSelectionChanged( QgsFeatureIds, QgsFeatureIds, bool ) ) );
+  connect( mFeatureSelectionManager, SIGNAL( selectionChanged( QgsFeatureIds, QgsFeatureIds, bool ) ), this, SLOT( layerSelectionChanged( QgsFeatureIds, QgsFeatureIds, bool ) ) );
 
   QModelIndexList updatedIndexes;
-  foreach ( QModelIndex idx, selection.indexes() )
+  Q_FOREACH ( const QModelIndex& idx, selection.indexes() )
   {
     updatedIndexes.append( expandIndexToRow( idx ) );
   }
@@ -132,7 +132,14 @@ void QgsFeatureSelectionModel::selectFeatures( const QItemSelection &selection, 
   emit requestRepaint( updatedIndexes );
 }
 
-void QgsFeatureSelectionModel::layerSelectionChanged( QgsFeatureIds selected, QgsFeatureIds deselected, bool clearAndSelect )
+void QgsFeatureSelectionModel::setFeatureSelectionManager( QgsIFeatureSelectionManager* featureSelectionManager )
+{
+  mFeatureSelectionManager = featureSelectionManager;
+
+  connect( mFeatureSelectionManager, SIGNAL( selectionChanged( QgsFeatureIds, QgsFeatureIds, bool ) ), this, SLOT( layerSelectionChanged( QgsFeatureIds, QgsFeatureIds, bool ) ) );
+}
+
+void QgsFeatureSelectionModel::layerSelectionChanged( const QgsFeatureIds& selected, const QgsFeatureIds& deselected, bool clearAndSelect )
 {
   if ( clearAndSelect )
   {
@@ -141,12 +148,12 @@ void QgsFeatureSelectionModel::layerSelectionChanged( QgsFeatureIds selected, Qg
   else
   {
     QModelIndexList updatedIndexes;
-    foreach ( QgsFeatureId fid, selected )
+    Q_FOREACH ( QgsFeatureId fid, selected )
     {
       updatedIndexes.append( expandIndexToRow( mFeatureModel->fidToIndex( fid ) ) );
     }
 
-    foreach ( QgsFeatureId fid, deselected )
+    Q_FOREACH ( QgsFeatureId fid, deselected )
     {
       updatedIndexes.append( expandIndexToRow( mFeatureModel->fidToIndex( fid ) ) );
     }
@@ -164,7 +171,9 @@ QModelIndexList QgsFeatureSelectionModel::expandIndexToRow( const QModelIndex& i
   if ( !model )
     return indexes;
 
-  for ( int column = 0; column < model->columnCount(); ++column )
+  int columns = model->columnCount();
+  indexes.reserve( columns );
+  for ( int column = 0; column < columns; ++column )
   {
     indexes.append( model->index( row, column ) );
   }

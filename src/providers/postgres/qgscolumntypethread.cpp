@@ -19,6 +19,7 @@ email                : jef at norbit dot de
 #include "qgslogger.h"
 
 #include <QMetaType>
+#include <climits>
 
 QgsGeomColumnTypeThread::QgsGeomColumnTypeThread( QString name, bool useEstimatedMetaData, bool allowGeometrylessTables )
     : QThread()
@@ -26,6 +27,7 @@ QgsGeomColumnTypeThread::QgsGeomColumnTypeThread( QString name, bool useEstimate
     , mName( name )
     , mUseEstimatedMetadata( useEstimatedMetaData )
     , mAllowGeometrylessTables( allowGeometrylessTables )
+    , mStopped( false )
 {
   qRegisterMetaType<QgsPostgresLayerProperty>( "QgsPostgresLayerProperty" );
 }
@@ -61,27 +63,32 @@ void QgsGeomColumnTypeThread::run()
                                 mAllowGeometrylessTables ) ||
        layerProperties.isEmpty() )
   {
+    mConn->unref();
+    mConn = 0;
     return;
   }
 
-  int i = 0;
-  foreach ( QgsPostgresLayerProperty layerProperty, layerProperties )
+  int i = 0, n = layerProperties.size();
+  for ( QVector<QgsPostgresLayerProperty>::iterator it = layerProperties.begin(),
+        end = layerProperties.end();
+        it != end; ++it )
   {
+    QgsPostgresLayerProperty& layerProperty = *it;
     if ( !mStopped )
     {
-      emit progress( i++, layerProperties.size() );
+      emit progress( i++, n );
       emit progressMessage( tr( "Scanning column %1.%2.%3..." )
-                            .arg( layerProperty.schemaName )
-                            .arg( layerProperty.tableName )
-                            .arg( layerProperty.geometryColName ) );
+                            .arg( layerProperty.schemaName,
+                                  layerProperty.tableName,
+                                  layerProperty.geometryColName ) );
 
       if ( !layerProperty.geometryColName.isNull() &&
            ( layerProperty.types.value( 0, QGis::WKBUnknown ) == QGis::WKBUnknown ||
-             layerProperty.srids.value( 0, 0 ) == 0 ) )
+             layerProperty.srids.value( 0, INT_MIN ) == INT_MIN ) )
       {
         if ( dontResolveType )
         {
-          QgsDebugMsg( QString( "skipping column %1.%2 without type constraint" ).arg( layerProperty.schemaName ).arg( layerProperty.tableName ) );
+          QgsDebugMsg( QString( "skipping column %1.%2 without type constraint" ).arg( layerProperty.schemaName, layerProperty.tableName ) );
           continue;
         }
 
@@ -102,6 +109,6 @@ void QgsGeomColumnTypeThread::run()
   emit progress( 0, 0 );
   emit progressMessage( tr( "Table retrieval finished." ) );
 
-  mConn->disconnect();
+  mConn->unref();
   mConn = 0;
 }

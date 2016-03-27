@@ -41,15 +41,16 @@ void QgsGpsMarker::setSize( int theSize )
 void QgsGpsMarker::setCenter( const QgsPoint& point )
 {
   //transform to map crs
-  if ( mMapCanvas && mMapCanvas->mapRenderer() )
+  if ( mMapCanvas )
   {
-    QgsCoordinateTransform t( mWgs84CRS, mMapCanvas->mapRenderer()->destinationCrs() );
+    QgsCoordinateTransform t( mWgs84CRS, mMapCanvas->mapSettings().destinationCrs() );
     try
     {
       mCenter = t.transform( point );
     }
-    catch ( QgsCsException e ) //silently ignore transformation exceptions
+    catch ( QgsCsException &e ) //silently ignore transformation exceptions
     {
+      Q_UNUSED( e );
       return;
     }
   }
@@ -75,7 +76,7 @@ void QgsGpsMarker::paint( QPainter* p )
   setPos( pt );
 
   float myHalfSize = mSize / 2.0;
-  mSvg.render( p, QRectF( 0 - myHalfSize , 0 - myHalfSize, mSize, mSize ) );
+  mSvg.render( p, QRectF( 0 - myHalfSize, 0 - myHalfSize, mSize, mSize ) );
 }
 
 

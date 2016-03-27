@@ -13,8 +13,8 @@
  *                                                                         *
  ***************************************************************************/
 
-#include <QtTest>
-#include <QSignalSpy>
+#include <QtTest/QtTest>
+#include <QtTest/QSignalSpy>
 
 #include <qgsapplication.h>
 //#include <qgsproviderregistry.h>
@@ -72,7 +72,7 @@ void TestOpenStreetMap::download()
   // start download
   QgsOSMDownload download;
   download.setQuery( QgsOSMDownload::queryFromRect( rect ) );
-  download.setOutputFileName( "/tmp/dl-test.osm" );
+  download.setOutputFileName( QDir::tempPath() + "/dl-test.osm" );
   bool res = download.start();
   QVERIFY( res );
 
@@ -95,7 +95,7 @@ void TestOpenStreetMap::download()
 
 void TestOpenStreetMap::importAndQueries()
 {
-  QString dbFilename = "/tmp/testdata.db";
+  QString dbFilename =  QDir::tempPath() + "/testdata.db";
   QString xmlFilename = TEST_DATA_DIR "/openstreetmap/testdata.xml";
 
   QgsOSMXmlImport import( xmlFilename, dbFilename );
@@ -139,8 +139,8 @@ void TestOpenStreetMap::importAndQueries()
   // list nodes
 
   QgsOSMNodeIterator nodes = db.listNodes();
-  QCOMPARE( nodes.next().id(), 11111 );
-  QCOMPARE( nodes.next().id(), 360769661 );
+  QCOMPARE( nodes.next().id(), ( qint64 )11111 );
+  QCOMPARE( nodes.next().id(), ( qint64 )360769661 );
   nodes.close();
 
   // query way
@@ -148,8 +148,8 @@ void TestOpenStreetMap::importAndQueries()
   QgsOSMWay w = db.way( 32137532 );
   QCOMPARE( w.isValid(), true );
   QCOMPARE( w.nodes().count(), 5 );
-  QCOMPARE( w.nodes()[0], ( qint64 )360769661 );
-  QCOMPARE( w.nodes()[1], ( qint64 )360769664 );
+  QCOMPARE( w.nodes().at( 0 ), ( qint64 )360769661 );
+  QCOMPARE( w.nodes().at( 1 ), ( qint64 )360769664 );
 
   QgsOSMWay wNot = db.way( 1234567 );
   QCOMPARE( wNot.isValid(), false );
@@ -166,7 +166,7 @@ void TestOpenStreetMap::importAndQueries()
   // list ways
 
   QgsOSMWayIterator ways = db.listWays();
-  QCOMPARE( ways.next().id(), 32137532 );
+  QCOMPARE( ways.next().id(), ( qint64 )32137532 );
   QCOMPARE( ways.next().isValid(), false );
   ways.close();
 
@@ -190,4 +190,4 @@ void TestOpenStreetMap::importAndQueries()
 
 QTEST_MAIN( TestOpenStreetMap )
 
-#include "moc_testopenstreetmap.cxx"
+#include "testopenstreetmap.moc"

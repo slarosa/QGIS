@@ -18,25 +18,28 @@
 #define QGSABOUT_H
 
 #include "ui_qgsabout.h"
+#include "qgsoptionsdialogbase.h"
 
-class QgsAbout : public QDialog, private Ui::QgsAbout
+class APP_EXPORT QgsAbout : public QgsOptionsDialogBase, private Ui::QgsAbout
 {
     Q_OBJECT
   public:
     QgsAbout( QWidget *parent );
     ~QgsAbout();
-    void setVersion( QString v );
-    static QString fileSystemSafe( QString string );
+    void setVersion( const QString& v );
+    static QString fileSystemSafe( const QString& string );
 
   private:
-    void setWhatsNew( );
+    void setWhatsNew();
+    void setLicence();
     void setPluginInfo();
+    void setDevelopersMap();
     void init();
-    void openUrl( QString url );
 
   private slots:
     void on_btnQgisUser_clicked();
     void on_btnQgisHome_clicked();
+    void openUrl( const QUrl &url );
 };
 
 #endif

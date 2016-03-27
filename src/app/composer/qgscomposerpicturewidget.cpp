@@ -21,6 +21,7 @@
 #include "qgscomposerpicture.h"
 #include "qgscomposeritemwidget.h"
 #include "qgscomposition.h"
+#include "qgsexpressionbuilderdialog.h"
 #include <QDoubleValidator>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -31,7 +32,7 @@
 #include <QSettings>
 #include <QSvgRenderer>
 
-QgsComposerPictureWidget::QgsComposerPictureWidget( QgsComposerPicture* picture ): QWidget(), mPicture( picture )
+QgsComposerPictureWidget::QgsComposerPictureWidget( QgsComposerPicture* picture ): QgsComposerItemBaseWidget( 0, picture ), mPicture( picture ), mPreviewsLoaded( false )
 {
   setupUi( this );
 
@@ -44,8 +45,27 @@ QgsComposerPictureWidget::QgsComposerPictureWidget( QgsComposerPicture* picture 
 
   mPreviewListWidget->setIconSize( QSize( 30, 30 ) );
 
+  // mSearchDirectoriesGroupBox is a QgsCollapsibleGroupBoxBasic, so its collapsed state should not be saved/restored
+  mSearchDirectoriesGroupBox->setCollapsed( true );
+  // setup connection for loading previews on first expansion of group box
+  connect( mSearchDirectoriesGroupBox, SIGNAL( collapsedStateChanged( bool ) ), this, SLOT( loadPicturePreviews( bool ) ) );
+
   connect( mPicture, SIGNAL( itemChanged() ), this, SLOT( setGuiElementValues() ) );
-  connect( mPicture, SIGNAL( rotationChanged( double ) ), this, SLOT( setGuiElementValues() ) );
+  connect( mPicture, SIGNAL( pictureRotationChanged( double ) ), this, SLOT( setPicRotationSpinValue( double ) ) );
+
+  QgsAtlasComposition* atlas = atlasComposition();
+  if ( atlas )
+  {
+    // repopulate data defined buttons if atlas layer changes
+    connect( atlas, SIGNAL( coverageLayerChanged( QgsVectorLayer* ) ),
+             this, SLOT( populateDataDefinedButtons() ) );
+    connect( atlas, SIGNAL( toggled( bool ) ), this, SLOT( populateDataDefinedButtons() ) );
+  }
+
+  //connections for data defined buttons
+  connect( mSourceDDBtn, SIGNAL( dataDefinedChanged( const QString& ) ), this, SLOT( updateDataDefinedProperty() ) );
+  connect( mSourceDDBtn, SIGNAL( dataDefinedActivated( bool ) ), this, SLOT( updateDataDefinedProperty() ) );
+  connect( mSourceDDBtn, SIGNAL( dataDefinedActivated( bool ) ), mPictureLineEdit, SLOT( setDisabled( bool ) ) );
 }
 
 QgsComposerPictureWidget::~QgsComposerPictureWidget()
@@ -55,6 +75,7 @@ QgsComposerPictureWidget::~QgsComposerPictureWidget()
 
 void QgsComposerPictureWidget::on_mPictureBrowseButton_clicked()
 {
+  QSettings s;
   QString openDir;
   QString lineEditText = mPictureLineEdit->text();
   if ( !lineEditText.isEmpty() )
@@ -63,9 +84,13 @@ void QgsComposerPictureWidget::on_mPictureBrowseButton_clicked()
     openDir = openDirFileInfo.path();
   }
 
+  if ( openDir.isEmpty() )
+  {
+    openDir = s.value( "/UI/lastComposerPictureDir", QDir::homePath() ).toString();
+  }
 
   //show file dialog
-  QString filePath = QFileDialog::getOpenFileName( 0, tr( "Select svg or image file" ), openDir );
+  QString filePath = QFileDialog::getOpenFileName( this, tr( "Select svg or image file" ), openDir );
   if ( filePath.isEmpty() )
   {
     return;
@@ -79,6 +104,8 @@ void QgsComposerPictureWidget::on_mPictureBrowseButton_clicked()
     return;
   }
 
+  s.setValue( "/UI/lastComposerPictureDir", fileInfo.absolutePath() );
+
   mPictureLineEdit->blockSignals( true );
   mPictureLineEdit->setText( filePath );
   mPictureLineEdit->blockSignals( false );
@@ -87,7 +114,7 @@ void QgsComposerPictureWidget::on_mPictureBrowseButton_clicked()
   if ( mPicture )
   {
     mPicture->beginCommand( tr( "Picture changed" ) );
-    mPicture->setPictureFile( filePath );
+    mPicture->setPicturePath( filePath );
     mPicture->update();
     mPicture->endCommand();
   }
@@ -102,27 +129,19 @@ void QgsComposerPictureWidget::on_mPictureLineEdit_editingFinished()
     //check if file exists
     QFileInfo fileInfo( filePath );
 
-    if ( !fileInfo.exists() || !fileInfo.isReadable() )
-    {
-      QMessageBox::critical( 0, "Invalid file", "Error, file does not exist or is not readable" );
-      return;
-    }
-
     mPicture->beginCommand( tr( "Picture changed" ) );
-    mPicture->setPictureFile( filePath );
+    mPicture->setPicturePath( filePath );
     mPicture->update();
     mPicture->endCommand();
   }
 }
 
-
-void QgsComposerPictureWidget::on_mRotationSpinBox_valueChanged( double d )
+void QgsComposerPictureWidget::on_mPictureRotationSpinBox_valueChanged( double d )
 {
   if ( mPicture )
   {
     mPicture->beginCommand( tr( "Picture rotation changed" ), QgsComposerMergeCommand::ComposerPictureRotation );
-    mPicture->setRotation( d );
-    mPicture->update();
+    mPicture->setPictureRotation( d );
     mPicture->endCommand();
   }
 }
@@ -137,7 +156,7 @@ void QgsComposerPictureWidget::on_mPreviewListWidget_currentItemChanged( QListWi
 
   QString absoluteFilePath = current->data( Qt::UserRole ).toString();
   mPicture->beginCommand( tr( "Picture changed" ) );
-  mPicture->setPictureFile( absoluteFilePath );
+  mPicture->setPicturePath( absoluteFilePath );
   mPictureLineEdit->setText( absoluteFilePath );
   mPicture->update();
   mPicture->endCommand();
@@ -146,7 +165,7 @@ void QgsComposerPictureWidget::on_mPreviewListWidget_currentItemChanged( QListWi
 void QgsComposerPictureWidget::on_mAddDirectoryButton_clicked()
 {
   //let user select a directory
-  QString directory = QFileDialog::getExistingDirectory( 0, tr( "Select new preview directory" ) );
+  QString directory = QFileDialog::getExistingDirectory( this, tr( "Select new preview directory" ) );
   if ( directory.isNull() )
   {
     return; //dialog canceled by user
@@ -194,6 +213,45 @@ void QgsComposerPictureWidget::on_mRemoveDirectoryButton_clicked()
   s.setValue( "/Composer/PictureWidgetDirectories", userDirList );
 }
 
+void QgsComposerPictureWidget::on_mResizeModeComboBox_currentIndexChanged( int index )
+{
+  if ( !mPicture )
+  {
+    return;
+  }
+
+  mPicture->beginCommand( tr( "Picture resize mode changed" ) );
+  mPicture->setResizeMode(( QgsComposerPicture::ResizeMode )index );
+  mPicture->endCommand();
+
+  //disable picture rotation for non-zoom modes
+  mRotationGroupBox->setEnabled( mPicture->resizeMode() == QgsComposerPicture::Zoom ||
+                                 mPicture->resizeMode() == QgsComposerPicture::ZoomResizeFrame );
+
+  //disable anchor point control for certain zoom modes
+  if ( mPicture->resizeMode() == QgsComposerPicture::Zoom ||
+       mPicture->resizeMode() == QgsComposerPicture::Clip )
+  {
+    mAnchorPointComboBox->setEnabled( true );
+  }
+  else
+  {
+    mAnchorPointComboBox->setEnabled( false );
+  }
+}
+
+void QgsComposerPictureWidget::on_mAnchorPointComboBox_currentIndexChanged( int index )
+{
+  if ( !mPicture )
+  {
+    return;
+  }
+
+  mPicture->beginCommand( tr( "Picture placement changed" ) );
+  mPicture->setPictureAnchor(( QgsComposerItem::ItemPositionMode )index );
+  mPicture->endCommand();
+}
+
 void QgsComposerPictureWidget::on_mRotationFromComposerMapCheckBox_stateChanged( int state )
 {
   if ( !mPicture )
@@ -205,8 +263,9 @@ void QgsComposerPictureWidget::on_mRotationFromComposerMapCheckBox_stateChanged(
   if ( state == Qt::Unchecked )
   {
     mPicture->setRotationMap( -1 );
-    mRotationSpinBox->setEnabled( true );
+    mPictureRotationSpinBox->setEnabled( true );
     mComposerMapComboBox->setEnabled( false );
+    mPicture->setPictureRotation( mPictureRotationSpinBox->value() );
   }
   else
   {
@@ -218,7 +277,7 @@ void QgsComposerPictureWidget::on_mRotationFromComposerMapCheckBox_stateChanged(
     int composerId = mComposerMapComboBox->itemData( currentItemIndex, Qt::UserRole ).toInt();
 
     mPicture->setRotationMap( composerId );
-    mRotationSpinBox->setEnabled( false );
+    mPictureRotationSpinBox->setEnabled( false );
     mComposerMapComboBox->setEnabled( true );
   }
   mPicture->endCommand();
@@ -241,7 +300,7 @@ void QgsComposerPictureWidget::on_mComposerMapComboBox_activated( const QString 
   //extract id
   int id;
   bool conversionOk;
-  QStringList textSplit = text.split( " " );
+  QStringList textSplit = text.split( ' ' );
   if ( textSplit.size() < 1 )
   {
     return;
@@ -305,26 +364,34 @@ void QgsComposerPictureWidget::refreshMapComboBox()
   mComposerMapComboBox->blockSignals( false );
 }
 
+void QgsComposerPictureWidget::setPicRotationSpinValue( double r )
+{
+  mPictureRotationSpinBox->blockSignals( true );
+  mPictureRotationSpinBox->setValue( r );
+  mPictureRotationSpinBox->blockSignals( false );
+}
+
 void QgsComposerPictureWidget::setGuiElementValues()
 {
   //set initial gui values
   if ( mPicture )
   {
-    mRotationSpinBox->blockSignals( true );
+    mPictureRotationSpinBox->blockSignals( true );
     mPictureLineEdit->blockSignals( true );
     mComposerMapComboBox->blockSignals( true );
     mRotationFromComposerMapCheckBox->blockSignals( true );
+    mResizeModeComboBox->blockSignals( true );
+    mAnchorPointComboBox->blockSignals( true );
 
-    mPictureLineEdit->setText( mPicture->pictureFile() );
-//    QRectF pictureRect = mPicture->rect();
-    mRotationSpinBox->setValue( mPicture->rotation() );
+    mPictureLineEdit->setText( mPicture->picturePath() );
+    mPictureRotationSpinBox->setValue( mPicture->pictureRotation() );
 
     refreshMapComboBox();
 
     if ( mPicture->useRotationMap() )
     {
       mRotationFromComposerMapCheckBox->setCheckState( Qt::Checked );
-      mRotationSpinBox->setEnabled( false );
+      mPictureRotationSpinBox->setEnabled( false );
       mComposerMapComboBox->setEnabled( true );
       QString mapText = tr( "Map %1" ).arg( mPicture->rotationMap() );
       int itemId = mComposerMapComboBox->findText( mapText );
@@ -336,15 +403,35 @@ void QgsComposerPictureWidget::setGuiElementValues()
     else
     {
       mRotationFromComposerMapCheckBox->setCheckState( Qt::Unchecked );
-      mRotationSpinBox->setEnabled( true );
+      mPictureRotationSpinBox->setEnabled( true );
       mComposerMapComboBox->setEnabled( false );
     }
 
+    mResizeModeComboBox->setCurrentIndex(( int )mPicture->resizeMode() );
+    //disable picture rotation for non-zoom modes
+    mRotationGroupBox->setEnabled( mPicture->resizeMode() == QgsComposerPicture::Zoom ||
+                                   mPicture->resizeMode() == QgsComposerPicture::ZoomResizeFrame );
+
+    mAnchorPointComboBox->setCurrentIndex(( int )mPicture->pictureAnchor() );
+    //disable anchor point control for certain zoom modes
+    if ( mPicture->resizeMode() == QgsComposerPicture::Zoom ||
+         mPicture->resizeMode() == QgsComposerPicture::Clip )
+    {
+      mAnchorPointComboBox->setEnabled( true );
+    }
+    else
+    {
+      mAnchorPointComboBox->setEnabled( false );
+    }
 
     mRotationFromComposerMapCheckBox->blockSignals( false );
-    mRotationSpinBox->blockSignals( false );
+    mPictureRotationSpinBox->blockSignals( false );
     mPictureLineEdit->blockSignals( false );
     mComposerMapComboBox->blockSignals( false );
+    mResizeModeComboBox->blockSignals( false );
+    mAnchorPointComboBox->blockSignals( false );
+
+    populateDataDefinedButtons();
   }
 }
 
@@ -399,7 +486,7 @@ int QgsComposerPictureWidget::addDirectoryToPreview( const QString& path )
       QIcon icon( filePath );
       listItem->setIcon( icon );
     }
-    else if ( fileIsPixel ) //for pixel formats: create icon from scaled pixmap
+    else //for pixel formats: create icon from scaled pixmap
     {
       QPixmap iconPixmap( filePath );
       if ( iconPixmap.isNull() )
@@ -410,10 +497,6 @@ int QgsComposerPictureWidget::addDirectoryToPreview( const QString& path )
       QPixmap scaledPixmap( iconPixmap.scaled( QSize( 30, 30 ), Qt::KeepAspectRatio ) );
       QIcon icon( scaledPixmap );
       listItem->setIcon( icon );
-    }
-    else
-    {
-      ++counter; continue;
     }
 
     listItem->setText( "" );
@@ -464,6 +547,8 @@ void QgsComposerPictureWidget::addStandardDirectoriesToPreview()
     addDirectoryToPreview( *userDirIt );
     mSearchDirectoriesComboBox->addItem( *userDirIt );
   }
+
+  mPreviewsLoaded = true;
 }
 
 bool QgsComposerPictureWidget::testSvgFile( const QString& filename ) const
@@ -485,12 +570,14 @@ bool QgsComposerPictureWidget::testImageFile( const QString& filename ) const
   return !formatName.isEmpty(); //file is in a supported pixel format
 }
 
-void QgsComposerPictureWidget::showEvent( QShowEvent * event )
+void QgsComposerPictureWidget::loadPicturePreviews( bool collapsed )
 {
-  Q_UNUSED( event );
-  refreshMapComboBox();
+  if ( mPreviewsLoaded )
+  {
+    return;
+  }
 
-  if ( mPreviewListWidget->count() == 0 )
+  if ( !collapsed ) // load the previews only on first parent group box expansion
   {
     mPreviewListWidget->hide();
     mPreviewsLoadingLabel->show();
@@ -500,9 +587,57 @@ void QgsComposerPictureWidget::showEvent( QShowEvent * event )
   }
 }
 
+void QgsComposerPictureWidget::showEvent( QShowEvent * event )
+{
+  Q_UNUSED( event );
+  refreshMapComboBox();
+}
+
 void QgsComposerPictureWidget::resizeEvent( QResizeEvent * event )
 {
   Q_UNUSED( event );
   mSearchDirectoriesComboBox->setMinimumWidth( mPreviewListWidget->sizeHint().width() );
+}
+
+QgsComposerObject::DataDefinedProperty QgsComposerPictureWidget::ddPropertyForWidget( QgsDataDefinedButton *widget )
+{
+  if ( widget == mSourceDDBtn )
+  {
+    return QgsComposerObject::PictureSource;
+  }
+
+  return QgsComposerObject::NoProperty;
+}
+
+static QgsExpressionContext _getExpressionContext( const void* context )
+{
+  const QgsComposerObject* composerObject = ( const QgsComposerObject* ) context;
+  if ( !composerObject )
+  {
+    return QgsExpressionContext();
+  }
+
+  QScopedPointer< QgsExpressionContext > expContext( composerObject->createExpressionContext() );
+  return QgsExpressionContext( *expContext );
+}
+
+void QgsComposerPictureWidget::populateDataDefinedButtons()
+{
+  QgsVectorLayer* vl = atlasCoverageLayer();
+
+  //block signals from data defined buttons
+  mSourceDDBtn->blockSignals( true );
+
+  mSourceDDBtn->registerGetExpressionContextCallback( &_getExpressionContext, mPicture );
+
+  //initialise buttons to use atlas coverage layer
+  mSourceDDBtn->init( vl, mPicture->dataDefinedProperty( QgsComposerObject::PictureSource ),
+                      QgsDataDefinedButton::AnyType, QgsDataDefinedButton::anyStringDesc() );
+
+  //initial state of controls - disable related controls when dd buttons are active
+  mPictureLineEdit->setEnabled( !mSourceDDBtn->isActive() );
+
+  //unblock signals from data defined buttons
+  mSourceDDBtn->blockSignals( false );
 }
 

@@ -20,8 +20,8 @@
 #include "qgsgraduatedsymbolrendererv2.h"
 #include "qgsrulebasedrendererv2.h"
 #include "qgspointdisplacementrenderer.h"
-
-QgsRendererV2Registry* QgsRendererV2Registry::mInstance = NULL;
+#include "qgsinvertedpolygonrenderer.h"
+#include "qgsheatmaprenderer.h"
 
 QgsRendererV2Registry::QgsRendererV2Registry()
 {
@@ -34,6 +34,7 @@ QgsRendererV2Registry::QgsRendererV2Registry()
   addRenderer( new QgsRendererV2Metadata( "categorizedSymbol",
                                           QObject::tr( "Categorized" ),
                                           QgsCategorizedSymbolRendererV2::create ) );
+
   addRenderer( new QgsRendererV2Metadata( "graduatedSymbol",
                                           QObject::tr( "Graduated" ),
                                           QgsGraduatedSymbolRendererV2::create ) );
@@ -46,11 +47,19 @@ QgsRendererV2Registry::QgsRendererV2Registry()
   addRenderer( new QgsRendererV2Metadata( "pointDisplacement",
                                           QObject::tr( "Point displacement" ),
                                           QgsPointDisplacementRenderer::create ) );
+
+  addRenderer( new QgsRendererV2Metadata( "invertedPolygonRenderer",
+                                          QObject::tr( "Inverted polygons" ),
+                                          QgsInvertedPolygonRenderer::create ) );
+
+  addRenderer( new QgsRendererV2Metadata( "heatmapRenderer",
+                                          QObject::tr( "Heatmap" ),
+                                          QgsHeatmapRenderer::create ) );
 }
 
 QgsRendererV2Registry::~QgsRendererV2Registry()
 {
-  foreach ( QString name, mRenderers.keys() )
+  Q_FOREACH ( const QString& name, mRenderers.keys() )
   {
     delete mRenderers[name];
   }
@@ -59,10 +68,8 @@ QgsRendererV2Registry::~QgsRendererV2Registry()
 
 QgsRendererV2Registry* QgsRendererV2Registry::instance()
 {
-  if ( !mInstance )
-    mInstance = new QgsRendererV2Registry();
-
-  return mInstance;
+  static QgsRendererV2Registry mInstance;
+  return &mInstance;
 }
 
 
@@ -76,7 +83,7 @@ bool QgsRendererV2Registry::addRenderer( QgsRendererV2AbstractMetadata* metadata
   return true;
 }
 
-bool QgsRendererV2Registry::removeRenderer( QString rendererName )
+bool QgsRendererV2Registry::removeRenderer( const QString& rendererName )
 {
   if ( !mRenderers.contains( rendererName ) )
     return false;
@@ -87,10 +94,12 @@ bool QgsRendererV2Registry::removeRenderer( QString rendererName )
   return true;
 }
 
-QgsRendererV2AbstractMetadata* QgsRendererV2Registry::rendererMetadata( QString rendererName )
+QgsRendererV2AbstractMetadata* QgsRendererV2Registry::rendererMetadata( const QString& rendererName )
 {
   return mRenderers.value( rendererName );
 }
+
+QgsRendererV2Metadata::~QgsRendererV2Metadata() {}
 
 QStringList QgsRendererV2Registry::renderersList()
 {

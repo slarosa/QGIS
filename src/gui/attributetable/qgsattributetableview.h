@@ -21,15 +21,17 @@
 
 #include "qgsfeature.h" // For QgsFeatureIds
 
-class QgsAttributeTableModel;
-class QgsAttributeTableFilterModel;
-class QgsVectorLayerCache;
-class QgsFeatureSelectionModel;
 class QgsAttributeTableDelegate;
+class QgsAttributeTableFilterModel;
+class QgsAttributeTableModel;
+class QgsFeatureSelectionModel;
+class QgsIFeatureSelectionManager;
 class QgsMapCanvas;
 class QgsVectorLayer;
+class QgsVectorLayerCache;
 class QMenu;
 class QProgressDialog;
+
 
 /**
  * @brief
@@ -50,13 +52,10 @@ class GUI_EXPORT QgsAttributeTableView : public QTableView
     virtual void setModel( QgsAttributeTableFilterModel* filterModel );
 
     /**
-     * Autocreates the models
-     * @param layerCache The @link QgsVectorLayerCache @endlink to use ( as backend )
-     * @param canvas     The @link QgsMapCanvas @endlink to use ( for the currently visible features filter )
-     *
-     * @deprecated
+     * @brief setFeatureSelectionManager
+     * @param featureSelectionManager We will take ownership
      */
-    void setCanvasAndLayerCache( QgsMapCanvas *canvas, QgsVectorLayerCache *layerCache );
+    void setFeatureSelectionManager( QgsIFeatureSelectionManager* featureSelectionManager );
 
     /**
      * This event filter is installed on the verticalHeader to intercept mouse press and release
@@ -68,7 +67,7 @@ class GUI_EXPORT QgsAttributeTableView : public QTableView
      *
      * @return Returns always false, so the event gets processed
      */
-    virtual bool eventFilter( QObject* object, QEvent* event );
+    virtual bool eventFilter( QObject* object, QEvent* event ) override;
 
   protected:
     /**
@@ -77,7 +76,7 @@ class GUI_EXPORT QgsAttributeTableView : public QTableView
      *
      * @param event The mouse event
      */
-    void mousePressEvent( QMouseEvent *event );
+    void mousePressEvent( QMouseEvent *event ) override;
 
     /**
      * Called for mouse release events on a table cell.
@@ -85,7 +84,7 @@ class GUI_EXPORT QgsAttributeTableView : public QTableView
      *
      * @param event The mouse event
      */
-    void mouseReleaseEvent( QMouseEvent *event );
+    void mouseReleaseEvent( QMouseEvent *event ) override;
 
     /**
      * Called for mouse move events on a table cell.
@@ -93,7 +92,7 @@ class GUI_EXPORT QgsAttributeTableView : public QTableView
      *
      * @param event The mouse event
      */
-    void mouseMoveEvent( QMouseEvent *event );
+    void mouseMoveEvent( QMouseEvent *event ) override;
 
     /**
      * Called for key press events
@@ -101,7 +100,7 @@ class GUI_EXPORT QgsAttributeTableView : public QTableView
      *
      * @param event The mouse event
      */
-    void keyPressEvent( QKeyEvent *event );
+    void keyPressEvent( QKeyEvent *event ) override;
 
     /**
      * @brief
@@ -110,13 +109,13 @@ class GUI_EXPORT QgsAttributeTableView : public QTableView
      *
      * @param event The associated event object.
      */
-    void contextMenuEvent( QContextMenuEvent* event );
+    void contextMenuEvent( QContextMenuEvent* event ) override;
 
     /**
      * Saves geometry to the settings on close
      * @param event not used
      */
-    void closeEvent( QCloseEvent *event );
+    void closeEvent( QCloseEvent *event ) override;
 
   signals:
     /**
@@ -127,22 +126,27 @@ class GUI_EXPORT QgsAttributeTableView : public QTableView
      * @param atIndex  The QModelIndex, to which the context menu belongs. Relative to the source model.
      *                 In most cases, this will be a @link QgsAttributeTableFilterModel @endlink
      */
-    void willShowContextMenu( QMenu* menu, QModelIndex atIndex );
+    void willShowContextMenu( QMenu* menu, const QModelIndex& atIndex );
 
     void finished();
 
   public slots:
-    void repaintRequested( QModelIndexList indexes );
+    void repaintRequested( const QModelIndexList& indexes );
     void repaintRequested();
-    virtual void selectAll();
+    virtual void selectAll() override;
     virtual void selectRow( int row );
     virtual void _q_selectRow( int row );
+
+  private slots:
+    void modelDeleted();
+    void showHorizontalSortIndicator();
 
   private:
     void selectRow( int row, bool anchor );
     QgsAttributeTableModel* mMasterModel;
     QgsAttributeTableFilterModel* mFilterModel;
     QgsFeatureSelectionModel* mFeatureSelectionModel;
+    QgsIFeatureSelectionManager* mFeatureSelectionManager;
     QgsAttributeTableDelegate* mTableDelegate;
     QAbstractItemModel* mModel; // Most likely the filter model
     QMenu *mActionPopup;

@@ -20,6 +20,7 @@ SET (INTERPOLATION_MOC_HDRS
      qgstininterpolatordialog.h
      qgsidwinterpolatordialog.h
      qgsinterpolationdialog.h
+     qgsinterpolatordialog.h
 )
 
 SET (INTERPOLATION_RCCS  interpolator.qrc)
@@ -43,6 +44,7 @@ INCLUDE_DIRECTORIES(
      ${GEOS_INCLUDE_DIR}
      ../../analysis/interpolation
      ../../core
+     ../../core/geometry
      ../../core/raster
      ../../gui
      ..

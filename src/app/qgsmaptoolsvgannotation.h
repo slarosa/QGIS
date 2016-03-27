@@ -20,13 +20,15 @@
 
 #include "qgsmaptoolannotation.h"
 
-class QgsMapToolSvgAnnotation: public QgsMapToolAnnotation
+class APP_EXPORT QgsMapToolSvgAnnotation: public QgsMapToolAnnotation
 {
+    Q_OBJECT
+
   public:
     QgsMapToolSvgAnnotation( QgsMapCanvas* canvas );
     ~QgsMapToolSvgAnnotation();
   protected:
-    QgsAnnotationItem* createItem( QMouseEvent* e );
+    QgsAnnotationItem* createItem( QMouseEvent* e ) override;
 };
 
 #endif // QGSMAPTOOLSVGANNOTATION_H

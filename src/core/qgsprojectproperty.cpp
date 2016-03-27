@@ -21,7 +21,7 @@
 #include <QDomDocument>
 #include <QStringList>
 
-void QgsPropertyValue::dump( size_t tabs ) const
+void QgsPropertyValue::dump( int tabs ) const
 {
   QString tabString;
   tabString.fill( '\t', tabs );
@@ -32,15 +32,14 @@ void QgsPropertyValue::dump( size_t tabs ) const
 
     for ( QStringList::const_iterator i = sl.begin(); i != sl.end(); ++i )
     {
-      QgsDebugMsg( QString( "%1[%2] " ).arg( tabString ).arg( *i ) );
+      QgsDebugMsg( QString( "%1[%2] " ).arg( tabString, *i ) );
     }
   }
   else
   {
-    QgsDebugMsg( QString( "%1%2" ).arg( tabString ).arg( value_.toString() ) );
+    QgsDebugMsg( QString( "%1%2" ).arg( tabString, value_.toString() ) );
   }
 } // QgsPropertyValue::dump()
-
 
 
 bool QgsPropertyValue::readXML( QDomNode & keyNode )
@@ -265,9 +264,7 @@ bool QgsPropertyValue::writeXML( QString const & nodeName,
 } // QgsPropertyValue::writeXML
 
 
-
-
-QgsPropertyKey::QgsPropertyKey( QString const name )
+QgsPropertyKey::QgsPropertyKey( const QString &name )
     : mName( name )
 {}
 
@@ -290,13 +287,13 @@ QVariant QgsPropertyKey::value() const
 } // QVariant QgsPropertyKey::value()
 
 
-void QgsPropertyKey::dump( size_t tabs ) const
+void QgsPropertyKey::dump( int tabs ) const
 {
   QString tabString;
 
   tabString.fill( '\t', tabs );
 
-  QgsDebugMsg( QString( "%1name: %2" ).arg( tabString ).arg( name() ) );
+  QgsDebugMsg( QString( "%1name: %2" ).arg( tabString, name() ) );
 
   tabs++;
   tabString.fill( '\t', tabs );
@@ -308,39 +305,40 @@ void QgsPropertyKey::dump( size_t tabs ) const
     {
       if ( i.next().value()->isValue() )
       {
-        QgsPropertyValue * propertyValue =
-          dynamic_cast<QgsPropertyValue*>( i.value() );
+        QgsPropertyValue * propertyValue = static_cast<QgsPropertyValue*>( i.value() );
 
         if ( QVariant::StringList == propertyValue->value().type() )
         {
-          QgsDebugMsg( QString( "%1key: <%2>  value:" ).arg( tabString ).arg( i.key() ) );
+          QgsDebugMsg( QString( "%1key: <%2>  value:" ).arg( tabString, i.key() ) );
           propertyValue->dump( tabs + 1 );
         }
         else
         {
-          QgsDebugMsg( QString( "%1key: <%2>  value: %3" ).arg( tabString ).arg( i.key() ).arg( propertyValue->value().toString() ) );
+          QgsDebugMsg( QString( "%1key: <%2>  value: %3" ).arg( tabString, i.key(), propertyValue->value().toString() ) );
         }
       }
       else
       {
         QgsDebugMsg( QString( "%1key: <%2>  subkey: <%3>" )
-                     .arg( tabString )
-                     .arg( i.key() )
-                     .arg( dynamic_cast<QgsPropertyKey*>( i.value() )->name() ) );
+                     .arg( tabString,
+                           i.key(),
+                           dynamic_cast<QgsPropertyKey*>( i.value() )->name() ) );
         i.value()->dump( tabs + 1 );
       }
 
-//              qDebug("<%s>", name().toUtf8().constData());
-//              if ( i.value()->isValue() )
-//              {
-//                  qDebug("   <%s>", i.key().toUtf8().constData() );
-//              }
-//              i.value()->dump();
-//              if ( i.value()->isValue() )
-//              {
-//                  qDebug("   </%s>", i.key().toUtf8().constData() );
-//              }
-//              qDebug("</%s>", name().toUtf8().constData());
+#if 0
+      qDebug( "<%s>", name().toUtf8().constData() );
+      if ( i.value()->isValue() )
+      {
+        qDebug( "   <%s>", i.key().toUtf8().constData() );
+      }
+      i.value()->dump();
+      if ( i.value()->isValue() )
+      {
+        qDebug( "   </%s>", i.key().toUtf8().constData() );
+      }
+      qDebug( "</%s>", name().toUtf8().constData() );
+#endif
     }
   }
 
@@ -423,7 +421,7 @@ bool QgsPropertyKey::writeXML( QString const &nodeName, QDomElement & element, Q
 
 
 
-/** return keys that do not contain other keys
+/** Return keys that do not contain other keys
  */
 void QgsPropertyKey::entryList( QStringList & entries ) const
 {

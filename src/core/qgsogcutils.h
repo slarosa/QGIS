@@ -1,6 +1,7 @@
 #ifndef QGSOGCUTILS_H
 #define QGSOGCUTILS_H
 
+class QColor;
 class QDomNode;
 class QDomElement;
 class QDomDocument;
@@ -14,6 +15,7 @@ class QgsGeometry;
 class QgsPoint;
 class QgsRectangle;
 
+#include "qgsgeometry.h"
 #include "qgsexpression.h"
 
 /**
@@ -22,50 +24,51 @@ class QgsRectangle;
  *
  * Currently supported standards:
  * - GML2 - Geography Markup Language (import, export)
- *
- * @note added in 2.0
  */
 class CORE_EXPORT QgsOgcUtils
 {
   public:
 
-    /** static method that creates geometry from GML
+    /** Static method that creates geometry from GML
      @param xmlString xml representation of the geometry. GML elements are expected to be
        in default namespace (\verbatim {<Point>...</Point> \endverbatim) or in
        "gml" namespace (\verbatim <gml:Point>...</gml:Point> \endverbatim)
      */
     static QgsGeometry* geometryFromGML( const QString& xmlString );
 
-    /** static method that creates geometry from GML
+    /** Static method that creates geometry from GML
       */
     static QgsGeometry* geometryFromGML( const QDomNode& geometryNode );
 
-    /** read rectangle from GML2 Box */
+    /** Read rectangle from GML2 Box */
     static QgsRectangle rectangleFromGMLBox( const QDomNode& boxNode );
 
-    /** read rectangle from GML3 Envelope */
+    /** Read rectangle from GML3 Envelope */
     static QgsRectangle rectangleFromGMLEnvelope( const QDomNode& envelopeNode );
 
     /** Exports the geometry to GML2 or GML3
-        @return QDomELement
+        @return QDomElement
      */
-    static QDomElement geometryToGML( QgsGeometry* geometry, QDomDocument& doc, QString format );
+    static QDomElement geometryToGML( const QgsGeometry* geometry, QDomDocument& doc, const QString& format, const int &precision = 17 );
 
     /** Exports the geometry to GML2
         @return QDomElement
      */
-    static QDomElement geometryToGML( QgsGeometry* geometry, QDomDocument& doc );
+    static QDomElement geometryToGML( const QgsGeometry* geometry, QDomDocument& doc, const int &precision = 17 );
 
     /** Exports the rectangle to GML2 Box
         @return QDomElement
      */
-    static QDomElement rectangleToGMLBox( QgsRectangle* box, QDomDocument& doc );
+    static QDomElement rectangleToGMLBox( QgsRectangle* box, QDomDocument& doc, const int &precision = 17 );
 
     /** Exports the rectangle to GML2 Envelope
         @return QDomElement
      */
-    static QDomElement rectangleToGMLEnvelope( QgsRectangle* env, QDomDocument& doc );
+    static QDomElement rectangleToGMLEnvelope( QgsRectangle* env, QDomDocument& doc, const int &precision = 17 );
 
+
+    /** Parse XML with OGC fill into QColor */
+    static QColor colorFromOgcFill( const QDomElement& fillElement );
 
     /** Parse XML with OGC filter into QGIS expression */
     static QgsExpression* expressionFromOgcFilter( const QDomElement& element );
@@ -78,43 +81,43 @@ class CORE_EXPORT QgsOgcUtils
     static QDomElement expressionToOgcFilter( const QgsExpression& exp, QDomDocument& doc, QString* errorMessage = 0 );
 
   private:
-    /** static method that creates geometry from GML Point */
+    /** Static method that creates geometry from GML Point */
     static QgsGeometry* geometryFromGMLPoint( const QDomElement& geometryElement );
-    /** static method that creates geometry from GML LineString */
+    /** Static method that creates geometry from GML LineString */
     static QgsGeometry* geometryFromGMLLineString( const QDomElement& geometryElement );
-    /** static method that creates geometry from GML Polygon */
+    /** Static method that creates geometry from GML Polygon */
     static QgsGeometry* geometryFromGMLPolygon( const QDomElement& geometryElement );
-    /** static method that creates geometry from GML MultiPoint */
+    /** Static method that creates geometry from GML MultiPoint */
     static QgsGeometry* geometryFromGMLMultiPoint( const QDomElement& geometryElement );
-    /** static method that creates geometry from GML MultiLineString */
+    /** Static method that creates geometry from GML MultiLineString */
     static QgsGeometry* geometryFromGMLMultiLineString( const QDomElement& geometryElement );
-    /** static method that creates geometry from GML MultiPolygon */
+    /** Static method that creates geometry from GML MultiPolygon */
     static QgsGeometry* geometryFromGMLMultiPolygon( const QDomElement& geometryElement );
     /** Reads the \verbatim <gml:coordinates> \endverbatim element and extracts the coordinates as points
        @param coords list where the found coordinates are appended
        @param elem the \verbatim <gml:coordinates> \endverbatim element
        @return boolean for success*/
-    static bool readGMLCoordinates( std::list<QgsPoint>& coords, const QDomElement elem );
+    static bool readGMLCoordinates( QgsPolyline &coords, const QDomElement &elem );
     /** Reads the \verbatim <gml:pos> \endverbatim or \verbatim <gml:posList> \endverbatim
        and extracts the coordinates as points
        @param coords list where the found coordinates are appended
        @param elem the \verbatim <gml:pos> \endverbatim or
                     \verbatim <gml:posList> \endverbatim element
        @return boolean for success*/
-    static bool readGMLPositions( std::list<QgsPoint>& coords, const QDomElement elem );
+    static bool readGMLPositions( QgsPolyline &coords, const QDomElement &elem );
 
 
-    /**Create a GML coordinates element from a point list.
+    /** Create a GML coordinates element from a point list.
       @param points list of data points
       @param doc the GML document
       @return QDomElement */
-    static QDomElement createGMLCoordinates( const QVector<QgsPoint> points, QDomDocument& doc );
+    static QDomElement createGMLCoordinates( const QgsPolyline &points, QDomDocument& doc );
 
-    /**Create a GML pos or posList element from a point list.
+    /** Create a GML pos or posList element from a point list.
       @param points list of data points
       @param doc the GML document
       @return QDomElement */
-    static QDomElement createGMLPositions( const QVector<QgsPoint> points, QDomDocument& doc );
+    static QDomElement createGMLPositions( const QgsPolyline &points, QDomDocument& doc );
 
     //! handle a generic sub-expression
     static QgsExpression::Node* nodeFromOgcFilter( QDomElement &element, QString &errorMessage );

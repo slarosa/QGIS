@@ -28,20 +28,21 @@
 
 #include "qgsattributedialog.h"
 #include "qgsvectorlayer.h" //QgsFeatureIds
+#include "qgsfieldmodel.h"
+#include "qgssearchwidgetwrapper.h"
+#include <QDockWidget>
 
 class QDialogButtonBox;
 class QPushButton;
 class QLineEdit;
 class QComboBox;
 class QMenu;
-class QDockWidget;
 class QSignalMapper;
-
 class QgsAttributeTableModel;
 class QgsAttributeTableFilterModel;
-class QgsAttributeTableView;
+class QgsRubberBand;
 
-class QgsAttributeTableDialog : public QDialog, private Ui::QgsAttributeTableDialog
+class APP_EXPORT QgsAttributeTableDialog : public QDialog, private Ui::QgsAttributeTableDialog
 {
     Q_OBJECT
 
@@ -59,7 +60,7 @@ class QgsAttributeTableDialog : public QDialog, private Ui::QgsAttributeTableDia
      * Sets the filter expression to filter visible features
      * @param filterString filter query string. QgsExpression compatible.
      */
-    void setFilterExpression( QString filterString );
+    void setFilterExpression( const QString& filterString );
 
   public slots:
     /**
@@ -73,6 +74,10 @@ class QgsAttributeTableDialog : public QDialog, private Ui::QgsAttributeTableDia
      */
     void on_mCopySelectedRowsButton_clicked();
     /**
+     * Paste features from the clipboard
+     */
+    void on_mPasteFeatures_clicked();
+    /**
      * Toggles editing mode
      */
     void on_mToggleEditingButton_toggled();
@@ -80,6 +85,10 @@ class QgsAttributeTableDialog : public QDialog, private Ui::QgsAttributeTableDia
      * Saves edits
      */
     void on_mSaveEditsButton_clicked();
+    /**
+     * Reload the data
+     */
+    void on_mReloadButton_clicked();
 
     /**
      * Inverts selection
@@ -122,6 +131,15 @@ class QgsAttributeTableDialog : public QDialog, private Ui::QgsAttributeTableDia
     void on_mDeleteSelectedButton_clicked();
 
     /**
+     * Called when the current index changes in the main view
+     * i.e. when the view mode is switched from table to form view
+     * or vice versa.
+     *
+     * Will adjust the button state
+     */
+    void on_mMainView_currentChanged( int );
+
+    /**
      * add feature
      */
     void on_mAddFeature_clicked();
@@ -137,11 +155,17 @@ class QgsAttributeTableDialog : public QDialog, private Ui::QgsAttributeTableDia
     void filterEdited();
     void filterQueryChanged( const QString& query );
     void filterQueryAccepted();
+    void openConditionalStyles();
 
     /**
      * update window title
      */
     void updateTitle();
+
+    void updateButtonStatus( const QString& fieldName, bool isValid );
+
+    /* replace the search widget with a new one */
+    void replaceSearchWidget( QWidget* oldw, QWidget* neww );
 
   signals:
     /**
@@ -161,7 +185,13 @@ class QgsAttributeTableDialog : public QDialog, private Ui::QgsAttributeTableDia
      * Handle closing of the window
      * @param event unused
      */
-    void closeEvent( QCloseEvent* event );
+    void closeEvent( QCloseEvent* event ) override;
+
+    /*
+     * Handle KeyPress event of the window
+     * @param event
+     */
+    void keyPressEvent( QKeyEvent* event ) override;
 
   private slots:
     /**
@@ -169,16 +199,38 @@ class QgsAttributeTableDialog : public QDialog, private Ui::QgsAttributeTableDia
      */
     void columnBoxInit();
 
+    void runFieldCalculation( QgsVectorLayer* layer, const QString& fieldName, const QString& expression, const QgsFeatureIds& filteredIds = QgsFeatureIds() );
+    void updateFieldFromExpression();
+    void updateFieldFromExpressionSelected();
+
   private:
     QMenu* mMenuActions;
     QAction* mActionToggleEditing;
 
     QDockWidget* mDock;
+    QgsDistanceArea* myDa;
+
 
     QMenu* mFilterColumnsMenu;
     QSignalMapper* mFilterActionMapper;
 
     QgsVectorLayer* mLayer;
+    QgsFieldModel* mFieldModel;
+
+    QgsRubberBand* mRubberBand;
+    QgsSearchWidgetWrapper* mCurrentSearchWidgetWrapper;
 };
+
+
+class QgsAttributeTableDock : public QDockWidget
+{
+    Q_OBJECT
+
+  public:
+    QgsAttributeTableDock( const QString & title, QWidget * parent = 0, Qt::WindowFlags flags = 0 );
+
+    virtual void closeEvent( QCloseEvent * ev ) override;
+};
+
 
 #endif

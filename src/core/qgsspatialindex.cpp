@@ -17,6 +17,7 @@
 
 #include "qgsgeometry.h"
 #include "qgsfeature.h"
+#include "qgsfeatureiterator.h"
 #include "qgsrectangle.h"
 #include "qgslogger.h"
 
@@ -25,61 +26,205 @@
 using namespace SpatialIndex;
 
 
+
 // custom visitor that adds found features to list
 class QgisVisitor : public SpatialIndex::IVisitor
 {
   public:
-    QgisVisitor( QList<QgsFeatureId> & list )
+    explicit QgisVisitor( QList<QgsFeatureId> & list )
         : mList( list ) {}
 
-    void visitNode( const INode& n )
-    { Q_UNUSED( n ); }
+    void visitNode( const INode& n ) override
+      { Q_UNUSED( n ); }
 
-    void visitData( const IData& d )
+    void visitData( const IData& d ) override
     {
       mList.append( d.getIdentifier() );
     }
 
-    void visitData( std::vector<const IData*>& v )
-    { Q_UNUSED( v ); }
+    void visitData( std::vector<const IData*>& v ) override
+      { Q_UNUSED( v ); }
 
   private:
     QList<QgsFeatureId>& mList;
 };
 
+class QgsSpatialIndexCopyVisitor : public SpatialIndex::IVisitor
+{
+  public:
+    explicit QgsSpatialIndexCopyVisitor( SpatialIndex::ISpatialIndex* newIndex )
+        : mNewIndex( newIndex ) {}
+
+    void visitNode( const INode& n ) override
+      { Q_UNUSED( n ); }
+
+    void visitData( const IData& d ) override
+    {
+      SpatialIndex::IShape* shape;
+      d.getShape( &shape );
+      mNewIndex->insertData( 0, 0, *shape, d.getIdentifier() );
+      delete shape;
+    }
+
+    void visitData( std::vector<const IData*>& v ) override
+      { Q_UNUSED( v ); }
+
+  private:
+    SpatialIndex::ISpatialIndex* mNewIndex;
+};
+
+
+/** Utility class for bulk loading of R-trees. Not a part of public API. */
+class QgsFeatureIteratorDataStream : public IDataStream
+{
+  public:
+    //! constructor - needs to load all data to a vector for later access when bulk loading
+    explicit QgsFeatureIteratorDataStream( const QgsFeatureIterator& fi )
+        : mFi( fi )
+        , mNextData( 0 )
+    {
+      readNextEntry();
+    }
+
+    ~QgsFeatureIteratorDataStream()
+    {
+      delete mNextData;
+    }
+
+    //! returns a pointer to the next entry in the stream or 0 at the end of the stream.
+    virtual IData* getNext() override
+    {
+      RTree::Data* ret = mNextData;
+      mNextData = 0;
+      readNextEntry();
+      return ret;
+    }
+
+    //! returns true if there are more items in the stream.
+    virtual bool hasNext() override { return mNextData != 0; }
+
+    //! returns the total number of entries available in the stream.
+    virtual uint32_t size() override { Q_ASSERT( 0 && "not available" ); return 0; }
+
+    //! sets the stream pointer to the first entry, if possible.
+    virtual void rewind() override { Q_ASSERT( 0 && "not available" ); }
+
+  protected:
+    void readNextEntry()
+    {
+      QgsFeature f;
+      SpatialIndex::Region r;
+      QgsFeatureId id;
+      while ( mFi.nextFeature( f ) )
+      {
+        if ( QgsSpatialIndex::featureInfo( f, r, id ) )
+        {
+          mNextData = new RTree::Data( 0, 0, r, id );
+          return;
+        }
+      }
+    }
+
+  private:
+    QgsFeatureIterator mFi;
+    RTree::Data* mNextData;
+};
+
+
+/** Data of spatial index that may be implicitly shared */
+class QgsSpatialIndexData : public QSharedData
+{
+  public:
+    QgsSpatialIndexData()
+    {
+      initTree();
+    }
+
+    explicit QgsSpatialIndexData( const QgsFeatureIterator& fi )
+    {
+      QgsFeatureIteratorDataStream fids( fi );
+      initTree( &fids );
+    }
+
+    QgsSpatialIndexData( const QgsSpatialIndexData& other )
+        : QSharedData( other )
+    {
+      initTree();
+
+      // copy R-tree data one by one (is there a faster way??)
+      double low[]  = { DBL_MIN, DBL_MIN };
+      double high[] = { DBL_MAX, DBL_MAX };
+      SpatialIndex::Region query( low, high, 2 );
+      QgsSpatialIndexCopyVisitor visitor( mRTree );
+      other.mRTree->intersectsWithQuery( query, visitor );
+    }
+
+    ~QgsSpatialIndexData()
+    {
+      delete mRTree;
+      delete mStorage;
+    }
+
+    void initTree( IDataStream* inputStream = 0 )
+    {
+      // for now only memory manager
+      mStorage = StorageManager::createNewMemoryStorageManager();
+
+      // R-Tree parameters
+      double fillFactor = 0.7;
+      unsigned long indexCapacity = 10;
+      unsigned long leafCapacity = 10;
+      unsigned long dimension = 2;
+      RTree::RTreeVariant variant = RTree::RV_RSTAR;
+
+      // create R-tree
+      SpatialIndex::id_type indexId;
+
+      if ( inputStream )
+        mRTree = RTree::createAndBulkLoadNewRTree( RTree::BLM_STR, *inputStream, *mStorage, fillFactor, indexCapacity,
+                 leafCapacity, dimension, variant, indexId );
+      else
+        mRTree = RTree::createNewRTree( *mStorage, fillFactor, indexCapacity,
+                                        leafCapacity, dimension, variant, indexId );
+    }
+
+    /** Storage manager */
+    SpatialIndex::IStorageManager* mStorage;
+
+    /** R-tree containing spatial index */
+    SpatialIndex::ISpatialIndex* mRTree;
+};
+
+// -------------------------------------------------------------------------
+
 
 QgsSpatialIndex::QgsSpatialIndex()
 {
-  // for now only memory manager
-  mStorageManager = StorageManager::createNewMemoryStorageManager();
+  d = new QgsSpatialIndexData;
+}
 
-  // create buffer
+QgsSpatialIndex::QgsSpatialIndex( const QgsFeatureIterator& fi )
+{
+  d = new QgsSpatialIndexData( fi );
+}
 
-  unsigned int capacity = 10;
-  bool writeThrough = false;
-  mStorage = StorageManager::createNewRandomEvictionsBuffer( *mStorageManager, capacity, writeThrough );
-
-  // R-Tree parameters
-  double fillFactor = 0.7;
-  unsigned long indexCapacity = 10;
-  unsigned long leafCapacity = 10;
-  unsigned long dimension = 2;
-  RTree::RTreeVariant variant = RTree::RV_RSTAR;
-
-  // create R-tree
-  SpatialIndex::id_type indexId;
-  mRTree = RTree::createNewRTree( *mStorage, fillFactor, indexCapacity,
-                                  leafCapacity, dimension, variant, indexId );
+QgsSpatialIndex::QgsSpatialIndex( const QgsSpatialIndex& other )
+    : d( other.d )
+{
 }
 
 QgsSpatialIndex:: ~QgsSpatialIndex()
 {
-  delete mRTree;
-  delete mStorage;
-  delete mStorageManager;
 }
 
-Region QgsSpatialIndex::rectToRegion( QgsRectangle rect )
+QgsSpatialIndex& QgsSpatialIndex::operator=( const QgsSpatialIndex & other )
+{
+  if ( this != &other )
+    d = other.d;
+  return *this;
+}
+
+Region QgsSpatialIndex::rectToRegion( const QgsRectangle& rect )
 {
   double pt1[2], pt2[2];
   pt1[0] = rect.xMinimum();
@@ -89,18 +234,20 @@ Region QgsSpatialIndex::rectToRegion( QgsRectangle rect )
   return Region( pt1, pt2, 2 );
 }
 
-bool QgsSpatialIndex::featureInfo( QgsFeature& f, SpatialIndex::Region& r, QgsFeatureId &id )
+bool QgsSpatialIndex::featureInfo( const QgsFeature& f, SpatialIndex::Region& r, QgsFeatureId &id )
 {
-  QgsGeometry *g = f.geometry();
-  if ( !g )
+  if ( !f.constGeometry() )
     return false;
 
+  QgsGeometry g( *f.constGeometry() );
+
   id = f.id();
-  r = rectToRegion( g->boundingBox() );
+  r = rectToRegion( g.boundingBox() );
   return true;
 }
 
-bool QgsSpatialIndex::insertFeature( QgsFeature& f )
+
+bool QgsSpatialIndex::insertFeature( const QgsFeature& f )
 {
   Region r;
   QgsFeatureId id;
@@ -110,7 +257,8 @@ bool QgsSpatialIndex::insertFeature( QgsFeature& f )
   // TODO: handle possible exceptions correctly
   try
   {
-    mRTree->insertData( 0, 0, r, FID_TO_NUMBER( id ) );
+    d->mRTree->insertData( 0, 0, r, FID_TO_NUMBER( id ) );
+    return true;
   }
   catch ( Tools::Exception &e )
   {
@@ -127,10 +275,10 @@ bool QgsSpatialIndex::insertFeature( QgsFeature& f )
     QgsDebugMsg( "unknown spatial index exception caught" );
   }
 
-  return true;
+  return false;
 }
 
-bool QgsSpatialIndex::deleteFeature( QgsFeature& f )
+bool QgsSpatialIndex::deleteFeature( const QgsFeature& f )
 {
   Region r;
   QgsFeatureId id;
@@ -138,22 +286,22 @@ bool QgsSpatialIndex::deleteFeature( QgsFeature& f )
     return false;
 
   // TODO: handle exceptions
-  return mRTree->deleteData( r, FID_TO_NUMBER( id ) );
+  return d->mRTree->deleteData( r, FID_TO_NUMBER( id ) );
 }
 
-QList<QgsFeatureId> QgsSpatialIndex::intersects( QgsRectangle rect )
+QList<QgsFeatureId> QgsSpatialIndex::intersects( const QgsRectangle& rect ) const
 {
   QList<QgsFeatureId> list;
   QgisVisitor visitor( list );
 
   Region r = rectToRegion( rect );
 
-  mRTree->intersectsWithQuery( r, visitor );
+  d->mRTree->intersectsWithQuery( r, visitor );
 
   return list;
 }
 
-QList<QgsFeatureId> QgsSpatialIndex::nearestNeighbor( QgsPoint point, int neighbors )
+QList<QgsFeatureId> QgsSpatialIndex::nearestNeighbor( const QgsPoint& point, int neighbors ) const
 {
   QList<QgsFeatureId> list;
   QgisVisitor visitor( list );
@@ -163,7 +311,12 @@ QList<QgsFeatureId> QgsSpatialIndex::nearestNeighbor( QgsPoint point, int neighb
   pt[1] = point.y();
   Point p( pt, 2 );
 
-  mRTree->nearestNeighborQuery( neighbors, p, visitor );
+  d->mRTree->nearestNeighborQuery( neighbors, p, visitor );
 
   return list;
+}
+
+QAtomicInt QgsSpatialIndex::refs() const
+{
+  return d->ref;
 }

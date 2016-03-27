@@ -23,6 +23,7 @@
 #include "qgscptcityarchive.h"
 
 #include <QAbstractProxyModel>
+#include <QSortFilterProxyModel>
 
 class QgsCptCityColorRampV2;
 class TreeFilterProxyModel;
@@ -48,6 +49,7 @@ class GUI_EXPORT QgsCptCityColorRampV2Dialog : public QDialog, private Ui::QgsCp
 
     void on_mTreeView_clicked( const QModelIndex & );
     void on_mListWidget_itemClicked( QListWidgetItem * item );
+    void on_mListWidget_itemSelectionChanged();
     void on_tabBar_currentChanged( int index );
     void on_pbtnLicenseDetails_pressed();
     void on_cboVariantName_currentIndexChanged( int index );
@@ -62,7 +64,7 @@ class GUI_EXPORT QgsCptCityColorRampV2Dialog : public QDialog, private Ui::QgsCp
     void updateCopyingInfo( const QMap< QString, QString >& copyingMap );
     void updateTreeView( QgsCptCityDataItem *item, bool resetRamp = true );
     void updateListWidget( QgsCptCityDataItem *item );
-    bool eventFilter( QObject *obj, QEvent *event );
+    bool eventFilter( QObject *obj, QEvent *event ) override;
 
     QgsCptCityColorRampV2* mRamp;
     QgsCptCityArchive* mArchive;
@@ -70,6 +72,7 @@ class GUI_EXPORT QgsCptCityColorRampV2Dialog : public QDialog, private Ui::QgsCp
 
     /* void refreshModel( const QModelIndex& index ); */
     bool updateRamp();
+    void showAll();
     void setTreeModel( QgsCptCityBrowserModel* model );
 
     QgsCptCityBrowserModel* mModel;
@@ -79,6 +82,26 @@ class GUI_EXPORT QgsCptCityColorRampV2Dialog : public QDialog, private Ui::QgsCp
     QVector<QgsCptCityColorRampItem*> mListRamps;
 
 };
+
+///@cond
+//not part of public API
+
+class TreeFilterProxyModel : public QSortFilterProxyModel
+{
+    Q_OBJECT
+
+  public:
+    TreeFilterProxyModel( QObject *parent, QgsCptCityBrowserModel* model );
+
+  protected:
+    bool filterAcceptsRow( int sourceRow, const QModelIndex &sourceParent ) const override;
+    // bool lessThan(const QModelIndex &left, const QModelIndex &right) const;
+
+  private:
+    QgsCptCityBrowserModel* mModel;
+};
+
+///@endcond
 
 
 #endif

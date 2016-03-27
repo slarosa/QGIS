@@ -48,12 +48,13 @@ class CORE_EXPORT QgsNetworkAccessManager : public QNetworkAccessManager
   public:
     //! returns a pointer to the single instance
     // and creates that instance on the first call.
-    static QgsNetworkAccessManager *instance();
+    static QgsNetworkAccessManager* instance();
+
+    QgsNetworkAccessManager( QObject *parent = 0 );
 
     //! destructor
     ~QgsNetworkAccessManager();
 
-#if QT_VERSION >= 0x40500
     //! insert a factory into the proxy factories list
     void insertProxyFactory( QNetworkProxyFactory *factory );
 
@@ -62,7 +63,6 @@ class CORE_EXPORT QgsNetworkAccessManager : public QNetworkAccessManager
 
     //! retrieve proxy factory list
     const QList<QNetworkProxyFactory *> proxyFactories() const;
-#endif
 
     //! retrieve fall back proxy (for urls that no factory returned proxies for)
     const QNetworkProxy &fallbackProxy() const;
@@ -79,25 +79,47 @@ class CORE_EXPORT QgsNetworkAccessManager : public QNetworkAccessManager
     //! Get QNetworkRequest::CacheLoadControl from name
     static QNetworkRequest::CacheLoadControl cacheLoadControlFromName( const QString &theName );
 
+    //! Setup the NAM according to the user's settings
+    void setupDefaultProxyAndCache();
+
+    bool useSystemProxy() { return mUseSystemProxy; }
+
+  public slots:
+    /** Send GET request, calls get().
+     * Emits requestSent().
+     * @param request request to be sent
+     */
+    void sendGet( const QNetworkRequest & request );
+    /** Abort and delete reply. This slot may be used to abort reply created by instance of this class
+     * (and which was not moved to another thread) from a different thread. Such reply cannot
+     * be aborted directly from a different thread. The reply must be also deleted
+     * in this slot, otherwise it could happen that abort signal comes after the reply was deleted.
+     * @param reply reply to be aborted.
+     */
+    void deleteReply( QNetworkReply * reply );
+
   signals:
     void requestAboutToBeCreated( QNetworkAccessManager::Operation, const QNetworkRequest &, QIODevice * );
     void requestCreated( QNetworkReply * );
+    void requestTimedOut( QNetworkReply * );
+    /** Emitted when request was sent by request()
+     * @param reply request reply
+     * @param sender the object which called request() slot.
+     */
+    void requestSent( QNetworkReply * reply, QObject *sender );
 
   private slots:
     void abortRequest();
 
   protected:
-    virtual QNetworkReply *createRequest( QNetworkAccessManager::Operation op, const QNetworkRequest &req, QIODevice *outgoingData = 0 );
+    virtual QNetworkReply *createRequest( QNetworkAccessManager::Operation op, const QNetworkRequest &req, QIODevice *outgoingData = 0 ) override;
 
   private:
-    QgsNetworkAccessManager( QObject *parent = 0 );
-#if QT_VERSION >= 0x40500
     QList<QNetworkProxyFactory*> mProxyFactories;
-#endif
     QNetworkProxy mFallbackProxy;
     QStringList mExcludedURLs;
-
-    static QgsNetworkAccessManager *smNAM;
+    bool mUseSystemProxy;
 };
 
 #endif // QGSNETWORKACCESSMANAGER_H
+

@@ -16,39 +16,22 @@
 #include "qgsspatialindex.h"
 #include "qgswfsprovider.h"
 #include "qgsmessagelog.h"
+#include "qgsgeometry.h"
 
-QgsWFSFeatureIterator::QgsWFSFeatureIterator( QgsWFSProvider* provider, const QgsFeatureRequest& request ):
-    QgsAbstractFeatureIterator( request ), mProvider( provider )
+QgsWFSFeatureIterator::QgsWFSFeatureIterator( QgsWFSFeatureSource* source, bool ownSource, const QgsFeatureRequest& request )
+    : QgsAbstractFeatureIteratorFromSource<QgsWFSFeatureSource>( source, ownSource, request )
 {
-  //select ids
-  //get iterator
-  if ( !mProvider )
+  if ( !request.filterRect().isNull() && mSource->mSpatialIndex )
   {
-    return;
+    mSelectedFeatures = mSource->mSpatialIndex->intersects( request.filterRect() );
   }
-
-  if ( mProvider->mActiveIterator )
+  else if ( request.filterType() == QgsFeatureRequest::FilterFid )
   {
-    QgsMessageLog::logMessage( QObject::tr( "Already active iterator on this provider was closed." ), QObject::tr( "WFS" ) );
-    mProvider->mActiveIterator->close();
+    mSelectedFeatures.push_back( request.filterFid() );
   }
-  mProvider->mActiveIterator = this;
-
-  switch ( request.filterType() )
+  else
   {
-    case QgsFeatureRequest::FilterRect:
-      if ( mProvider->mSpatialIndex )
-      {
-        mSelectedFeatures = mProvider->mSpatialIndex->intersects( request.filterRect() );
-      }
-      break;
-    case QgsFeatureRequest::FilterFid:
-      mSelectedFeatures.push_back( request.filterFid() );
-      break;
-    case QgsFeatureRequest::FilterNone:
-      mSelectedFeatures = mProvider->mFeatures.keys();
-    default: //QgsFeatureRequest::FilterNone
-      mSelectedFeatures = mProvider->mFeatures.keys();
+    mSelectedFeatures = mSource->mFeatures.keys();
   }
 
   mFeatureIterator = mSelectedFeatures.constBegin();
@@ -59,45 +42,47 @@ QgsWFSFeatureIterator::~QgsWFSFeatureIterator()
   close();
 }
 
-bool QgsWFSFeatureIterator::nextFeature( QgsFeature& f )
+bool QgsWFSFeatureIterator::fetchFeature( QgsFeature& f )
 {
-  if ( !mProvider )
-  {
+  if ( mClosed )
     return false;
-  }
 
   if ( mFeatureIterator == mSelectedFeatures.constEnd() )
   {
     return false;
   }
 
-  QMap<QgsFeatureId, QgsFeature* >::iterator it = mProvider->mFeatures.find( *mFeatureIterator );
-  if ( it == mProvider->mFeatures.end() )
-  {
-    return false;
-  }
-  QgsFeature* fet =  it.value();
+  const QgsFeature *fet = 0;
 
-  QgsAttributeList attributes;
-  if ( mRequest.flags() & QgsFeatureRequest::SubsetOfAttributes )
+  for ( ;; )
   {
-    attributes = mRequest.subsetOfAttributes();
+    if ( mFeatureIterator == mSelectedFeatures.constEnd() )
+      return false;
+
+    QgsFeaturePtrMap::const_iterator it = mSource->mFeatures.constFind( *mFeatureIterator );
+    if ( it == mSource->mFeatures.constEnd() )
+      return false;
+
+    fet = it.value();
+    if (( mRequest.flags() & QgsFeatureRequest::ExactIntersect ) == 0 )
+      break;
+
+    if ( fet->constGeometry() && fet->constGeometry()->intersects( mRequest.filterRect() ) )
+      break;
+
+    ++mFeatureIterator;
   }
-  else
-  {
-    attributes = mProvider->attributeIndexes();
-  }
-  mProvider->copyFeature( fet, f, !( mRequest.flags() & QgsFeatureRequest::NoGeometry ), attributes );
+
+
+  copyFeature( fet, f, !( mRequest.flags() & QgsFeatureRequest::NoGeometry ) );
   ++mFeatureIterator;
   return true;
 }
 
 bool QgsWFSFeatureIterator::rewind()
 {
-  if ( !mProvider )
-  {
+  if ( mClosed )
     return false;
-  }
 
   mFeatureIterator = mSelectedFeatures.constBegin();
 
@@ -106,11 +91,80 @@ bool QgsWFSFeatureIterator::rewind()
 
 bool QgsWFSFeatureIterator::close()
 {
-  if ( !mProvider )
-  {
+  if ( mClosed )
     return false;
-  }
-  mProvider->mActiveIterator = 0;
-  mProvider = 0;
+
+  iteratorClosed();
+
+  mClosed = true;
   return true;
+}
+
+
+
+void QgsWFSFeatureIterator::copyFeature( const QgsFeature* f, QgsFeature& feature, bool fetchGeometry )
+{
+  Q_UNUSED( fetchGeometry );
+
+  if ( !f )
+  {
+    return;
+  }
+
+  //copy the geometry
+  const QgsGeometry* geometry = f->constGeometry();
+  if ( geometry && fetchGeometry )
+  {
+    const unsigned char *geom = geometry->asWkb();
+    int geomSize = geometry->wkbSize();
+    unsigned char* copiedGeom = new unsigned char[geomSize];
+    memcpy( copiedGeom, geom, geomSize );
+
+    QgsGeometry *g = new QgsGeometry();
+    g->fromWkb( copiedGeom, geomSize );
+    feature.setGeometry( g );
+  }
+  else
+  {
+    feature.setGeometry( 0 );
+  }
+
+  //and the attributes
+  feature.initAttributes( mSource->mFields.size() );
+  for ( int i = 0; i < mSource->mFields.size(); i++ )
+  {
+    const QVariant &v = f->attributes().value( i );
+    if ( v.type() != mSource->mFields.at( i ).type() )
+      feature.setAttribute( i, QgsVectorDataProvider::convertValue( mSource->mFields.at( i ).type(), v.toString() ) );
+    else
+      feature.setAttribute( i, v );
+  }
+
+  //id and valid
+  feature.setValid( true );
+  feature.setFeatureId( f->id() );
+  feature.setFields( mSource->mFields ); // allow name-based attribute lookups
+}
+
+
+// -------------------------
+
+QgsWFSFeatureSource::QgsWFSFeatureSource( const QgsWFSProvider* p )
+    : QObject(( QgsWFSProvider* ) p )
+    , mFields( p->mFields )
+    , mFeatures( p->mFeatures )
+    , mSpatialIndex( p->mSpatialIndex ? new QgsSpatialIndex( *p->mSpatialIndex ) : 0 )  // just shallow copy
+{
+}
+
+QgsWFSFeatureSource::~QgsWFSFeatureSource()
+{
+  delete mSpatialIndex;
+}
+
+QgsFeatureIterator QgsWFSFeatureSource::getFeatures( const QgsFeatureRequest& request )
+{
+  if ( !request.filterRect().isNull() )
+    emit extentRequested( request.filterRect() );
+  return QgsFeatureIterator( new QgsWFSFeatureIterator( this, false, request ) );
 }

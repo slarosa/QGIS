@@ -17,6 +17,7 @@
 
 #include "qgscomposermultiframecommand.h"
 #include "qgscomposermultiframe.h"
+#include "qgsproject.h"
 
 QgsComposerMultiFrameCommand::QgsComposerMultiFrameCommand( QgsComposerMultiFrame* multiFrame, const QString& text, QUndoCommand* parent ):
     QUndoCommand( text, parent ), mMultiFrame( multiFrame ), mFirstRun( true )
@@ -71,6 +72,7 @@ void QgsComposerMultiFrameCommand::restoreState( QDomDocument& stateDoc )
   if ( mMultiFrame )
   {
     mMultiFrame->readXML( stateDoc.documentElement().firstChild().toElement(), stateDoc );
+    QgsProject::instance()->dirty( true );
   }
 }
 
@@ -87,4 +89,28 @@ bool QgsComposerMultiFrameCommand::checkFirstRun()
 bool QgsComposerMultiFrameCommand::containsChange() const
 {
   return !( mPreviousState.isNull() || mAfterState.isNull() || mPreviousState.toString() == mAfterState.toString() );
+}
+
+
+QgsComposerMultiFrameMergeCommand::QgsComposerMultiFrameMergeCommand( QgsComposerMultiFrameMergeCommand::Context c, QgsComposerMultiFrame *multiFrame, const QString &text )
+    : QgsComposerMultiFrameCommand( multiFrame, text )
+    , mContext( c )
+{
+
+}
+
+QgsComposerMultiFrameMergeCommand::~QgsComposerMultiFrameMergeCommand()
+{
+
+}
+
+bool QgsComposerMultiFrameMergeCommand::mergeWith( const QUndoCommand *command )
+{
+  const QgsComposerMultiFrameCommand* c = dynamic_cast<const QgsComposerMultiFrameCommand*>( command );
+  if ( !c || mMultiFrame != c->multiFrame() )
+  {
+    return false;
+  }
+  mAfterState = c->afterState();
+  return true;
 }

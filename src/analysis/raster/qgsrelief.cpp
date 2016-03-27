@@ -28,13 +28,20 @@
 #include <QTextStream>
 
 #if defined(GDAL_VERSION_NUM) && GDAL_VERSION_NUM >= 1800
-#define TO8(x) (x).toUtf8().constData()
+#define TO8F(x) (x).toUtf8().constData()
 #else
-#define TO8(x) (x).toLocal8Bit().constData()
+#define TO8F(x) QFile::encodeName( x ).constData()
 #endif
 
-QgsRelief::QgsRelief( const QString& inputFile, const QString& outputFile, const QString& outputFormat ): \
-    mInputFile( inputFile ), mOutputFile( outputFile ), mOutputFormat( outputFormat ), mZFactor( 1.0 )
+QgsRelief::QgsRelief( const QString& inputFile, const QString& outputFile, const QString& outputFormat )
+    : mInputFile( inputFile )
+    , mOutputFile( outputFile )
+    , mOutputFormat( outputFormat )
+    , mCellSizeX( 0.0 )
+    , mCellSizeY( 0.0 )
+    , mInputNodataValue( -1 )
+    , mOutputNodataValue( -1 )
+    , mZFactor( 1.0 )
 {
   mSlopeFilter = new QgsSlopeFilter( inputFile, outputFile, outputFormat );
   mAspectFilter = new QgsAspectFilter( inputFile, outputFile, outputFormat );
@@ -269,7 +276,7 @@ int QgsRelief::processRaster( QProgressDialog* p )
   if ( p && p->wasCanceled() )
   {
     //delete the dataset without closing (because it is faster)
-    GDALDeleteDataset( outputDriver, mOutputFile.toLocal8Bit().data() );
+    GDALDeleteDataset( outputDriver, TO8F( mOutputFile ) );
     return 7;
   }
   GDALClose( outputDataset );
@@ -390,7 +397,7 @@ bool QgsRelief::setElevationColor( double elevation, int* red, int* green, int* 
 //duplicated from QgsNineCellFilter. Todo: make common base class
 GDALDatasetH QgsRelief::openInputFile( int& nCellsX, int& nCellsY )
 {
-  GDALDatasetH inputDataset = GDALOpen( TO8( mInputFile ), GA_ReadOnly );
+  GDALDatasetH inputDataset = GDALOpen( TO8F( mInputFile ), GA_ReadOnly );
   if ( inputDataset != NULL )
   {
     nCellsX = GDALGetRasterXSize( inputDataset );
@@ -435,7 +442,7 @@ GDALDatasetH QgsRelief::openOutputFile( GDALDatasetH inputDataset, GDALDriverH o
   }
 
   int xSize = GDALGetRasterXSize( inputDataset );
-  int ySize = GDALGetRasterYSize( inputDataset );;
+  int ySize = GDALGetRasterYSize( inputDataset );
 
   //open output file
   char **papszOptions = NULL;
@@ -444,7 +451,7 @@ GDALDatasetH QgsRelief::openOutputFile( GDALDatasetH inputDataset, GDALDriverH o
   papszOptions = CSLSetNameValue( papszOptions, "COMPRESS", "PACKBITS" );
 
   //create three band raster (reg, green, blue)
-  GDALDatasetH outputDataset = GDALCreate( outputDriver, mOutputFile.toLocal8Bit().data(), xSize, ySize, 3, GDT_Byte, papszOptions );
+  GDALDatasetH outputDataset = GDALCreate( outputDriver, TO8F( mOutputFile ), xSize, ySize, 3, GDT_Byte, papszOptions );
   if ( outputDataset == NULL )
   {
     return outputDataset;
@@ -503,7 +510,7 @@ bool QgsRelief::exportFrequencyDistributionToCsv( const QString& file )
 
   if ( !minOk || !maxOk )
   {
-    GDALComputeRasterMinMax( elevationBand, TRUE, minMax );
+    GDALComputeRasterMinMax( elevationBand, true, minMax );
   }
 
   //2. go through raster cells and get frequency of classes
@@ -553,7 +560,7 @@ bool QgsRelief::exportFrequencyDistributionToCsv( const QString& file )
   QTextStream outstream( &outFile );
   for ( int i = 0; i < 252; ++i )
   {
-    outstream << QString::number( i ) + "," + QString::number( frequency[i] ) << endl;
+    outstream << QString::number( i ) + ',' + QString::number( frequency[i] ) << endl;
   }
   outFile.close();
   return true;
@@ -586,7 +593,7 @@ QList< QgsRelief::ReliefColor > QgsRelief::calculateOptimizedReliefClasses()
 
   if ( !minOk || !maxOk )
   {
-    GDALComputeRasterMinMax( elevationBand, TRUE, minMax );
+    GDALComputeRasterMinMax( elevationBand, true, minMax );
   }
 
   //2. go through raster cells and get frequency of classes
@@ -667,6 +674,7 @@ QList< QgsRelief::ReliefColor > QgsRelief::calculateOptimizedReliefClasses()
   colorList.push_back( QColor( 255, 133, 92 ) );
   colorList.push_back( QColor( 204, 204, 204 ) );
 
+  resultList.reserve( classBreaks.size() );
   for ( int i = 1; i < classBreaks.size(); ++i )
   {
     double minElevation = minMax[0] + classBreaks[i - 1] * frequencyClassRange;
@@ -693,7 +701,7 @@ void QgsRelief::optimiseClassBreaks( QList<int>& breaks, double* frequencies )
     }
 
     double aParam, bParam;
-    if ( regressionInput.size() > 0 && calculateRegression( regressionInput, aParam, bParam ) )
+    if ( !regressionInput.isEmpty() && calculateRegression( regressionInput, aParam, bParam ) )
     {
       a[i] = aParam;
       b[i] = bParam;

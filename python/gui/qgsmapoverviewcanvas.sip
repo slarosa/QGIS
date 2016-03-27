@@ -6,12 +6,9 @@ class QgsMapOverviewCanvas : QWidget
 %End
 
   public:
-    QgsMapOverviewCanvas( QWidget * parent = 0, QgsMapCanvas* mapCanvas = NULL );
+    QgsMapOverviewCanvas( QWidget * parent /TransferThis/ = 0, QgsMapCanvas* mapCanvas = NULL );
 
     ~QgsMapOverviewCanvas();
-
-    //! used for overview canvas to reflect changed extent in main map canvas
-    void drawExtentRect();
 
     //! renders overview and updates panning widget
     void refresh();
@@ -22,7 +19,7 @@ class QgsMapOverviewCanvas : QWidget
     //! updates layer set for overview
     void setLayerSet( const QStringList& layerSet );
 
-    QStringList& layerSet();
+    QStringList layerSet() const;
 
     void enableAntiAliasing( bool flag );
 
@@ -30,9 +27,19 @@ class QgsMapOverviewCanvas : QWidget
 
   public slots:
 
+    // ### QGIS 3: make protected
+    //! used for overview canvas to reflect changed extent in main map canvas
+    void drawExtentRect();
+
+    // ### QGIS 3: rename so it does not look like getter, make protected
     void hasCrsTransformEnabled( bool flag );
 
+    // ### QGIS 3: rename Srs to Crs, make protected
     void destinationSrsChanged();
+
+  protected slots:
+    void mapRenderingFinished();
+    void layerRepaintRequested();
 
   protected:
 

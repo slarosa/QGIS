@@ -38,7 +38,7 @@ class ANALYSIS_EXPORT QgsOSMElement
 
     // fetched automatically from DB
     QgsOSMElementID elemID() const { return mElemID; }
-    int id() const { return mElemID.id; }
+    QgsOSMId id() const { return mElemID.id; }
     //QString username() const;
     //QDateTime timestamp() const;
     //int version() const;
@@ -83,7 +83,7 @@ class ANALYSIS_EXPORT QgsOSMWay : public QgsOSMElement
 {
   public:
     QgsOSMWay() {}
-    QgsOSMWay( QgsOSMId id, const QList<QgsOSMId> nodes ) : QgsOSMElement( QgsOSMElementID::Way, id ), mNodes( nodes ) {}
+    QgsOSMWay( QgsOSMId id, const QList<QgsOSMId>& nodes ) : QgsOSMElement( QgsOSMElementID::Way, id ), mNodes( nodes ) {}
 
     QList<QgsOSMId> nodes() const { return mNodes; }
 

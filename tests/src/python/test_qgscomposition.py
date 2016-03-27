@@ -8,13 +8,14 @@ the Free Software Foundation; either version 2 of the License, or
 """
 __author__ = '(C) 2012 by Tim Sutton'
 __date__ = '20/08/2012'
-__copyright__ = 'Copyright 2012, The Quantum GIS Project'
+__copyright__ = 'Copyright 2012, The QGIS Project'
 # This will get replaced with a git SHA1 when you do a git archive
 __revision__ = '$Format:%H$'
 
+import qgis
 import os
 
-from PyQt4.QtCore import QFileInfo, QDir, QStringList
+from PyQt4.QtCore import QFileInfo, QDir
 from PyQt4.QtXml import QDomDocument
 
 from qgis.core import (QgsComposition,
@@ -29,7 +30,7 @@ from utilities import (unitTestDataPath,
                        getQgisTestApp,
                        TestCase,
                        unittest
-                       #expectedFailure
+                       # expectedFailure
                        )
 
 QGISAPP, CANVAS, IFACE, PARENT = getQgisTestApp()
@@ -59,7 +60,7 @@ class TestQgsComposition(TestCase):
 
         # Load the composition with the substitutions
         myComposition = QgsComposition(CANVAS.mapRenderer())
-        mySubstitutionMap = {'replace-me': myText }
+        mySubstitutionMap = {'replace-me': myText}
         myFile = os.path.join(TEST_DATA_DIR, 'template-for-substitution.qpt')
         myTemplateFile = file(myFile, 'rt')
         myTemplateContent = myTemplateFile.read()
@@ -96,15 +97,16 @@ class TestQgsComposition(TestCase):
         myRasterLayer = QgsRasterLayer(myFileInfo.filePath(),
                                        myFileInfo.completeBaseName())
         myRenderer = QgsMultiBandColorRenderer(
-                        myRasterLayer.dataProvider(), 2, 3, 4)
+            myRasterLayer.dataProvider(), 2, 3, 4
+        )
         #mRasterLayer.setRenderer( rasterRenderer )
         myPipe = myRasterLayer.pipe()
-        assert myPipe.set( myRenderer ), "Cannot set pipe renderer"
+        assert myPipe.set(myRenderer), "Cannot set pipe renderer"
 
         QgsMapLayerRegistry.instance().addMapLayers([myRasterLayer])
 
         myMapRenderer = QgsMapRenderer()
-        myLayerStringList = QStringList()
+        myLayerStringList = []
         myLayerStringList.append(myRasterLayer.id())
         myMapRenderer.setLayerSet(myLayerStringList)
         myMapRenderer.setProjectionsEnabled(False)

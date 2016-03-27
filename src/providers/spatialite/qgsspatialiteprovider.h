@@ -14,6 +14,9 @@ email                : a.furieri@lqt.it
  *                                                                         *
  ***************************************************************************/
 
+#ifndef QGSSPATIALITEPROVIDER_H
+#define QGSSPATIALITEPROVIDER_H
+
 extern "C"
 {
 #include <sys/types.h>
@@ -33,6 +36,7 @@ extern "C"
 class QgsFeature;
 class QgsField;
 
+class QgsSqliteHandle;
 class QgsSpatiaLiteFeatureIterator;
 
 #include "qgsdatasourceuri.h"
@@ -65,32 +69,34 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      * Constructor of the vector provider
      * @param uri  uniform resource locator (URI) for a dataset
      */
-    QgsSpatiaLiteProvider( QString const &uri = "" );
+    explicit QgsSpatiaLiteProvider( QString const &uri = "" );
 
     //! Destructor
     virtual ~ QgsSpatiaLiteProvider();
 
+    virtual QgsAbstractFeatureSource* featureSource() const override;
+
     /**
         *   Returns the permanent storage type for this layer as a friendly name.
         */
-    virtual QString storageType() const;
+    virtual QString storageType() const override;
 
-    /*! Get the QgsCoordinateReferenceSystem for this layer
+    /** Get the QgsCoordinateReferenceSystem for this layer
      * @note Must be reimplemented by each provider.
      * If the provider isn't capable of returning
      * its projection an empty srs will be return, ti will return 0
      */
-    virtual QgsCoordinateReferenceSystem crs();
+    virtual QgsCoordinateReferenceSystem crs() override;
 
-    virtual QgsFeatureIterator getFeatures( const QgsFeatureRequest& request );
+    virtual QgsFeatureIterator getFeatures( const QgsFeatureRequest& request ) override;
 
     /** Accessor for sql where clause used to limit dataset */
-    virtual QString subsetString();
+    virtual QString subsetString() override;
 
-    /** mutator for sql where clause used to limit dataset size */
-    virtual bool setSubsetString( QString theSQL, bool updateFeatureCount = true );
+    /** Mutator for sql where clause used to limit dataset size */
+    virtual bool setSubsetString( const QString& theSQL, bool updateFeatureCount = true ) override;
 
-    virtual bool supportsSubsetString() { return true; }
+    virtual bool supportsSubsetString() override { return true; }
 
     /** Get the feature type. This corresponds to
      * WKBPoint,
@@ -101,9 +107,9 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
      * WKBMultiPolygon
      * as defined in qgis.h
      */
-    QGis::WkbType geometryType() const;
+    QGis::WkbType geometryType() const override;
 
-    /** return the number of layers for the current data source
+    /** Return the number of layers for the current data source
 
     @note
 
@@ -114,63 +120,63 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
     /**
      * Get the number of features in the layer
      */
-    long featureCount() const;
+    long featureCount() const override;
 
     /** Return the extent for this data layer
     */
-    virtual QgsRectangle extent();
+    virtual QgsRectangle extent() override;
 
     /** Update the extent for this data layer
     */
-    virtual void updateExtents();
-
-    /**  * Get the name of the primary key for the layer
-    */
-    QString getPrimaryKey();
+    virtual void updateExtents() override;
 
     /**
       * Get the field information for the layer
       * @return vector of QgsField objects
       */
-    const QgsFields & fields() const;
+    const QgsFields & fields() const override;
 
     /** Returns the minimum value of an attribute
      *  @param index the index of the attribute */
-    QVariant minimumValue( int index );
+    QVariant minimumValue( int index ) override;
 
     /** Returns the maximum value of an attribute
      *  @param index the index of the attribute */
-    QVariant maximumValue( int index );
+    QVariant maximumValue( int index ) override;
 
     /** Return the unique values of an attribute
      *  @param index the index of the attribute
      *  @param values reference to the list of unique values
-     *  @param limit maximum number of values (added in 1.4) */
-    virtual void uniqueValues( int index, QList < QVariant > &uniqueValues, int limit = -1 );
+     *  @param limit maximum number of values */
+    virtual void uniqueValues( int index, QList < QVariant > &uniqueValues, int limit = -1 ) override;
 
-    /**Returns true if layer is valid
+    /** Returns true if layer is valid
     */
-    bool isValid();
+    bool isValid() override;
 
-    /**Adds a list of features
+    /** Describes if provider has save and load style support
+       @return true in case saving style to db is supported by this provider*/
+    virtual bool isSaveAndLoadStyleToDBSupported() override { return true; }
+
+    /** Adds a list of features
       @return true in case of success and false in case of failure*/
-    bool addFeatures( QgsFeatureList & flist );
+    bool addFeatures( QgsFeatureList & flist ) override;
 
-    /**Deletes a list of features
+    /** Deletes a list of features
       @param id list of feature ids
       @return true in case of success and false in case of failure*/
-    bool deleteFeatures( const QgsFeatureIds & id );
+    bool deleteFeatures( const QgsFeatureIds & id ) override;
 
-    /**Adds new attributes
+    /** Adds new attributes
       @param name map with attribute name as key and type as value
       @return true in case of success and false in case of failure*/
-    bool addAttributes( const QList<QgsField> &attributes );
+    bool addAttributes( const QList<QgsField> &attributes ) override;
 
-    /**Changes attribute values of existing features
+    /** Changes attribute values of existing features
       @param attr_map a map containing the new attributes. The integer is the feature id,
       the first QString is the attribute name and the second one is the new attribute value
       @return true in case of success and false in case of failure*/
-    bool changeAttributeValues( const QgsChangedAttributesMap & attr_map );
+    bool changeAttributeValues( const QgsChangedAttributesMap & attr_map ) override;
 
     /**
        Changes geometries of existing features
@@ -178,10 +184,10 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
                              the second map parameter being the new geometries themselves
        @return               true in case of success and false in case of failure
      */
-    bool changeGeometryValues( QgsGeometryMap & geometry_map );
+    bool changeGeometryValues( QgsGeometryMap & geometry_map ) override;
 
-    /**Returns a bitmask containing the supported capabilities*/
-    int capabilities() const;
+    /** Returns a bitmask containing the supported capabilities*/
+    int capabilities() const override;
 
     /** The SpatiaLite provider does its own transforms so we return
      * true for the following three functions to indicate that transforms
@@ -195,7 +201,7 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
       return false;
     }
 
-    /** return a provider name
+    /** Return a provider name
 
     Essentially just returns the provider key.  Should be used to build file
     dialogs so that providers can be shown with their supported types. Thus
@@ -209,9 +215,9 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
     anything strange with regards to their name or description?
 
     */
-    QString name() const;
+    QString name() const override;
 
-    /** return description
+    /** Return description
 
     Return a terse string describing what the provider is.
 
@@ -222,7 +228,12 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
     anything strange with regards to their name or description?
 
     */
-    QString description() const;
+    QString description() const override;
+
+    /**
+     * Return list of indexes of fields that make up the primary key
+     */
+    QgsAttributeList pkAttributeIndexes() override;
 
   signals:
     /**
@@ -246,13 +257,13 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
 
   private:
 
-    /** loads fields from input file to member attributeFields */
+    /** Loads fields from input file to member attributeFields */
     void loadFields();
 
     /** Check if a table/view has any triggers.  Triggers can be used on views to make them editable.*/
     bool hasTriggers();
 
-    /** convert a QgsField to work with SL */
+    /** Convert a QgsField to work with SL */
     static bool convertField( QgsField &field );
 
     QString geomParam() const;
@@ -301,6 +312,10 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
        * Name of the primary key column in the table
        */
     QString mPrimaryKey;
+    /**
+       * List of primary key columns in the table
+       */
+    QgsAttributeList mPrimaryKeyAttrs;
     /**
        * Name of the geometry column in the table
        */
@@ -403,8 +418,14 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
     bool getFeature( sqlite3_stmt *stmt, bool fetchGeometry,
                      QgsFeature &feature,
                      const QgsAttributeList &fetchAttributes );
-    void convertToGeosWKB( const unsigned char *blob, size_t blob_size,
-                           unsigned char **wkb, size_t *geom_size );
+  public:
+    // static functions
+
+    static void convertToGeosWKB( const unsigned char *blob, size_t blob_size,
+                                  unsigned char **wkb, size_t *geom_size );
+    static int computeMultiWKB3Dsize( const unsigned char *p_in, int little_endian,
+                                      int endian_arch );
+  private:
     int computeSizeFromMultiWKB2D( const unsigned char *p_in, int nDims,
                                    int little_endian,
                                    int endian_arch );
@@ -417,8 +438,6 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
     void convertFromGeosWKB3D( const unsigned char *blob, size_t blob_size,
                                unsigned char *wkb, size_t geom_size,
                                int nDims, int little_endian, int endian_arch );
-    int computeMultiWKB3Dsize( const unsigned char *p_in, int little_endian,
-                               int endian_arch );
     void convertFromGeosWKB( const unsigned char *blob, size_t blob_size,
                              unsigned char **wkb, size_t *geom_size,
                              int dims );
@@ -440,48 +459,15 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
       GEOS_3D_GEOMETRYCOLLECTION = -2147483641,
     };
 
-    struct SLFieldNotFound {}; //! Exception to throw
-
   public:
     static QString quotedIdentifier( QString id );
     static QString quotedValue( QString value );
 
-    class SqliteHandles
-    {
-        //
-        // a class allowing to reuse the same sqlite handle for more layers
-        //
-      public:
-        SqliteHandles( sqlite3 * handle ):
-            ref( 1 ), sqlite_handle( handle )
-        {
-        }
-
-        sqlite3 *handle()
-        {
-          return sqlite_handle;
-        }
-
-        //
-        // libsqlite3 wrapper
-        //
-        void sqliteClose();
-
-        static SqliteHandles *openDb( const QString & dbPath );
-        static bool checkMetadata( sqlite3 * handle );
-        static void closeDb( SqliteHandles * &handle );
-        static void closeDb( QMap < QString, SqliteHandles * >&handlesRO, SqliteHandles * &handle );
-
-      private:
-        int ref;
-        sqlite3 *sqlite_handle;
-
-        static QMap < QString, SqliteHandles * >handles;
-    };
+    struct SLFieldNotFound {}; //! Exception to throw
 
     struct SLException
     {
-      SLException( char *msg ) : errMsg( msg )
+      explicit SLException( char *msg ) : errMsg( msg )
       {
       }
 
@@ -507,8 +493,9 @@ class QgsSpatiaLiteProvider: public QgsVectorDataProvider
     /**
      * sqlite3 handles pointer
      */
-    SqliteHandles *handle;
+    QgsSqliteHandle *handle;
 
-    friend class QgsSpatiaLiteFeatureIterator;
-    QgsSpatiaLiteFeatureIterator* mActiveIterator;
+    friend class QgsSpatiaLiteFeatureSource;
 };
+
+#endif

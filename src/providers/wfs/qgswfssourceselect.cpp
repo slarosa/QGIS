@@ -38,7 +38,7 @@
 #include <QPainter>
 
 
-QgsWFSSourceSelect::QgsWFSSourceSelect( QWidget* parent, Qt::WFlags fl, bool embeddedMode )
+QgsWFSSourceSelect::QgsWFSSourceSelect( QWidget* parent, Qt::WindowFlags fl, bool embeddedMode )
     : QDialog( parent, fl )
     , mCapabilities( NULL )
 {
@@ -61,7 +61,7 @@ QgsWFSSourceSelect::QgsWFSSourceSelect( QWidget* parent, Qt::WFlags fl, bool emb
   connect( mAddButton, SIGNAL( clicked() ), this, SLOT( addLayer() ) );
 
   buttonBox->addButton( mBuildQueryButton, QDialogButtonBox::ActionRole );
-  connect( mBuildQueryButton, SIGNAL( clicked() ), this, SLOT( on_mBuildQueryButton_clicked() ) );
+  connect( mBuildQueryButton, SIGNAL( clicked() ), this, SLOT( buildQueryButtonClicked() ) );
 
   connect( buttonBox, SIGNAL( rejected() ), this, SLOT( reject() ) );
   connect( btnNew, SIGNAL( clicked() ), this, SLOT( addEntryToServerList() ) );
@@ -94,8 +94,8 @@ QgsWFSSourceSelect::QgsWFSSourceSelect( QWidget* parent, Qt::WFlags fl, bool emb
   mModelProxy->setSortCaseSensitivity( Qt::CaseInsensitive );
   treeView->setModel( mModelProxy );
 
-  connect( treeView, SIGNAL( doubleClicked( const QModelIndex& ) ), this, SLOT( on_treeWidget_itemDoubleClicked( const QModelIndex& ) ) );
-  connect( treeView->selectionModel(), SIGNAL( currentRowChanged( QModelIndex, QModelIndex ) ), this, SLOT( on_treeWidget_currentRowChanged( const QModelIndex&, const QModelIndex& ) ) );
+  connect( treeView, SIGNAL( doubleClicked( const QModelIndex& ) ), this, SLOT( treeWidgetItemDoubleClicked( const QModelIndex& ) ) );
+  connect( treeView->selectionModel(), SIGNAL( currentRowChanged( QModelIndex, QModelIndex ) ), this, SLOT( treeWidgetCurrentRowChanged( const QModelIndex&, const QModelIndex& ) ) );
 }
 
 QgsWFSSourceSelect::~QgsWFSSourceSelect()
@@ -132,14 +132,15 @@ void QgsWFSSourceSelect::populateConnectionList()
     btnConnect->setEnabled( true );
     btnEdit->setEnabled( true );
     btnDelete->setEnabled( true );
+    btnSave->setEnabled( true );
   }
-
   else
   {
     // No connections available - disable various buttons
     btnConnect->setEnabled( false );
     btnEdit->setEnabled( false );
     btnDelete->setEnabled( false );
+    btnSave->setEnabled( false );
   }
 
   //set last used connection
@@ -208,14 +209,14 @@ void QgsWFSSourceSelect::capabilitiesReplyFinished()
     // handle errors
     QMessageBox::critical( 0, title, mCapabilities->errorMessage() );
 
-    btnAdd->setEnabled( false );
+    mAddButton->setEnabled( false );
     return;
   }
 
   QgsWFSCapabilities::GetCapabilities caps = mCapabilities->capabilities();
 
   mAvailableCRS.clear();
-  foreach ( QgsWFSCapabilities::FeatureType featureType, caps.featureTypes )
+  Q_FOREACH ( const QgsWFSCapabilities::FeatureType& featureType, caps.featureTypes )
   {
     // insert the typenames, titles and abstracts into the tree view
     QStandardItem* titleItem = new QStandardItem( featureType.title );
@@ -233,14 +234,14 @@ void QgsWFSSourceSelect::capabilitiesReplyFinished()
 
     // insert the available CRS into mAvailableCRS
     std::list<QString> currentCRSList;
-    foreach ( QString crs, featureType.crslist )
+    Q_FOREACH ( const QString& crs, featureType.crslist )
     {
       currentCRSList.push_back( crs );
     }
     mAvailableCRS.insert( std::make_pair( featureType.name, currentCRSList ) );
   }
 
-  if ( caps.featureTypes.count() > 0 )
+  if ( !caps.featureTypes.isEmpty() )
   {
     treeView->resizeColumnToContents( 0 );
     treeView->resizeColumnToContents( 1 );
@@ -303,6 +304,23 @@ void QgsWFSSourceSelect::deleteEntryOfServerList()
     QgsOWSConnection::deleteConnection( "WFS", cmbConnections->currentText() );
     cmbConnections->removeItem( cmbConnections->currentIndex() );
     emit connectionsChanged();
+
+    if ( cmbConnections->count() > 0 )
+    {
+      // Connections available - enable various buttons
+      btnConnect->setEnabled( true );
+      btnEdit->setEnabled( true );
+      btnDelete->setEnabled( true );
+      btnSave->setEnabled( true );
+    }
+    else
+    {
+      // No connections available - disable various buttons
+      btnConnect->setEnabled( false );
+      btnEdit->setEnabled( false );
+      btnDelete->setEnabled( false );
+      btnSave->setEnabled( false );
+    }
   }
 }
 
@@ -340,11 +358,11 @@ void QgsWFSSourceSelect::addLayer()
   if ( extentVariant.isValid() )
   {
     QString extentString = extentVariant.toString();
-    QStringList minMaxSplit = extentString.split( ":" );
+    QStringList minMaxSplit = extentString.split( ':' );
     if ( minMaxSplit.size() > 1 )
     {
-      QStringList xyMinSplit = minMaxSplit[0].split( "," );
-      QStringList xyMaxSplit = minMaxSplit[1].split( "," );
+      QStringList xyMinSplit = minMaxSplit[0].split( ',' );
+      QStringList xyMaxSplit = minMaxSplit[1].split( ',' );
       if ( xyMinSplit.size() > 1 && xyMaxSplit.size() > 1 )
       {
         extent.set( xyMinSplit[0].toDouble(), xyMinSplit[1].toDouble(),
@@ -376,17 +394,19 @@ void QgsWFSSourceSelect::addLayer()
       continue;
     }
     int row = idx.row();
-    QString typeName = mModel->item( row,  1 )->text(); //WFS repository's name for layer
-    QString titleName = mModel->item( row,  0 )->text(); //WFS type name title for layer name (if option is set)
-    QString filter = mModel->item( row,  4 )->text(); //optional filter specified by user
+    QString typeName = mModel->item( row, 1 )->text(); //WFS repository's name for layer
+    QString titleName = mModel->item( row, 0 )->text(); //WFS type name title for layer name (if option is set)
+    QString filter = mModel->item( row, 4 )->text(); //optional filter specified by user
     QString layerName = typeName;
     if ( cbxUseTitleLayerName->isChecked() && !titleName.isEmpty() )
     {
       layerName = titleName;
     }
     QgsDebugMsg( "Layer " + typeName + " Filter is " + filter );
+
     //is "cache features" checked?
-    if ( mModel->item( row,  3 )->checkState() == Qt::Checked )
+    //non-cached mode does not work anymore
+    if ( !cbxFeatureCurrentViewExtent->isChecked() && mModel->item( row, 3 )->checkState() == Qt::Checked )
     { //yes: entire WFS layer will be retrieved and cached
       mUri = conn.uriGetFeature( typeName, pCrsString, filter );
     }
@@ -508,7 +528,7 @@ void QgsWFSSourceSelect::on_btnSave_clicked()
 
 void QgsWFSSourceSelect::on_btnLoad_clicked()
 {
-  QString fileName = QFileDialog::getOpenFileName( this, tr( "Load connections" ), ".",
+  QString fileName = QFileDialog::getOpenFileName( this, tr( "Load connections" ), QDir::homePath(),
                      tr( "XML files (*.xml *XML)" ) );
   if ( fileName.isEmpty() )
   {
@@ -521,13 +541,13 @@ void QgsWFSSourceSelect::on_btnLoad_clicked()
   emit connectionsChanged();
 }
 
-void QgsWFSSourceSelect::on_treeWidget_itemDoubleClicked( const QModelIndex& index )
+void QgsWFSSourceSelect::treeWidgetItemDoubleClicked( const QModelIndex& index )
 {
   QgsDebugMsg( "double click called" );
   buildQuery( index );
 }
 
-void QgsWFSSourceSelect::on_treeWidget_currentRowChanged( const QModelIndex & current, const QModelIndex & previous )
+void QgsWFSSourceSelect::treeWidgetCurrentRowChanged( const QModelIndex & current, const QModelIndex & previous )
 {
   Q_UNUSED( previous )
   QgsDebugMsg( "treeWidget_currentRowChanged called" );
@@ -536,13 +556,13 @@ void QgsWFSSourceSelect::on_treeWidget_currentRowChanged( const QModelIndex & cu
   mAddButton->setEnabled( current.isValid() );
 }
 
-void QgsWFSSourceSelect::on_mBuildQueryButton_clicked()
+void QgsWFSSourceSelect::buildQueryButtonClicked()
 {
   QgsDebugMsg( "mBuildQueryButton click called" );
   buildQuery( treeView->selectionModel()->currentIndex() );
 }
 
-void QgsWFSSourceSelect::filterChanged( QString text )
+void QgsWFSSourceSelect::filterChanged( const QString& text )
 {
   QgsDebugMsg( "WFS FeatureType filter changed to :" + text );
   QRegExp::PatternSyntax mySyntax = QRegExp::PatternSyntax( QRegExp::RegExp );

@@ -1,3 +1,119 @@
+qgis (2.13.0) UNRELEASED; urgency=medium
+
+  * New development version 2.13 after branch of 2.12
+
+ -- Jürgen E. Fischer <jef@norbit.de>  Fri, 23 Oct 2015 14:11:22 +0200
+
+qgis (2.12.0) unstable; urgency=medium
+
+  * Release of 2.12.0
+
+ -- Jürgen E. Fischer <jef@norbit.de>  Fri, 23 Oct 2015 14:11:22 +0200
+
+qgis (2.11.0) unstable; urgency=medium
+
+  * New development version 2.11 after branch of 2.10
+  * moved grass default.qgc from config to modules
+  * include grass7 plugin
+  * move grass provider to separate package
+  * add ubuntu wily and debian stretch
+  * add dependencies to qca2 and python-qt4-sql for new auth system
+    and jquery and leaflet for developer map
+  * separate libqgis_app to separate package
+  * include geometry checker and snapper plugins
+  * merge downstream debian changes from Bas Couwenberg
+
+ -- Jürgen E. Fischer <jef@norbit.de>  Fri, 23 Oct 2015 14:10:38 +0200
+
+qgis (2.10.0) unstable; urgency=medium
+
+  * Release of 2.10.0
+
+ -- Jürgen E. Fischer <jef@norbit.de>  Fri, 26 Jun 2015 14:39:38 +0200
+
+qgis (2.9.0) unstable; urgency=medium
+
+  * New development version 2.9 after branch of 2.8
+  * include dependency to liblwgeom
+  * 'stretch' package a bit
+  * merge downstream addition of debug package
+  * make build directory configurable
+  * include links to qt4 documentation in api docs
+  * include browser icons
+  * include libqt4-sql-sqlite and python-pyspatialite as build dependency
+
+ -- Jürgen E. Fischer <jef@norbit.de>  Fri, 26 Jun 2015 14:38:57 +0200
+
+qgis (2.8.0) unstable; urgency=medium
+
+  * Release of 2.8
+
+ -- Jürgen E. Fischer <jef@norbit.de>  Fri, 20 Feb 2015 13:06:05 +0100
+
+qgis (2.7.0) unstable; urgency=medium
+
+  * New development version 2.7 after branch of 2.6
+  * run tests in en_US.UTF-8 locale
+  * add build dependency to python-qscintilla2 for tests
+  * rename libqgis-customwidgets{QGIS_ABI} to libqgis-customwidgets
+  * merge some downstream debian changes
+  * drop support for ubuntu saucy and add vivid
+
+ -- Jürgen E. Fischer <jef@norbit.de>  Fri, 20 Feb 2015 13:05:35 +0100
+
+qgis (2.6.0) unstable; urgency=medium
+
+  * Release of 2.6
+
+ -- Jürgen E. Fischer <jef@norbit.de>  Fri, 31 Oct 2014 13:00:45 +0100
+
+qgis (2.5.0) unstable; urgency=medium
+
+  * New development version 2.5 after branch of 2.4
+  * add libqscintilla2-dev as build dependency
+  * add remove sqlanywhere plugin and provider
+  * drop support for ubuntu quantal and raring and add utopic
+  * merge downstream debian changes
+  * add build dependency to pyqt4.qsci-dev
+  * adapt debian downstream changes
+
+ -- Jürgen E. Fischer <jef@norbit.de>  Fri, 31 Oct 2014 13:00:09 +0100
+
+qgis (2.4.0) unstable; urgency=medium
+
+  * Release of 2.4
+
+ -- Jürgen E. Fischer <jef@norbit.de>  Fri, 27 Jun 2014 14:00:54 +0200
+
+qgis (2.3.0) unstable; urgency=medium
+
+  * New development version 2.3 after branch of 2.2
+  * enable globe on jessie
+  * add dependency on libqt4-sql-sqlite to qgis-provider
+  * merge debian packageing changes
+  * merge distribution specific file templates into one file template
+  * include metasearch plugins and add it's dependencies
+  * include custom widgets
+
+ -- Jürgen E. Fischer <jef@norbit.de>  Fri, 27 Jun 2014 14:00:08 +0200
+
+qgis (2.2.0) unstable; urgency=medium
+
+  * Release of 2.2
+
+ -- Jürgen E. Fischer <jef@norbit.de>  Sat, 22 Feb 2014 09:49:29 +0100
+
+qgis (2.1.0) unstable; urgency=low
+
+  * new development version 2.1 after branch of 2.0
+  * drop qgis_icon.xpm and use "upstream" version
+  * Update Qt dependency to 4.7
+  * drop support for Debian squeeze and Ubuntu lucid, maverick, natty and oneiric
+  * add support for Ubuntu trusty
+  * run crssync on copy of srs.db (Closes #738117)
+
+ -- Jürgen E. Fischer <jef@norbit.de>  Sat, 22 Feb 2014 09:48:46 +0100
+
 qgis (1.9.0) UNRELEASED; urgency=low
 
   * new development version 1.9 after branch of 1.8
@@ -14,10 +130,13 @@ qgis (1.9.0) UNRELEASED; urgency=low
   * remove js files and add libjs-jquery/libjs-underscore dependency
   * add spatialite qt sql driver
   * include topology plugin
-  * drop delimited text plugin (now in core)
+  * drop delimited text and diagram overlay plugin (now in core)
   * drop context_help, function_help and qgis_help.db files
+  * use dh_sip
+  * add build dependency to xfonts (100dpi, 75dpi, scalable) for tests
+  * raise Qt dependency to 4.6
 
- -- Jürgen E. Fischer <jef@norbit.de>  Sat, 18 May 2013 10:19:16 +0200
+ -- Jürgen E. Fischer <jef@norbit.de>  Sat, 27 Jul 2013 16:45:43 +0200
 
 qgis (1.8.0) UNRELEASED; urgency=low
 
@@ -72,7 +191,7 @@ qgis (1.6.0) UNRELEASED; urgency=low
   * add subversion as build dependency for trunk
   * add qgis-mapserver package
   * trim dependencies
- 
+
  -- Jürgen E. Fischer <jef@norbit.de>  Sun, 17 Oct 2010 12:09:23 +0200
 
 qgis (1.5.0) UNRELEASED; urgency=low
@@ -141,7 +260,7 @@ qgis (1.1.0-4) UNRELEASED; urgency=low
 
 qgis (1.1.0-3) UNRELEASED; urgency=low
 
-  * include diagram overlays 
+  * include diagram overlays
 
  -- Jürgen E. Fischer <jef@norbit.de>  Wed, 08 Apr 2009 16:30:57 +0200
 
@@ -177,10 +296,10 @@ qgis (1.1.0) UNRELEASED; urgency=low
  -- Jürgen E. Fischer <jef@norbit.de>  Fri, 13 Feb 2009 22:03:25 +0100
 
 qgis (1.0.0) experimental; urgency=low
- 
+
   * new upstream release
   * update qgis.mime
-  * add qgis.desktop and qgis.xml 
+  * add qgis.desktop and qgis.xml
   * add mime types for KDE
   * don't ignore errors in preinst and postrm
   * run ldconfig in postrm
@@ -281,7 +400,7 @@ qgis (0.11.0test3) experimental; urgency=low
 
 qgis (0.11.0test2) experimental; urgency=low
 
-  * removed 'upstream' changes from changelog 
+  * removed 'upstream' changes from changelog
   * policy update 3.7.2 to 3.7.3
   * python support: renamed qgis-python-plugin to python-qgis, moved to python
     section, added Python:Provides
@@ -301,13 +420,13 @@ qgis (0.11.0test1) experimental; urgency=low
  -- Jürgen E. Fischer <jef@norbit.de>  Thu, 29 May 2008 00:23:14 +0200
 
 qgis (0.10.0-2) gutsy; urgency=low
-  
+
   * fix libgdal1 grass dependency for ubuntu gutsy/hardy (1.4.0 | 1.5.0)
 
  -- Jürgen E. Fischer <jef@norbit.de>  Wed, 30 Apr 2008 22:35:42 +0200
 
 qgis (0.10.0-1) gutsy; urgency=low
-  
+
   * updated Maintainer field
   * updated version for sip build dependency and removed old libgdal<1.5
     dependencies.
@@ -325,7 +444,7 @@ qgis (0.10.0) gutsy; urgency=low
 
 qgis (0.9.2test1) gutsy; urgency=low
 
-  * Testing package to see if icons deploy 
+  * Testing package to see if icons deploy
 
  -- Tim Sutton <tim@linfiniti.com>  Tue, 12 Feb 2008 21:18:35 -0200
 
@@ -343,7 +462,7 @@ qgis (0.9.1) gutsy; urgency=low
 
 qgis (0.9.0) gutsy; urgency=low
 
-  * Quantum GIS 0.9.0 'Ganymede' release 
+  * Quantum GIS 0.9.0 'Ganymede' release
 
  -- Tim Sutton <tim@linfiniti.com>  Tue, 28 Aug 2007 22:43:41 -0300
 
@@ -374,7 +493,7 @@ qgis (0.8.1-1) UNRELEASED; urgency=low
 
 qgis (0.8.0-5) unstable; urgency=low
 
-  * Added python-dev build-dep. 
+  * Added python-dev build-dep.
     Patch added: ax_python.dpatch, fixes python environment detection.
     (closes: #429234)
   * Added build-dep for autoconf/automake due to acinclude.m4 changes.
@@ -510,7 +629,7 @@ qgis (0.6.0-1) unstable; urgency=low
 
 qgis (0.5.0-2) unstable; urgency=low
 
-  * Fix typos in .install files that left out the delimitedtext plugin 
+  * Fix typos in .install files that left out the delimitedtext plugin
     (Closes: #282084)
 
  -- Steve Halasz <debian@adkgis.org>  Fri, 19 Nov 2004 10:51:07 -0500
@@ -556,7 +675,7 @@ qgis (0.2.0-1) unstable; urgency=low
 
 qgis (0.1-2) unstable; urgency=low
 
-  * Build with the Shapefile to PostGIS Import Tool (SPIT) and 
+  * Build with the Shapefile to PostGIS Import Tool (SPIT) and
     PostgreSQL support (Closes: #233191)
 
  -- Steve Halasz <debian@adkgis.org>  Wed,  7 Apr 2004 09:18:34 -0400
@@ -564,7 +683,7 @@ qgis (0.1-2) unstable; urgency=low
 qgis (0.1-1) unstable; urgency=low
 
   * New upstream release
-  * changed install location of html documentation to /usr/share/doc/qgis 
+  * changed install location of html documentation to /usr/share/doc/qgis
   * updated man page to describe new command-line options and include pointers
     to HTML and PDF documentation (Closes: #234600)
   * debian/control:

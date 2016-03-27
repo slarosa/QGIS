@@ -8,27 +8,22 @@ the Free Software Foundation; either version 2 of the License, or
 """
 __author__ = '(C) 2012 by Dr. Horst Düster / Dr. Marco Hugentobler'
 __date__ = '20/08/2012'
-__copyright__ = 'Copyright 2012, The Quantum GIS Project'
+__copyright__ = 'Copyright 2012, The QGIS Project'
 # This will get replaced with a git SHA1 when you do a git archive
 __revision__ = '$Format:%H$'
 
-import os
-from PyQt4.QtCore import (QStringList,
-                          QFileInfo)
-from PyQt4.QtXml import QDomDocument
-from PyQt4.QtGui import (QPainter, QColor)
+import qgis
+from PyQt4.QtGui import QPainter, QColor
 
 from qgis.core import (QgsComposerShape,
-                       QgsRectangle,
                        QgsComposition,
                        QgsMapRenderer
-                     )
+                       )
 from utilities import (unitTestDataPath,
                        getQgisTestApp,
                        TestCase,
-                       unittest,
-                       expectedFailure
-                      )
+                       unittest
+                       )
 from qgscompositionchecker import QgsCompositionChecker
 
 QGISAPP, CANVAS, IFACE, PARENT = getQgisTestApp()
@@ -61,33 +56,26 @@ class TestQgsComposerEffects(TestCase):
 
         self.mComposerRect2.setBlendMode(QPainter.CompositionMode_Multiply)
 
-        checker = QgsCompositionChecker()
-        myPath = os.path.join(TEST_DATA_DIR,
-                              'control_images',
-                              'expected_composereffects',
-                              'composereffect_blend.png')
-        myTestResult, myMessage = checker.testComposition('Composer effects blending',
-                                             self.mComposition, myPath)
+        checker = QgsCompositionChecker('composereffects_blend', self.mComposition)
+        checker.setControlPathPrefix("composer_effects")
+        myTestResult, myMessage = checker.testComposition()
+
         self.mComposerRect2.setBlendMode(QPainter.CompositionMode_SourceOver)
 
-        assert myTestResult == True, myMessage
+        assert myTestResult, myMessage
 
     def testTransparency(self):
         """Test that transparency works for composer items."""
 
-        self.mComposerRect2.setTransparency( 50 )
+        self.mComposerRect2.setTransparency(50)
 
-        checker = QgsCompositionChecker()
-        myPath = os.path.join(TEST_DATA_DIR,
-                              'control_images',
-                              'expected_composereffects',
-                              'composereffect_transparency.png')
-        myTestResult, myMessage = checker.testComposition('Composer effects transparency',
-                                             self.mComposition, myPath)
-        self.mComposerRect2.setTransparency( 100 )
+        checker = QgsCompositionChecker('composereffects_transparency', self.mComposition)
+        checker.setControlPathPrefix("composer_effects")
+        myTestResult, myMessage = checker.testComposition()
 
-        assert myTestResult == True, myMessage
+        self.mComposerRect2.setTransparency(100)
+
+        assert myTestResult, myMessage
 
 if __name__ == '__main__':
     unittest.main()
-

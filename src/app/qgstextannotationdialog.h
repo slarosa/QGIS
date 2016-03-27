@@ -23,7 +23,7 @@
 class QgsAnnotationWidget;
 class QgsTextAnnotationItem;
 
-class QgsTextAnnotationDialog: public QDialog, private Ui::QgsTextAnnotationDialogBase
+class APP_EXPORT QgsTextAnnotationDialog: public QDialog, private Ui::QgsTextAnnotationDialogBase
 {
     Q_OBJECT
   public:
@@ -32,7 +32,7 @@ class QgsTextAnnotationDialog: public QDialog, private Ui::QgsTextAnnotationDial
 
   private:
     QgsTextAnnotationItem* mItem;
-    /**Text document (a clone of the annotation items document)*/
+    /** Text document (a clone of the annotation items document)*/
     QTextDocument* mTextDocument;
     QgsAnnotationWidget* mEmbeddedWidget;
 

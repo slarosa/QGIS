@@ -16,14 +16,13 @@ test_analysis.py
 '''
 import unittest
 import sys
-import os
+import qgis
+
 from utilities import unitTestDataPath, getQgisTestApp
-from PyQt4.QtCore import QFileInfo, QDir, QStringList
-from PyQt4.QtXml import QDomDocument
 
 # support python < 2.7 via unittest2
 # needed for expected failure decorator
-if sys.version_info[0:2] < (2,7):
+if sys.version_info[0:2] < (2, 7):
     try:
         from unittest2 import TestCase, expectedFailure
     except ImportError:

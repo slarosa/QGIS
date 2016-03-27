@@ -20,7 +20,7 @@
 #include "ui_qgshandlebadlayersbase.h"
 #include "qgsproject.h"
 
-class QgsHandleBadLayersHandler
+class APP_EXPORT QgsHandleBadLayersHandler
       : public QObject
       , public QgsProjectBadLayerHandler
 {
@@ -29,14 +29,14 @@ class QgsHandleBadLayersHandler
   public:
     QgsHandleBadLayersHandler();
 
-    /** implementation of the handler */
-    virtual void handleBadLayers( QList<QDomNode> layers, QDomDocument projectDom );
+    /** Implementation of the handler */
+    virtual void handleBadLayers( const QList<QDomNode>& layers, const QDomDocument& projectDom ) override;
 };
 
 
 class QPushButton;
 
-class QgsHandleBadLayers
+class APP_EXPORT QgsHandleBadLayers
       : public QDialog
       , private Ui::QgsHandleBadLayersBase
 {
@@ -51,11 +51,10 @@ class QgsHandleBadLayers
   private slots:
     void selectionChanged();
     void browseClicked();
+    void editAuthCfg();
     void apply();
-    void accept();
+    void accept() override;
     void rejected();
-    void itemChanged( QTableWidgetItem * );
-    void cellDoubleClicked( int row, int column );
 
   private:
     QPushButton *mBrowseButton;
@@ -63,6 +62,9 @@ class QgsHandleBadLayers
     QList<int> mRows;
     QString mVectorFileFilter;
     QString mRasterFileFilter;
+
+    QString filename( int row );
+    void setFilename( int row, const QString& filename );
 };
 
 #endif

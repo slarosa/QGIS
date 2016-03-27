@@ -49,10 +49,10 @@ void QgsDetailedItemDelegate::paint( QPainter * thepPainter,
 {
   // After painting we need to restore the painter to its original state
   thepPainter->save();
-  if ( qVariantCanConvert<QgsDetailedItemData>( theIndex.data( Qt::UserRole ) ) )
+  if ( theIndex.data( Qt::UserRole ).canConvert<QgsDetailedItemData>() )
   {
     QgsDetailedItemData myData =
-      qVariantValue<QgsDetailedItemData>( theIndex.data( Qt::UserRole ) );
+      theIndex.data( Qt::UserRole ).value<QgsDetailedItemData>();
     if ( myData.isRenderedAsWidget() )
     {
       paintAsWidget( thepPainter, theOption, myData );
@@ -71,10 +71,10 @@ QSize QgsDetailedItemDelegate::sizeHint(
   const QStyleOptionViewItem & theOption,
   const QModelIndex & theIndex ) const
 {
-  if ( qVariantCanConvert<QgsDetailedItemData>( theIndex.data( Qt::UserRole ) ) )
+  if ( theIndex.data( Qt::UserRole ).canConvert<QgsDetailedItemData>() )
   {
     QgsDetailedItemData myData =
-      qVariantValue<QgsDetailedItemData>( theIndex.data( Qt::UserRole ) );
+      theIndex.data( Qt::UserRole ).value<QgsDetailedItemData>();
     if ( myData.isRenderedAsWidget() )
     {
       return QSize( 378, mpWidget->height() );
@@ -92,9 +92,9 @@ QSize QgsDetailedItemDelegate::sizeHint(
   }
 }
 
-void QgsDetailedItemDelegate::paintManually( QPainter * thepPainter,
-    const QStyleOptionViewItem & theOption,
-    const QgsDetailedItemData theData ) const
+void QgsDetailedItemDelegate::paintManually( QPainter *thepPainter,
+    const QStyleOptionViewItem &theOption,
+    const QgsDetailedItemData &theData ) const
 {
   //
   // Get the strings and check box properties
@@ -111,7 +111,6 @@ void QgsDetailedItemDelegate::paintManually( QPainter * thepPainter,
 
   QFontMetrics myTitleMetrics( titleFont( theOption ) );
   QFontMetrics myDetailMetrics( detailFont( theOption ) );
-  QFontMetrics myCategoryMetrics( categoryFont( theOption ) );
   int myTextStartX = theOption.rect.x() + horizontalSpacing();
   int myTextStartY = theOption.rect.y() + verticalSpacing();
   int myHeight = myTitleMetrics.height() + verticalSpacing();
@@ -147,6 +146,7 @@ void QgsDetailedItemDelegate::paintManually( QPainter * thepPainter,
   QPixmap myDecoPixmap = theData.icon();
   if ( !myDecoPixmap.isNull() )
   {
+    myIconFlag = true;
     int iconWidth = 32, iconHeight = 32;
 
     if ( myDecoPixmap.width() <= iconWidth && myDecoPixmap.height() <= iconHeight )
@@ -238,9 +238,9 @@ void QgsDetailedItemDelegate::paintManually( QPainter * thepPainter,
 } //render by manual painting
 
 
-void QgsDetailedItemDelegate::paintAsWidget( QPainter * thepPainter,
-    const QStyleOptionViewItem & theOption,
-    const QgsDetailedItemData theData ) const
+void QgsDetailedItemDelegate::paintAsWidget( QPainter *thepPainter,
+    const QStyleOptionViewItem &theOption,
+    const QgsDetailedItemData &theData ) const
 {
 
   mpWidget->setChecked( theData.isChecked() );
@@ -276,8 +276,8 @@ void QgsDetailedItemDelegate::drawHighlight( const QStyleOptionViewItem &theOpti
   thepPainter->fillRect( theOption.rect, QBrush( myGradient ) );
 }
 
-int QgsDetailedItemDelegate::height( const QStyleOptionViewItem & theOption,
-                                     const QgsDetailedItemData theData ) const
+int QgsDetailedItemDelegate::height( const QStyleOptionViewItem &theOption,
+                                     const QgsDetailedItemData &theData ) const
 {
   QFontMetrics myTitleMetrics( titleFont( theOption ) );
   QFontMetrics myDetailMetrics( detailFont( theOption ) );
@@ -322,8 +322,8 @@ QFont QgsDetailedItemDelegate::titleFont( const QStyleOptionViewItem &theOption 
 }
 
 
-QStringList QgsDetailedItemDelegate::wordWrap( QString theString,
-    QFontMetrics theMetrics,
+QStringList QgsDetailedItemDelegate::wordWrap( const QString& theString,
+    const QFontMetrics& theMetrics,
     int theWidth ) const
 {
   if ( theString.isEmpty() )

@@ -50,7 +50,7 @@ class CORE_EXPORT QgsRasterBandStats
     {
       statsGathered = None;
       minimumValue = std::numeric_limits<double>::max();
-      maximumValue = std::numeric_limits<double>::min();
+      maximumValue = -std::numeric_limits<double>::max();
       range = 0.0;
       mean = 0.0;
       sumOfSquares = 0.0;
@@ -59,9 +59,10 @@ class CORE_EXPORT QgsRasterBandStats
       elementCount = 0;
       width = 0;
       height = 0;
+      bandNumber = 1;
     }
 
-    /*! Compares region, size etc. not collected statistics */
+    /** Compares region, size etc. not collected statistics */
     bool contains( const QgsRasterBandStats &s ) const
     {
       return ( s.bandNumber == bandNumber &&
@@ -71,15 +72,12 @@ class CORE_EXPORT QgsRasterBandStats
                s.statsGathered == ( statsGathered & s.statsGathered ) );
     }
 
-    /** \brief The name of the band that these stats belong to. */
-    //QString bandName;
-
     /** \brief The gdal band number (starts at 1)*/
     int bandNumber;
 
     /** \brief The number of not no data cells in the band. */
     // TODO: check if no data are excluded in stats calculation
-    size_t elementCount;
+    qgssize elementCount;
 
     /** \brief The maximum cell value in the raster band. NO_DATA values
      * are ignored. This does not use the gdal GetMaximmum function. */

@@ -12,9 +12,7 @@ Email                : sherman at mrcc dot com
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-#include <QtTest>
-#include <iostream>
-
+#include <QtTest/QtTest>
 #include <QPixmap>
 
 #include <qgsapplication.h>
@@ -34,6 +32,7 @@ class TestQgsCoordinateReferenceSystem: public QObject
     Q_OBJECT
   private slots:
     void initTestCase();
+    void cleanupTestCase();
     void wktCtor();
     void idCtor();
     void copyCtor();
@@ -49,6 +48,7 @@ class TestQgsCoordinateReferenceSystem: public QObject
     void validate();
     void equality();
     void noEquality();
+    void equalityInvalid();
     void readXML();
     void writeXML();
     void setCustomSrsValidation();
@@ -60,6 +60,7 @@ class TestQgsCoordinateReferenceSystem: public QObject
     void geographicFlag();
     void mapUnits();
     void setValidationHint();
+    void axisInverted();
   private:
     void debugPrint( QgsCoordinateReferenceSystem &theCrs );
     // these used by createFromESRIWkt()
@@ -97,6 +98,11 @@ void TestQgsCoordinateReferenceSystem::initTestCase()
   }
 #endif
 
+}
+
+void TestQgsCoordinateReferenceSystem::cleanupTestCase()
+{
+  QgsApplication::exitQgis();
 }
 
 void TestQgsCoordinateReferenceSystem::wktCtor()
@@ -142,7 +148,7 @@ void TestQgsCoordinateReferenceSystem::createFromOgcWmsCrs()
   QgsCoordinateReferenceSystem myCrs;
   //@todo implement this - for now we just check that if fails
   //if passed an empty string
-  QVERIFY( !myCrs.createFromOgcWmsCrs( QString( "" ) ) );
+  QVERIFY( !myCrs.createFromOgcWmsCrs( QString() ) );
 }
 void TestQgsCoordinateReferenceSystem::createFromSrid()
 {
@@ -172,10 +178,10 @@ QString TestQgsCoordinateReferenceSystem::testESRIWkt( int i, QgsCoordinateRefer
 #endif
   if ( myCrs.toProj4().indexOf( myTOWGS84Strings[i] ) == -1 )
     return QString( "test %1 [%2] not found, PROJ.4 = [%3] expecting [%4]"
-                  ).arg( i ).arg( myTOWGS84Strings[i] ).arg( myCrs.toProj4() ).arg( myProj4Strings[i] );
+                  ).arg( i ).arg( myTOWGS84Strings[i], myCrs.toProj4(), myProj4Strings[i] );
   if ( myCrs.authid() !=  myAuthIdStrings[i] )
     return QString( "test %1 AUTHID = [%2] expecting [%3]"
-                  ).arg( i ).arg( myCrs.authid() ).arg( myAuthIdStrings[i] );
+                  ).arg( i ).arg( myCrs.authid(), myAuthIdStrings[i] );
 
   return "";
 }
@@ -235,7 +241,7 @@ void TestQgsCoordinateReferenceSystem::createFromESRIWkt()
     {
       // use ogr to open file, make sure CRS is ok
       // this probably could be in another test, but leaving it here since it deals with CRS
-      QString fileStr = QString( TEST_DATA_DIR ) + QDir::separator() + myFiles[i];
+      QString fileStr = QString( TEST_DATA_DIR ) + '/' + myFiles[i];
       QgsDebugMsg( QString( "i=%1 file=%2" ).arg( i ).arg( fileStr ) );
 
       QgsVectorLayer *myLayer = new QgsVectorLayer( fileStr, "", "ogr" );
@@ -251,7 +257,7 @@ void TestQgsCoordinateReferenceSystem::createFromESRIWkt()
         if ( GDAL_VERSION_NUM < myGdalVersionOK[i] )
         {
           QEXPECT_FAIL( "", QString( "expected failure with GDAL %1 : %2 using layer %3"
-                                   ).arg( GDAL_VERSION_NUM ).arg( msg ).arg( fileStr ).toLocal8Bit().constData(),
+                                   ).arg( GDAL_VERSION_NUM ).arg( msg, fileStr ).toLocal8Bit().constData(),
                         Continue );
         }
         if ( !msg.isEmpty() )
@@ -310,6 +316,12 @@ void TestQgsCoordinateReferenceSystem::noEquality()
   myCrs2.createFromSrsId( 4327 );
   debugPrint( myCrs );
   QVERIFY( myCrs != myCrs2 );
+}
+void TestQgsCoordinateReferenceSystem::equalityInvalid()
+{
+  QgsCoordinateReferenceSystem invalidCrs1;
+  QgsCoordinateReferenceSystem invalidCrs2;
+  QVERIFY( invalidCrs1 == invalidCrs2 );
 }
 void TestQgsCoordinateReferenceSystem::readXML()
 {
@@ -406,9 +418,25 @@ void TestQgsCoordinateReferenceSystem::setValidationHint()
 {
   QgsCoordinateReferenceSystem myCrs;
   myCrs.setValidationHint( "<head>" );
-  QVERIFY( myCrs.validationHint() == QString( "<head>" ) );
+  QVERIFY( myCrs.validationHint() == "<head>" );
   debugPrint( myCrs );
 }
+
+void TestQgsCoordinateReferenceSystem::axisInverted()
+{
+  // this is used by WMS 1.3 to determine whether to switch axes or not
+
+  QgsCoordinateReferenceSystem crs;
+  crs.createFromOgcWmsCrs( "EPSG:4326" ); // WGS 84 with inverted axes
+  QVERIFY( crs.axisInverted() );
+
+  crs.createFromOgcWmsCrs( "CRS:84" ); // WGS 84 without inverted axes
+  QVERIFY( !crs.axisInverted() );
+
+  crs.createFromOgcWmsCrs( "EPSG:32633" ); // "WGS 84 / UTM zone 33N" - projected CRS without invertex axes
+  QVERIFY( !crs.axisInverted() );
+}
+
 
 void TestQgsCoordinateReferenceSystem::debugPrint(
   QgsCoordinateReferenceSystem &theCrs )
@@ -437,4 +465,4 @@ void TestQgsCoordinateReferenceSystem::debugPrint(
 }
 
 QTEST_MAIN( TestQgsCoordinateReferenceSystem )
-#include "moc_testqgscoordinatereferencesystem.cxx"
+#include "testqgscoordinatereferencesystem.moc"

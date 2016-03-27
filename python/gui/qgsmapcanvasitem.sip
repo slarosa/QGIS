@@ -23,11 +23,10 @@ class QgsMapCanvasItem : QGraphicsItem
     //! schedules map canvas for repaint
     void updateCanvas();
 
-    /**Sets render context parameters
+    /** Sets render context parameters
     @param p painter for rendering
     @param context out: configured context
-    @return true in case of success
-    @note added in version 1.5*/
+    @return true in case of success */
     bool setRenderContextVariables( QPainter* p, QgsRenderContext& context ) const;
 
   public:
@@ -39,19 +38,20 @@ class QgsMapCanvasItem : QGraphicsItem
     virtual QRectF boundingRect() const;
 
     //! sets current offset, to be called from QgsMapCanvas
-    void setPanningOffset( const QPoint& point );
+    //! @deprecated since v2.4 - not called by QgsMapCanvas anymore
+    void setPanningOffset( const QPoint& point ) /Deprecated/;
 
-    //! returns canvas item rectangle
+    //! returns canvas item rectangle in map units
     QgsRectangle rect() const;
 
-    //! sets canvas item rectangle
-    void setRect( const QgsRectangle& r );
+    //! sets canvas item rectangle in map units
+    void setRect( const QgsRectangle& r, bool resetRotation = true );
 
     //! transformation from screen coordinates to map coordinates
-    QgsPoint toMapCoordinates( const QPoint& point );
+    QgsPoint toMapCoordinates( const QPoint& point ) const;
 
     //! transformation from map coordinates to screen coordinates
-    QPointF toCanvasCoordinates( const QgsPoint& point );
+    QPointF toCanvasCoordinates( const QgsPoint& point ) const;
 };
 
 

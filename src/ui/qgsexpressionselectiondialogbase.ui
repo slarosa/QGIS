@@ -14,6 +14,9 @@
    <string>Select By Expression</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <property name="margin">
+    <number>3</number>
+   </property>
    <item row="1" column="0">
     <spacer name="horizontalSpacer">
      <property name="orientation">
@@ -72,7 +75,7 @@
     <string>Remove from selection</string>
    </property>
   </action>
-  <action name="mActionSelectInstersect">
+  <action name="mActionSelectIntersect">
    <property name="text">
     <string>Select within selection</string>
    </property>

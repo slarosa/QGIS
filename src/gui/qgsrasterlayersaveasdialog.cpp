@@ -28,11 +28,11 @@
 QgsRasterLayerSaveAsDialog::QgsRasterLayerSaveAsDialog( QgsRasterLayer* rasterLayer,
     QgsRasterDataProvider* sourceProvider, const QgsRectangle& currentExtent,
     const QgsCoordinateReferenceSystem& layerCrs, const QgsCoordinateReferenceSystem& currentCrs,
-    QWidget* parent, Qt::WindowFlags f ) :
+    QWidget* parent, const Qt::WindowFlags& f ) :
     QDialog( parent, f )
     , mRasterLayer( rasterLayer ), mDataProvider( sourceProvider )
     , mCurrentExtent( currentExtent ), mLayerCrs( layerCrs )
-    , mCurrentCrs( currentCrs ), mExtentState( OriginalExtent )
+    , mCurrentCrs( currentCrs )
     , mResolutionState( OriginalResolution )
 {
   setupUi( this );
@@ -48,18 +48,13 @@ QgsRasterLayerSaveAsDialog::QgsRasterLayerSaveAsDialog( QgsRasterLayer* rasterLa
   on_mRawModeRadioButton_toggled( true );
 
   setValidators();
-  // Translated labels + EPSG are updated later
-  mCrsComboBox->addItem( "Layer", OriginalCrs );
-  mCrsComboBox->addItem( "Project", CurrentCrs );
-  mCrsComboBox->addItem( "Selected", UserCrs );
 
   toggleResolutionSize();
-  mUserCrs.createFromOgcWmsCrs( "EPSG:4326" );
 
   //only one hardcoded format at the moment
   QStringList myFormats;
   myFormats << "GTiff";
-  foreach ( QString myFormat, myFormats )
+  Q_FOREACH ( const QString& myFormat, myFormats )
   {
     mFormatComboBox->addItem( myFormat );
   }
@@ -67,9 +62,6 @@ QgsRasterLayerSaveAsDialog::QgsRasterLayerSaveAsDialog( QgsRasterLayer* rasterLa
   //fill reasonable default values depending on the provider
   if ( mDataProvider )
   {
-    //extent
-    setOutputExtent( mDataProvider->extent(), mLayerCrs, OriginalExtent );
-
     if ( mDataProvider->capabilities() & QgsRasterDataProvider::Size )
     {
       setOriginalResolution();
@@ -96,7 +88,7 @@ QgsRasterLayerSaveAsDialog::QgsRasterLayerSaveAsDialog( QgsRasterLayer* rasterLa
   }
 
   // Only do pyramids if dealing directly with GDAL.
-  if ( mDataProvider->capabilities() & QgsRasterDataProvider::BuildPyramids )
+  if ( mDataProvider && mDataProvider->capabilities() & QgsRasterDataProvider::BuildPyramids )
   {
     // setup pyramids option widget
     // mPyramidsOptionsWidget->createOptionsWidget()->setType( QgsRasterFormatSaveOptionsWidget::ProfileLineEdit );
@@ -126,13 +118,24 @@ QgsRasterLayerSaveAsDialog::QgsRasterLayerSaveAsDialog( QgsRasterLayer* rasterLa
 
   mTilesGroupBox->hide();
 
-  updateCrsGroup();
+  mCrsSelector->setLayerCrs( mLayerCrs );
+  mCrsSelector->setCrs( mCurrentCrs );
+  connect( mCrsSelector, SIGNAL( crsChanged( QgsCoordinateReferenceSystem ) ),
+           this, SLOT( crsChanged() ) );
 
   QPushButton* okButton = mButtonBox->button( QDialogButtonBox::Ok );
   if ( okButton )
   {
     okButton->setEnabled( false );
   }
+
+  mExtentGroupBox->setOutputCrs( outputCrs() );
+  mExtentGroupBox->setOriginalExtent( mDataProvider->extent(), mLayerCrs );
+  mExtentGroupBox->setCurrentExtent( mCurrentExtent, mCurrentCrs );
+  mExtentGroupBox->setOutputExtentFromOriginal();
+  connect( mExtentGroupBox, SIGNAL( extentChanged( QgsRectangle ) ), this, SLOT( extentChanged() ) );
+
+  recalcResolutionSize();
 }
 
 void QgsRasterLayerSaveAsDialog::setValidators()
@@ -143,10 +146,6 @@ void QgsRasterLayerSaveAsDialog::setValidators()
   mRowsLineEdit->setValidator( new QIntValidator( this ) );
   mMaximumSizeXLineEdit->setValidator( new QIntValidator( this ) );
   mMaximumSizeYLineEdit->setValidator( new QIntValidator( this ) );
-  mXMinLineEdit->setValidator( new QDoubleValidator( this ) );
-  mXMaxLineEdit->setValidator( new QDoubleValidator( this ) );
-  mYMinLineEdit->setValidator( new QDoubleValidator( this ) );
-  mYMaxLineEdit->setValidator( new QDoubleValidator( this ) );
 }
 
 QgsRasterLayerSaveAsDialog::~QgsRasterLayerSaveAsDialog()
@@ -156,12 +155,16 @@ QgsRasterLayerSaveAsDialog::~QgsRasterLayerSaveAsDialog()
 void QgsRasterLayerSaveAsDialog::on_mBrowseButton_clicked()
 {
   QString fileName;
+
+  QSettings settings;
+  QString dirName = mSaveAsLineEdit->text().isEmpty() ? settings.value( "/UI/lastRasterFileDir", QDir::homePath() ).toString() : mSaveAsLineEdit->text();
+
   if ( mTileModeCheckBox->isChecked() )
   {
     while ( true )
     {
       // TODO: would not it be better to select .vrt file instead of directory?
-      fileName = QFileDialog::getExistingDirectory( this, tr( "Select output directory" ) );
+      fileName = QFileDialog::getExistingDirectory( this, tr( "Select output directory" ), dirName );
       //fileName = QFileDialog::getSaveFileName( this, tr( "Select output file" ), QString(), tr( "VRT" ) + " (*.vrt *.VRT)" );
 
       if ( fileName.isEmpty() ) break; // canceled
@@ -175,7 +178,7 @@ void QgsRasterLayerSaveAsDialog::on_mBrowseButton_clicked()
       if ( !files.isEmpty() )
       {
         QMessageBox::StandardButton button = QMessageBox::warning( this, tr( "Warning" ),
-                                             tr( "The directory %1 contains files which will be overwritten: %2" ).arg( dir.absolutePath() ).arg( files.join( ", " ) ),
+                                             tr( "The directory %1 contains files which will be overwritten: %2" ).arg( dir.absolutePath(), files.join( ", " ) ),
                                              QMessageBox::Ok | QMessageBox::Cancel );
 
         if ( button == QMessageBox::Ok )
@@ -195,11 +198,16 @@ void QgsRasterLayerSaveAsDialog::on_mBrowseButton_clicked()
   }
   else
   {
-    fileName = QFileDialog::getSaveFileName( this, tr( "Select output file" ), QString(), tr( "GeoTIFF" ) + " (*.tif *.tiff *.TIF *.TIFF)" );
+    fileName = QFileDialog::getSaveFileName( this, tr( "Select output file" ), dirName, tr( "GeoTIFF" ) + " (*.tif *.tiff *.TIF *.TIFF)" );
   }
 
   if ( !fileName.isEmpty() )
   {
+    // ensure the user never ommited the extension from the file name
+    if ( !fileName.toLower().endsWith( ".tif" ) && !fileName.toLower().endsWith( ".tiff" ) )
+    {
+      fileName += ".tif";
+    }
     mSaveAsLineEdit->setText( fileName );
   }
 }
@@ -215,18 +223,6 @@ void QgsRasterLayerSaveAsDialog::on_mSaveAsLineEdit_textChanged( const QString& 
   okButton->setEnabled( QFileInfo( text ).absoluteDir().exists() );
 }
 
-void QgsRasterLayerSaveAsDialog::on_mCurrentExtentButton_clicked()
-{
-  setOutputExtent( mCurrentExtent, mCurrentCrs, CurrentExtent );
-}
-
-void QgsRasterLayerSaveAsDialog::on_mOriginalExtentButton_clicked()
-{
-  if ( mDataProvider )
-  {
-    setOutputExtent( mDataProvider->extent(), mLayerCrs, OriginalExtent );
-  }
-}
 
 void QgsRasterLayerSaveAsDialog::on_mFormatComboBox_currentIndexChanged( const QString & text )
 {
@@ -273,6 +269,11 @@ bool QgsRasterLayerSaveAsDialog::tileMode() const
   return mTileModeCheckBox->isChecked();
 }
 
+bool QgsRasterLayerSaveAsDialog::addToCanvas() const
+{
+  return mAddToCanvas->isChecked();
+}
+
 QString QgsRasterLayerSaveAsDialog::outputFileName() const
 {
   return mSaveAsLineEdit->text();
@@ -290,29 +291,7 @@ QStringList QgsRasterLayerSaveAsDialog::createOptions() const
 
 QgsRectangle QgsRasterLayerSaveAsDialog::outputRectangle() const
 {
-  return QgsRectangle( mXMinLineEdit->text().toDouble(), mYMinLineEdit->text().toDouble(), mXMaxLineEdit->text().toDouble(), mYMaxLineEdit->text().toDouble() );
-}
-
-void QgsRasterLayerSaveAsDialog::setOutputExtent( const QgsRectangle& r, const QgsCoordinateReferenceSystem& srcCrs, ExtentState state )
-{
-  QgsRectangle extent;
-  if ( outputCrs() == srcCrs )
-  {
-    extent = r;
-  }
-  else
-  {
-    QgsCoordinateTransform ct( srcCrs, outputCrs() );
-    extent = ct.transformBoundingBox( r );
-  }
-
-  mXMinLineEdit->setText( QgsRasterBlock::printValue( extent.xMinimum() ) );
-  mXMaxLineEdit->setText( QgsRasterBlock::printValue( extent.xMaximum() ) );
-  mYMinLineEdit->setText( QgsRasterBlock::printValue( extent.yMinimum() ) );
-  mYMaxLineEdit->setText( QgsRasterBlock::printValue( extent.yMaximum() ) );
-
-  mExtentState = state;
-  extentChanged();
+  return mExtentGroupBox->outputExtent();
 }
 
 void QgsRasterLayerSaveAsDialog::hideFormat()
@@ -451,7 +430,6 @@ void QgsRasterLayerSaveAsDialog::updateResolutionStateMsg()
 
 void QgsRasterLayerSaveAsDialog::extentChanged()
 {
-  updateExtentStateMsg();
   // Whenever extent changes with fixed size, original resolution is lost
   if ( mSizeRadioButton->isChecked() )
   {
@@ -460,67 +438,28 @@ void QgsRasterLayerSaveAsDialog::extentChanged()
   recalcResolutionSize();
 }
 
-void QgsRasterLayerSaveAsDialog::updateExtentStateMsg()
-{
-  QString msg;
-  switch ( mExtentState )
-  {
-    case OriginalExtent:
-      msg = tr( "layer" );
-      break;
-    case CurrentExtent:
-      msg = tr( "map view" );
-      break;
-    case UserExtent:
-      msg = tr( "user defined" );
-      break;
-    default:
-      break;
-  }
-  msg = tr( "Extent (current: %1)" ).arg( msg );
-  mExtentGroupBox->setTitle( msg );
-}
-
-void QgsRasterLayerSaveAsDialog::on_mChangeCrsPushButton_clicked()
-{
-  QgsGenericProjectionSelector * selector = new QgsGenericProjectionSelector( this );
-  selector->setMessage();
-  selector->setSelectedCrsId( mUserCrs.srsid() );
-  if ( selector->exec() )
-  {
-    mUserCrs.createFromId( selector->selectedCrsId(), QgsCoordinateReferenceSystem::InternalCrsId );
-    mCrsComboBox->setCurrentIndex( mCrsComboBox->findData( UserCrs ) );
-  }
-  delete selector;
-  crsChanged();
-}
-
 void QgsRasterLayerSaveAsDialog::crsChanged()
 {
-  QgsDebugMsg( "Entered" );
   if ( outputCrs() != mPreviousCrs )
   {
+    mExtentGroupBox->setOutputCrs( outputCrs() );
+    QgsExtentGroupBox::ExtentState state = mExtentGroupBox->extentState();
+
     // Reset extent
-    QgsRectangle previousExtent;
-    QgsCoordinateReferenceSystem previousCrs;
     // We could reproject previous but that would add additional space also if
     // it is was not necessary or at leas it could decrease accuracy
-    if ( mExtentState == OriginalExtent )
+    if ( state == QgsExtentGroupBox::OriginalExtent )
     {
-      previousExtent = mDataProvider->extent();
-      previousCrs = mLayerCrs;
+      mExtentGroupBox->setOutputExtentFromOriginal();
     }
-    else if ( mExtentState == CurrentExtent )
+    else if ( state == QgsExtentGroupBox::CurrentExtent )
     {
-      previousExtent = mCurrentExtent;
-      previousCrs = mCurrentCrs;
+      mExtentGroupBox->setOutputExtentFromCurrent();
     }
     else
     {
-      previousExtent = outputRectangle();
-      previousCrs = mPreviousCrs;
+      mExtentGroupBox->setOutputExtentFromUser( mExtentGroupBox->outputExtent(), mPreviousCrs );
     }
-    setOutputExtent( previousExtent, previousCrs, mExtentState );
 
     // Reset resolution
     if ( mResolutionRadioButton->isChecked() )
@@ -542,35 +481,11 @@ void QgsRasterLayerSaveAsDialog::crsChanged()
     }
   }
   mPreviousCrs = outputCrs();
-  updateCrsGroup();
-}
-
-void QgsRasterLayerSaveAsDialog::updateCrsGroup()
-{
-  QgsDebugMsg( "Entered" );
-
-  mCrsComboBox->setItemText( mCrsComboBox->findData( OriginalCrs ),
-                             tr( "Layer (%1, %2)" ).arg( mLayerCrs.description() ).arg( mLayerCrs.authid() ) );
-
-  mCrsComboBox->setItemText( mCrsComboBox->findData( CurrentCrs ),
-                             tr( "Project (%1, %2)" ).arg( mCurrentCrs.description() ).arg( mCurrentCrs.authid() ) );
-
-  mCrsComboBox->setItemText( mCrsComboBox->findData( UserCrs ),
-                             tr( "Selected (%1, %2)" ).arg( mUserCrs.description() ).arg( mUserCrs.authid() ) );
 }
 
 QgsCoordinateReferenceSystem QgsRasterLayerSaveAsDialog::outputCrs()
 {
-  int state = mCrsComboBox->itemData( mCrsComboBox->currentIndex() ).toInt();
-  if ( state == OriginalCrs )
-  {
-    return mLayerCrs;
-  }
-  else if ( state == CurrentCrs )
-  {
-    return mCurrentCrs;
-  }
-  return mUserCrs;
+  return mCrsSelector->crs();
 }
 
 QgsRasterLayerSaveAsDialog::Mode QgsRasterLayerSaveAsDialog::mode() const
@@ -595,7 +510,7 @@ void QgsRasterLayerSaveAsDialog::on_mLoadTransparentNoDataToolButton_clicked()
   const QgsRasterTransparency* rasterTransparency = mRasterLayer->renderer()->rasterTransparency();
   if ( !rasterTransparency ) return;
 
-  foreach ( QgsRasterTransparency::TransparentSingleValuePixel transparencyPixel, rasterTransparency->transparentSingleValuePixelList() )
+  Q_FOREACH ( const QgsRasterTransparency::TransparentSingleValuePixel& transparencyPixel, rasterTransparency->transparentSingleValuePixelList() )
   {
     if ( transparencyPixel.percentTransparent == 100 )
     {
@@ -758,8 +673,8 @@ void QgsRasterLayerSaveAsDialog::populatePyramidsLevels()
     {
       if ( ! mPyramidsUseExistingCheckBox->isChecked() ||  myRasterPyramidIterator->exists )
       {
-        text += QString::number( myRasterPyramidIterator->xDim ) + QString( "x" ) +
-                QString::number( myRasterPyramidIterator->yDim ) + " ";
+        text += QString::number( myRasterPyramidIterator->xDim ) + QLatin1String( "x" ) +
+                QString::number( myRasterPyramidIterator->yDim ) + ' ';
       }
     }
   }
@@ -803,7 +718,9 @@ QgsRasterRangeList QgsRasterLayerSaveAsDialog::noData() const
   if ( ! mNoDataGroupBox->isChecked() )
     return noDataList;
 
-  for ( int r = 0 ; r < mNoDataTableWidget->rowCount(); r++ )
+  int rows = mNoDataTableWidget->rowCount();
+  noDataList.reserve( rows );
+  for ( int r = 0 ; r < rows; r++ )
   {
     QgsRasterRange noData( noDataCellValue( r, 0 ), noDataCellValue( r, 1 ) );
     noDataList.append( noData );

@@ -37,6 +37,8 @@ class QNetworkReply;
 /** CoverageSummary structure */
 struct QgsWcsCoverageSummary
 {
+  QgsWcsCoverageSummary() : orderId( 0 ), valid( false ), described( false ), width( 0 ), height( 0 ), hasSize( false ) { }
+
   int           orderId;
   QString       identifier;
   QString       title;
@@ -87,8 +89,8 @@ class QgsWcsCapabilities : public QObject
     *                otherwise we contact the host directly.
     *
     */
-    QgsWcsCapabilities( QgsDataSourceURI const & theUri );
-    QgsWcsCapabilities( );
+    explicit QgsWcsCapabilities( QgsDataSourceURI const & theUri );
+    QgsWcsCapabilities();
 
     //! Destructor
     ~QgsWcsCapabilities();
@@ -127,7 +129,7 @@ class QgsWcsCapabilities : public QObject
 
     /** \brief Returns the GetCoverage full url
      *  \param version optional version, e.g. 1.0.0 or 1.1.0 */
-    QString getCapabilitiesUrl( const QString version ) const;
+    QString getCapabilitiesUrl( const QString& version ) const;
 
     /** \brief Returns the GetCoverage full url using current version  */
     QString getCapabilitiesUrl() const;
@@ -151,7 +153,7 @@ class QgsWcsCapabilities : public QObject
     bool parseDescribeCoverageDom11( QByteArray const &xml, QgsWcsCoverageSummary *coverage );
 
     //! set authorization header
-    void setAuthorization( QNetworkRequest &request ) const;
+    bool setAuthorization( QNetworkRequest &request ) const;
 
     QString version() const { return mCapabilities.version; }
 
@@ -245,10 +247,10 @@ class QgsWcsCapabilities : public QObject
      *
      * TODO: Make network-timeout tolerant
      */
-    bool retrieveServerCapabilities( QString preferredVersion );
+    bool retrieveServerCapabilities( const QString& preferredVersion );
 
     /** Retrieve the best WCS version supported by server and QGIS */
-    bool retrieveServerCapabilities( );
+    bool retrieveServerCapabilities();
 
     //! \return false if the capabilities document could not be parsed - see lastError() for more info
     bool parseCapabilitiesDom( QByteArray const &xml, QgsWcsCapabilitiesProperty &capabilities );

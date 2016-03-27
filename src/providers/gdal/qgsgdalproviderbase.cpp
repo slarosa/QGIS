@@ -15,6 +15,9 @@
  *                                                                         *
  ***************************************************************************/
 
+#define CPL_SUPRESS_CPLUSPLUS
+#include "cpl_conv.h"
+
 #include "qgsapplication.h"
 #include "qgslogger.h"
 #include "qgsgdalproviderbase.h"
@@ -56,6 +59,20 @@ QList<QgsColorRampShader::ColorRampItem> QgsGdalProviderBase::colorTable( GDALDa
   if ( myGdalColorTable )
   {
     QgsDebugMsg( "Color table found" );
+
+    // load category labels
+    char ** categoryNames = GDALGetRasterCategoryNames( myGdalBand );
+    QVector<QString> labels;
+    if ( categoryNames )
+    {
+      int i = 0;
+      while ( categoryNames[i] )
+      {
+        labels.append( QString( categoryNames[i] ) );
+        i++;
+      }
+    }
+
     int myEntryCount = GDALGetColorEntryCount( myGdalColorTable );
     GDALColorInterp myColorInterpretation =  GDALGetRasterColorInterpretation( myGdalBand );
     QgsDebugMsg( "Color Interpretation: " + QString::number(( int )myColorInterpretation ) );
@@ -73,12 +90,17 @@ QList<QgsColorRampShader::ColorRampItem> QgsGdalProviderBase::colorTable( GDALDa
       }
       else
       {
+        QString label = labels.value( myIterator );
+        if ( label.isEmpty() )
+        {
+          label = QString::number( myIterator );
+        }
         //Branch on the color interpretation type
         if ( myColorInterpretation == GCI_GrayIndex )
         {
           QgsColorRampShader::ColorRampItem myColorRampItem;
-          myColorRampItem.label = "";
           myColorRampItem.value = ( double )myIterator;
+          myColorRampItem.label = label;
           myColorRampItem.color = QColor::fromRgb( myColorEntry->c1, myColorEntry->c1, myColorEntry->c1, myColorEntry->c4 );
           ct.append( myColorRampItem );
         }
@@ -86,7 +108,7 @@ QList<QgsColorRampShader::ColorRampItem> QgsGdalProviderBase::colorTable( GDALDa
         {
           QgsColorRampShader::ColorRampItem myColorRampItem;
           myColorRampItem.value = ( double )myIterator;
-          myColorRampItem.label = QString::number( myColorRampItem.value );
+          myColorRampItem.label = label;
           //Branch on palette interpretation
           if ( myPaletteInterpretation  == GPI_RGB )
           {
@@ -124,107 +146,49 @@ QList<QgsColorRampShader::ColorRampItem> QgsGdalProviderBase::colorTable( GDALDa
   return ct;
 }
 
-QGis::DataType QgsGdalProviderBase::dataTypeFromGdal( int theGdalDataType ) const
+QGis::DataType QgsGdalProviderBase::dataTypeFromGdal( const GDALDataType theGdalDataType ) const
 {
   switch ( theGdalDataType )
   {
+    case GDT_Byte: return QGis::Byte;
+    case GDT_UInt16: return QGis::UInt16;
+    case GDT_Int16: return QGis::Int16;
+    case GDT_UInt32: return QGis::UInt32;
+    case GDT_Int32: return QGis::Int32;
+    case GDT_Float32: return QGis::Float32;
+    case GDT_Float64: return QGis::Float64;
+    case GDT_CInt16: return QGis::CInt16;
+    case GDT_CInt32: return QGis::CInt32;
+    case GDT_CFloat32: return QGis::CFloat32;
+    case GDT_CFloat64: return QGis::CFloat64;
     case GDT_Unknown:
+    case GDT_TypeCount:
       return QGis::UnknownDataType;
-      break;
-    case GDT_Byte:
-      return QGis::Byte;
-      break;
-    case GDT_UInt16:
-      return QGis::UInt16;
-      break;
-    case GDT_Int16:
-      return QGis::Int16;
-      break;
-    case GDT_UInt32:
-      return QGis::UInt32;
-      break;
-    case GDT_Int32:
-      return QGis::Int32;
-      break;
-    case GDT_Float32:
-      return QGis::Float32;
-      break;
-    case GDT_Float64:
-      return QGis::Float64;
-      break;
-    case GDT_CInt16:
-      return QGis::CInt16;
-      break;
-    case GDT_CInt32:
-      return QGis::CInt32;
-      break;
-    case GDT_CFloat32:
-      return QGis::CFloat32;
-      break;
-    case GDT_CFloat64:
-      return QGis::CFloat64;
-      break;
   }
   return QGis::UnknownDataType;
 }
 
-int QgsGdalProviderBase::colorInterpretationFromGdal( int gdalColorInterpretation ) const
+int QgsGdalProviderBase::colorInterpretationFromGdal( const GDALColorInterp gdalColorInterpretation ) const
 {
   switch ( gdalColorInterpretation )
   {
-    case GCI_Undefined:
-      return QgsRaster::UndefinedColorInterpretation;
-      break;
-    case GCI_GrayIndex:
-      return QgsRaster::GrayIndex;
-      break;
-    case GCI_PaletteIndex:
-      return QgsRaster::PaletteIndex;
-      break;
-    case GCI_RedBand:
-      return QgsRaster::RedBand;
-      break;
-    case GCI_GreenBand:
-      return QgsRaster::GreenBand;
-      break;
-    case GCI_BlueBand:
-      return QgsRaster::BlueBand;
-      break;
-    case GCI_AlphaBand:
-      return QgsRaster::AlphaBand;
-      break;
-    case GCI_HueBand:
-      return QgsRaster::HueBand;
-      break;
-    case GCI_SaturationBand:
-      return QgsRaster::SaturationBand;
-      break;
-    case GCI_LightnessBand:
-      return QgsRaster::LightnessBand;
-      break;
-    case GCI_CyanBand:
-      return QgsRaster::CyanBand;
-      break;
-    case GCI_MagentaBand:
-      return QgsRaster::MagentaBand;
-      break;
-    case GCI_YellowBand:
-      return QgsRaster::YellowBand;
-      break;
-    case GCI_BlackBand:
-      return QgsRaster::BlackBand;
-      break;
-    case GCI_YCbCr_YBand:
-      return QgsRaster::YCbCr_YBand;
-      break;
-    case GCI_YCbCr_CbBand:
-      return QgsRaster::YCbCr_CbBand;
-      break;
-    case GCI_YCbCr_CrBand:
-      return QgsRaster::YCbCr_CrBand;
-      break;
-    default:
-      break;
+    case GCI_GrayIndex: return QgsRaster::GrayIndex;
+    case GCI_PaletteIndex: return QgsRaster::PaletteIndex;
+    case GCI_RedBand: return QgsRaster::RedBand;
+    case GCI_GreenBand: return QgsRaster::GreenBand;
+    case GCI_BlueBand: return QgsRaster::BlueBand;
+    case GCI_AlphaBand: return QgsRaster::AlphaBand;
+    case GCI_HueBand: return QgsRaster::HueBand;
+    case GCI_SaturationBand: return QgsRaster::SaturationBand;
+    case GCI_LightnessBand: return QgsRaster::LightnessBand;
+    case GCI_CyanBand: return QgsRaster::CyanBand;
+    case GCI_MagentaBand: return QgsRaster::MagentaBand;
+    case GCI_YellowBand: return QgsRaster::YellowBand;
+    case GCI_BlackBand: return QgsRaster::BlackBand;
+    case GCI_YCbCr_YBand: return QgsRaster::YCbCr_YBand;
+    case GCI_YCbCr_CbBand: return QgsRaster::YCbCr_CbBand;
+    case GCI_YCbCr_CrBand: return QgsRaster::YCbCr_CrBand;
+    case GCI_Undefined: return QgsRaster::UndefinedColorInterpretation;
   }
   return QgsRaster::UndefinedColorInterpretation;
 }
@@ -236,7 +200,7 @@ void QgsGdalProviderBase::registerGdalDrivers()
   QString myJoinedList = mySettings.value( "gdal/skipList", "" ).toString();
   if ( !myJoinedList.isEmpty() )
   {
-    QStringList myList = myJoinedList.split( " " );
+    QStringList myList = myJoinedList.split( ' ' );
     for ( int i = 0; i < myList.size(); ++i )
     {
       QgsApplication::skipGdalDriver( myList.at( i ) );
@@ -272,4 +236,64 @@ QgsRectangle QgsGdalProviderBase::extent( GDALDatasetH gdalDataset )const
 
   QgsRectangle extent( myGeoTransform[0], myYMin, myXMax, myGeoTransform[3] );
   return extent;
+}
+
+GDALDatasetH QgsGdalProviderBase::gdalOpen( const char *pszFilename, GDALAccess eAccess )
+{
+  // See http://hub.qgis.org/issues/8356 and http://trac.osgeo.org/gdal/ticket/5170
+#if GDAL_VERSION_MAJOR == 1 && ( (GDAL_VERSION_MINOR == 9 && GDAL_VERSION_REV <= 2) || (GDAL_VERSION_MINOR == 10 && GDAL_VERSION_REV <= 0) )
+  char* pszOldVal = CPLStrdup( CPLGetConfigOption( "VSI_CACHE", "FALSE" ) );
+  CPLSetThreadLocalConfigOption( "VSI_CACHE", "FALSE" );
+  QgsDebugMsg( "Disabled VSI_CACHE" );
+#endif
+
+  GDALDatasetH hDS = GDALOpen( pszFilename, eAccess );
+
+#if GDAL_VERSION_MAJOR == 1 && ( (GDAL_VERSION_MINOR == 9 && GDAL_VERSION_REV <= 2) || (GDAL_VERSION_MINOR == 10 && GDAL_VERSION_REV <= 0) )
+  CPLSetThreadLocalConfigOption( "VSI_CACHE", pszOldVal );
+  CPLFree( pszOldVal );
+  QgsDebugMsg( "Reset VSI_CACHE" );
+#endif
+
+  return hDS;
+}
+
+CPLErr QgsGdalProviderBase::gdalRasterIO( GDALRasterBandH hBand, GDALRWFlag eRWFlag, int nXOff, int nYOff, int nXSize, int nYSize, void * pData, int nBufXSize, int nBufYSize, GDALDataType eBufType, int nPixelSpace, int nLineSpace )
+{
+  // See http://hub.qgis.org/issues/8356 and http://trac.osgeo.org/gdal/ticket/5170
+#if GDAL_VERSION_MAJOR == 1 && ( (GDAL_VERSION_MINOR == 9 && GDAL_VERSION_REV <= 2) || (GDAL_VERSION_MINOR == 10 && GDAL_VERSION_REV <= 0) )
+  char* pszOldVal = CPLStrdup( CPLGetConfigOption( "VSI_CACHE", "FALSE" ) );
+  CPLSetThreadLocalConfigOption( "VSI_CACHE", "FALSE" );
+  QgsDebugMsg( "Disabled VSI_CACHE" );
+#endif
+
+  CPLErr err = GDALRasterIO( hBand, eRWFlag, nXOff, nYOff, nXSize, nYSize, pData, nBufXSize, nBufYSize, eBufType, nPixelSpace, nLineSpace );
+
+#if GDAL_VERSION_MAJOR == 1 && ( (GDAL_VERSION_MINOR == 9 && GDAL_VERSION_REV <= 2) || (GDAL_VERSION_MINOR == 10 && GDAL_VERSION_REV <= 0) )
+  CPLSetThreadLocalConfigOption( "VSI_CACHE", pszOldVal );
+  CPLFree( pszOldVal );
+  QgsDebugMsg( "Reset VSI_CACHE" );
+#endif
+
+  return err;
+}
+
+int QgsGdalProviderBase::gdalGetOverviewCount( GDALRasterBandH hBand )
+{
+  // See http://hub.qgis.org/issues/8356 and http://trac.osgeo.org/gdal/ticket/5170
+#if GDAL_VERSION_MAJOR == 1 && ( (GDAL_VERSION_MINOR == 9 && GDAL_VERSION_REV <= 2) || (GDAL_VERSION_MINOR == 10 && GDAL_VERSION_REV <= 0) )
+  char* pszOldVal = CPLStrdup( CPLGetConfigOption( "VSI_CACHE", "FALSE" ) );
+  CPLSetThreadLocalConfigOption( "VSI_CACHE", "FALSE" );
+  QgsDebugMsg( "Disabled VSI_CACHE" );
+#endif
+
+  int count = GDALGetOverviewCount( hBand );
+
+#if GDAL_VERSION_MAJOR == 1 && ( (GDAL_VERSION_MINOR == 9 && GDAL_VERSION_REV <= 2) || (GDAL_VERSION_MINOR == 10 && GDAL_VERSION_REV <= 0) )
+  CPLSetThreadLocalConfigOption( "VSI_CACHE", pszOldVal );
+  CPLFree( pszOldVal );
+  QgsDebugMsg( "Reset VSI_CACHE" );
+#endif
+
+  return count;
 }

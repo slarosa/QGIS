@@ -1,6 +1,6 @@
 /***************************************************************************
-                              qgsscalecombobox.h
-                              ------------------------
+         qgsscalecombobox.h
+         ------------------------
   begin                : January 7, 2012
   copyright            : (C) 2012 by Alexander Bruy
   email                : alexander dot bruy at gmail dot com
@@ -51,7 +51,7 @@ void QgsScaleComboBox::updateScales( const QStringList &scales )
     QString myScales = settings.value( "Map/scales", PROJECT_SCALES ).toString();
     if ( !myScales.isEmpty() )
     {
-      myScalesList = myScales.split( "," );
+      myScalesList = myScales.split( ',' );
     }
   }
   else
@@ -60,6 +60,19 @@ void QgsScaleComboBox::updateScales( const QStringList &scales )
     for ( ; scaleIt != scales.constEnd(); ++scaleIt )
     {
       myScalesList.append( *scaleIt );
+    }
+  }
+
+  QStringList parts;
+  double denominator;
+  bool ok;
+  for ( int i = 0; i < myScalesList.size(); ++i )
+  {
+    parts = myScalesList[ i ] .split( ':' );
+    denominator = QLocale::system().toDouble( parts[1], &ok );
+    if ( ok )
+    {
+      myScalesList[ i ] = toString( 1.0 / denominator );
     }
   }
 
@@ -99,18 +112,17 @@ void QgsScaleComboBox::showPopup()
   blockSignals( true );
   view()->setCurrentIndex( model()->index( idx, 0 ) );
   blockSignals( false );
+  view()->setMinimumWidth( view()->sizeHintForColumn( 0 ) );
 }
 
 //! Function to read the selected scale as text
-// @note added in 2.0
 QString QgsScaleComboBox::scaleString()
 {
   return toString( mScale );
 }
 
 //! Function to set the selected scale from text
-// @note added in 2.0
-bool QgsScaleComboBox::setScaleString( QString scaleTxt )
+bool QgsScaleComboBox::setScaleString( const QString& scaleTxt )
 {
   bool ok;
   double newScale = toDouble( scaleTxt, &ok );
@@ -128,14 +140,12 @@ bool QgsScaleComboBox::setScaleString( QString scaleTxt )
 }
 
 //! Function to read the selected scale as double
-// @note added in 2.0
 double QgsScaleComboBox::scale()
 {
   return mScale;
 }
 
 //! Function to set the selected scale from double
-// @note added in 2.0
 void QgsScaleComboBox::setScale( double scale )
 {
   setScaleString( toString( scale ) );
@@ -148,7 +158,7 @@ void QgsScaleComboBox::fixupScale()
   double oldScale = mScale;
   bool ok, userSetScale;
   QStringList txtList = currentText().split( ':' );
-  txtList.size() == 2 ? userSetScale = false : userSetScale = true ;
+  userSetScale = txtList.size() != 2;
 
   // QgsDebugMsg( QString( "entered with oldScale: %1" ).arg( oldScale ) );
   newScale = toDouble( currentText(), &ok );
@@ -178,42 +188,48 @@ void QgsScaleComboBox::fixupScale()
 
 QString QgsScaleComboBox::toString( double scale )
 {
-  if ( scale > 1 )
+  if ( scale == 0 )
   {
-    return QString( "%1:1" ).arg( qRound( scale ) );
+    return "0";
+  }
+  else if ( scale > 1 )
+  {
+    return QString( "%1:1" ).arg( QLocale::system().toString( qRound( scale ) ) );
   }
   else
   {
-    return QString( "1:%1" ).arg( qRound( 1.0 / scale ) );
+    return QString( "1:%1" ).arg( QLocale::system().toString( qRound( 1.0 / scale ) ) );
   }
 }
 
-double QgsScaleComboBox::toDouble( QString scaleString, bool * returnOk )
+double QgsScaleComboBox::toDouble( const QString& scaleString, bool * returnOk )
 {
   bool ok = false;
   QString scaleTxt( scaleString );
 
-  double scale = QLocale::system().toDouble( scaleTxt, &ok );
+  double scale = QGis::permissiveToDouble( scaleTxt, ok );
   if ( ok )
   {
     // Create a text version and set that text and rescan
     // Idea is to get the same rounding.
     scaleTxt = toString( scale );
   }
-  // It is now either X:Y or not valid
-  ok = false;
-  QStringList txtList = scaleTxt.split( ':' );
-  if ( 2 == txtList.size() )
+  else
   {
-    bool okX = false;
-    bool okY = false;
-    int x = QLocale::system().toInt( txtList[ 0 ], &okX );
-    int y = QLocale::system().toInt( txtList[ 1 ], &okY );
-    if ( okX && okY )
+    // It is now either X:Y or not valid
+    QStringList txtList = scaleTxt.split( ':' );
+    if ( 2 == txtList.size() )
     {
-      // Scale is fraction of x and y
-      scale = ( double )x / ( double )y;
-      ok = true;
+      bool okX = false;
+      bool okY = false;
+      int x = QGis::permissiveToInt( txtList[ 0 ], okX );
+      int y = QGis::permissiveToInt( txtList[ 1 ], okY );
+      if ( okX && okY )
+      {
+        // Scale is fraction of x and y
+        scale = ( double )x / ( double )y;
+        ok = true;
+      }
     }
   }
 
@@ -224,3 +240,5 @@ double QgsScaleComboBox::toDouble( QString scaleString, bool * returnOk )
   }
   return scale;
 }
+
+

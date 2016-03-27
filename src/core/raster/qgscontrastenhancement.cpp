@@ -63,7 +63,7 @@ QgsContrastEnhancement::QgsContrastEnhancement( const QgsContrastEnhancement& ce
   mMaximumValue = ce.mMaximumValue;
   mRasterDataTypeRange = ce.mRasterDataTypeRange;
 
-  mLookupTableOffset = mMinimumValue * -1;
+  mLookupTableOffset = minimumValuePossible( mRasterDataType ) * -1;
 
   // setContrastEnhancementAlgorithm sets also QgsContrastEnhancementFunction
   setContrastEnhancementAlgorithm( ce.mContrastEnhancementAlgorithm, false );
@@ -276,18 +276,22 @@ void QgsContrastEnhancement::setContrastEnhancementAlgorithm( ContrastEnhancemen
     switch ( theAlgorithm )
     {
       case StretchToMinimumMaximum :
+        delete mContrastEnhancementFunction;
         mContrastEnhancementFunction = new QgsLinearMinMaxEnhancement( mRasterDataType, mMinimumValue, mMaximumValue );
         break;
       case StretchAndClipToMinimumMaximum :
+        delete mContrastEnhancementFunction;
         mContrastEnhancementFunction = new QgsLinearMinMaxEnhancementWithClip( mRasterDataType, mMinimumValue, mMaximumValue );
         break;
       case ClipToMinimumMaximum :
+        delete mContrastEnhancementFunction;
         mContrastEnhancementFunction = new QgsClipToMinMaxEnhancement( mRasterDataType, mMinimumValue, mMaximumValue );
         break;
       case UserDefinedEnhancement :
         //Do nothing
         break;
       default:
+        delete mContrastEnhancementFunction;
         mContrastEnhancementFunction = new QgsContrastEnhancementFunction( mRasterDataType, mMinimumValue, mMaximumValue );
         break;
     }
@@ -313,6 +317,7 @@ void QgsContrastEnhancement::setContrastEnhancementFunction( QgsContrastEnhancem
 
   if ( 0 != theFunction )
   {
+    delete mContrastEnhancementFunction;
     mContrastEnhancementFunction = theFunction;
     mContrastEnhancementAlgorithm = UserDefinedEnhancement;
     generateLookupTable();

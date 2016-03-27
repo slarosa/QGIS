@@ -21,6 +21,7 @@
 #include "qgslogger.h"
 #include "qgsmapcanvas.h"
 #include "qgsmaplayerregistry.h"
+#include "qgsmaptool.h"
 #include "qgsvectorlayer.h"
 #include <QDomElement>
 #include <QDir>
@@ -33,10 +34,15 @@
 #include <QWidget>
 
 QgsFormAnnotationItem::QgsFormAnnotationItem( QgsMapCanvas* canvas, QgsVectorLayer* vlayer, bool hasFeature, int feature )
-    : QgsAnnotationItem( canvas ), mWidgetContainer( 0 ), mDesignerWidget( 0 ), mVectorLayer( vlayer ),
-    mHasAssociatedFeature( hasFeature ), mFeature( feature )
+    : QgsAnnotationItem( canvas )
+    , mWidgetContainer( 0 )
+    , mDesignerWidget( 0 )
+    , mVectorLayer( vlayer )
+    , mHasAssociatedFeature( hasFeature )
+    , mFeature( feature )
 {
   mWidgetContainer = new QGraphicsProxyWidget( this );
+  mWidgetContainer->setData( 0, "AnnotationItem" ); //mark embedded widget as belonging to an annotation item (composer knows it needs to be printed)
   if ( mVectorLayer && mMapCanvas ) //default to the layers edit form
   {
     mDesignerForm = mVectorLayer->annotationForm();
@@ -87,8 +93,8 @@ QWidget* QgsFormAnnotationItem::createDesignerWidget( const QString& filePath )
     QgsFeature f;
     if ( mVectorLayer->getFeatures( QgsFeatureRequest().setFilterFid( mFeature ).setFlags( QgsFeatureRequest::NoGeometry ) ).nextFeature( f ) )
     {
-      const QgsFields& fields = mVectorLayer->pendingFields();
-      const QgsAttributes& attrs = f.attributes();
+      const QgsFields& fields = mVectorLayer->fields();
+      QgsAttributes attrs = f.attributes();
       for ( int i = 0; i < attrs.count(); ++i )
       {
         if ( i < fields.count() )
@@ -96,7 +102,7 @@ QWidget* QgsFormAnnotationItem::createDesignerWidget( const QString& filePath )
           QWidget* attWidget = widget->findChild<QWidget*>( fields[i].name() );
           if ( attWidget )
           {
-            QgsAttributeEditor::createAttributeEditor( widget, attWidget, mVectorLayer, i, attrs[i] );
+            QgsAttributeEditor::createAttributeEditor( widget, attWidget, mVectorLayer, i, attrs.at( i ) );
           }
         }
       }
@@ -224,9 +230,7 @@ void QgsFormAnnotationItem::setFeatureForMapPosition()
     return;
   }
 
-  QSettings settings;
-  double identifyValue = settings.value( "/Map/identifyRadius", QGis::DEFAULT_IDENTIFY_RADIUS ).toDouble();
-  double halfIdentifyWidth = mMapCanvas->extent().width() / 100 / 2 * identifyValue;
+  double halfIdentifyWidth = QgsMapTool::searchRadiusMU( mMapCanvas );
   QgsRectangle searchRect( mMapPosition.x() - halfIdentifyWidth, mMapPosition.y() - halfIdentifyWidth,
                            mMapPosition.x() + halfIdentifyWidth, mMapPosition.y() + halfIdentifyWidth );
 

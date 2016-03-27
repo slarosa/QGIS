@@ -26,7 +26,7 @@ using namespace std;
 class QgsStandardItem : public QStandardItem
 {
   public:
-    QgsStandardItem( QString text ) : QStandardItem( text )
+    explicit QgsStandardItem( const QString& text ) : QStandardItem( text )
     {
       // In addition to the DisplayRole, also set the user role, which is used for sorting.
       // This is needed for numerical sorting to work correctly (otherwise sorting is lexicographic).
@@ -34,15 +34,18 @@ class QgsStandardItem : public QStandardItem
       setTextAlignment( Qt::AlignRight );
     }
 
-    QgsStandardItem( int value ) : QStandardItem( QString::number( value ) )
+    explicit QgsStandardItem( int value ) : QStandardItem( QString::number( value ) )
     {
       setData( QVariant( value ), Qt::UserRole );
       setTextAlignment( Qt::AlignCenter );
     }
 
-    QgsStandardItem( double value ) : QStandardItem( QString::number( value, 'f', 2 ) )
+    explicit QgsStandardItem( double value ) : QStandardItem( QString::number( value, 'f', 4 ) )
     {
       setData( QVariant( value ), Qt::UserRole );
+      //show the full precision when editing points
+      setData( QVariant( value ), Qt::EditRole );
+      setData( QVariant( value ), Qt::ToolTipRole );
       setTextAlignment( Qt::AlignRight );
     }
 };
@@ -102,7 +105,15 @@ void QgsGCPListModel::updateModel()
     unitType = tr( "pixels" );
   }
 
-  itemLabels << "on/off" << "id" << "srcX" << "srcY" << "dstX" << "dstY" << QString( "dX[" ) + unitType + "]" << QString( "dY[" ) + unitType + "]" << "residual[" + unitType + "]";
+  itemLabels << tr( "Visible" )
+  << tr( "ID" )
+  << tr( "Source X" )
+  << tr( "Source Y" )
+  << tr( "Dest. X" )
+  << tr( "Dest. Y" )
+  << tr( "dX (%1)" ).arg( unitType )
+  << tr( "dY (%1)" ).arg( unitType )
+  << tr( "Residual (%1)" ).arg( unitType );
 
   setHorizontalHeaderLabels( itemLabels );
   setRowCount( mGCPList->size() );
@@ -111,6 +122,10 @@ void QgsGCPListModel::updateModel()
   {
     int j = 0;
     QgsGeorefDataPoint *p = mGCPList->at( i );
+
+    if ( !p )
+      continue;
+
     p->setId( i );
 
     QStandardItem *si = new QStandardItem();
@@ -159,10 +174,7 @@ void QgsGCPListModel::updateModel()
     }
     residual = sqrt( dX * dX + dY * dY );
 
-    if ( p )
-    {
-      p->setResidual( QPointF( dX, dY ) );
-    }
+    p->setResidual( QPointF( dX, dY ) );
 
     if ( residual >= 0.f )
     {

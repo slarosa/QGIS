@@ -25,10 +25,11 @@ bool QgsPythonRunner::isValid()
   return mInstance != NULL;
 }
 
-bool QgsPythonRunner::run( QString command, QString messageOnError )
+bool QgsPythonRunner::run( const QString& command, const QString& messageOnError )
 {
   if ( mInstance )
   {
+    QgsDebugMsg( "Running " + command );
     return mInstance->runCommand( command, messageOnError );
   }
   else
@@ -38,7 +39,7 @@ bool QgsPythonRunner::run( QString command, QString messageOnError )
   }
 }
 
-bool QgsPythonRunner::eval( QString command, QString& result )
+bool QgsPythonRunner::eval( const QString& command, QString& result )
 {
   if ( mInstance )
   {

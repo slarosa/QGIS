@@ -20,12 +20,14 @@
 #include <QMessageBox>
 #include <QUrl>
 #include <QPushButton>
+#include <QRegExpValidator>
 
 QgsNewHttpConnection::QgsNewHttpConnection(
-  QWidget *parent, const QString& baseKey, const QString& connName, Qt::WFlags fl ):
-    QDialog( parent, fl ),
-    mBaseKey( baseKey ),
-    mOriginalConnName( connName )
+  QWidget *parent, const QString& baseKey, const QString& connName, const Qt::WindowFlags& fl )
+    : QDialog( parent, fl )
+    , mBaseKey( baseKey )
+    , mOriginalConnName( connName )
+    , mAuthConfigSelect( 0 )
 {
   setupUi( this );
 
@@ -39,6 +41,18 @@ QgsNewHttpConnection::QgsNewHttpConnection(
   // using connection-wms and connection-wfs -> parse credential key fro it.
   mCredentialsBaseKey = mBaseKey.split( '-' ).last().toUpper();
 
+  txtName->setValidator( new QRegExpValidator( QRegExp( "[^\\/]+" ), txtName ) );
+
+  cmbDpiMode->clear();
+  cmbDpiMode->addItem( tr( "all" ) );
+  cmbDpiMode->addItem( tr( "off" ) );
+  cmbDpiMode->addItem( tr( "QGIS" ) );
+  cmbDpiMode->addItem( tr( "UMN" ) );
+  cmbDpiMode->addItem( tr( "GeoServer" ) );
+
+  mAuthConfigSelect = new QgsAuthConfigSelect( this );
+  tabAuth->insertTab( 1, mAuthConfigSelect, tr( "Configurations" ) );
+
   if ( !connName.isEmpty() )
   {
     // populate the dialog with the information stored for the connection
@@ -47,7 +61,7 @@ QgsNewHttpConnection::QgsNewHttpConnection(
     QSettings settings;
 
     QString key = mBaseKey + connName;
-    QString credentialsKey = "/Qgis/" + mCredentialsBaseKey + "/" + connName;
+    QString credentialsKey = "/Qgis/" + mCredentialsBaseKey + '/' + connName;
     txtName->setText( connName );
     txtUrl->setText( settings.value( key + "/url" ).toString() );
 
@@ -57,10 +71,38 @@ QgsNewHttpConnection::QgsNewHttpConnection(
     cbxIgnoreGetFeatureInfoURI->setChecked( settings.value( key + "/ignoreGetFeatureInfoURI", false ).toBool() );
     cbxSmoothPixmapTransform->setChecked( settings.value( key + "/smoothPixmapTransform", false ).toBool() );
 
+    int dpiIdx;
+    switch ( settings.value( key + "/dpiMode", 7 ).toInt() )
+    {
+      case 0: // off
+        dpiIdx = 1;
+        break;
+      case 1: // QGIS
+        dpiIdx = 2;
+        break;
+      case 2: // UMN
+        dpiIdx = 3;
+        break;
+      case 4: // GeoServer
+        dpiIdx = 4;
+        break;
+      default: // other => all
+        dpiIdx = 0;
+        break;
+    }
+    cmbDpiMode->setCurrentIndex( dpiIdx );
+
     txtReferer->setText( settings.value( key + "/referer" ).toString() );
 
     txtUserName->setText( settings.value( credentialsKey + "/username" ).toString() );
     txtPassword->setText( settings.value( credentialsKey + "/password" ).toString() );
+
+    QString authcfg = settings.value( credentialsKey + "/authcfg" ).toString();
+    mAuthConfigSelect->setConfigId( authcfg );
+    if ( !authcfg.isEmpty() )
+    {
+      tabAuth->setCurrentIndex( tabAuth->indexOf( mAuthConfigSelect ) );
+    }
   }
 
   if ( mBaseKey != "/Qgis/connections-wms/" )
@@ -75,13 +117,20 @@ QgsNewHttpConnection::QgsNewHttpConnection(
       cbxIgnoreGetMapURI->setVisible( false );
       cbxIgnoreAxisOrientation->setVisible( false );
       cbxInvertAxisOrientation->setVisible( false );
+      cbxSmoothPixmapTransform->setVisible( false );
       mGroupBox->layout()->removeWidget( cbxIgnoreGetMapURI );
       mGroupBox->layout()->removeWidget( cbxIgnoreAxisOrientation );
       mGroupBox->layout()->removeWidget( cbxInvertAxisOrientation );
+      mGroupBox->layout()->removeWidget( cbxSmoothPixmapTransform );
     }
 
     cbxIgnoreGetFeatureInfoURI->setVisible( false );
     mGroupBox->layout()->removeWidget( cbxIgnoreGetFeatureInfoURI );
+
+    cmbDpiMode->setVisible( false );
+    mGroupBox->layout()->removeWidget( cmbDpiMode );
+    lblDpiMode->setVisible( false );
+    mGroupBox->layout()->removeWidget( lblDpiMode );
 
     txtReferer->setVisible( false );
     mGroupBox->layout()->removeWidget( txtReferer );
@@ -103,17 +152,24 @@ QgsNewHttpConnection::~QgsNewHttpConnection()
 
 void QgsNewHttpConnection::on_txtName_textChanged( const QString &text )
 {
-  buttonBox->button( QDialogButtonBox::Ok )->setDisabled( text.isEmpty() );
+  Q_UNUSED( text );
+  buttonBox->button( QDialogButtonBox::Ok )->setDisabled( txtName->text().isEmpty() || txtUrl->text().isEmpty() );
+}
+
+void QgsNewHttpConnection::on_txtUrl_textChanged( const QString &text )
+{
+  Q_UNUSED( text );
+  buttonBox->button( QDialogButtonBox::Ok )->setDisabled( txtName->text().isEmpty() || txtUrl->text().isEmpty() );
 }
 
 void QgsNewHttpConnection::accept()
 {
   QSettings settings;
   QString key = mBaseKey + txtName->text();
-  QString credentialsKey = "/Qgis/" + mCredentialsBaseKey + "/" + txtName->text();
+  QString credentialsKey = "/Qgis/" + mCredentialsBaseKey + '/' + txtName->text();
 
   // warn if entry was renamed to an existing connection
-  if (( mOriginalConnName.isNull() || mOriginalConnName != txtName->text() ) &&
+  if (( mOriginalConnName.isNull() || mOriginalConnName.compare( txtName->text(), Qt::CaseInsensitive ) != 0 ) &&
       settings.contains( key + "/url" ) &&
       QMessageBox::question( this,
                              tr( "Save connection" ),
@@ -136,7 +192,8 @@ void QgsNewHttpConnection::accept()
   if ( !mOriginalConnName.isNull() && mOriginalConnName != key )
   {
     settings.remove( mBaseKey + mOriginalConnName );
-    settings.remove( "/Qgis/" + mCredentialsBaseKey + "/" + mOriginalConnName );
+    settings.remove( "/Qgis/" + mCredentialsBaseKey + '/' + mOriginalConnName );
+    settings.sync();
   }
 
   QUrl url( txtUrl->text().trimmed() );
@@ -147,7 +204,9 @@ void QgsNewHttpConnection::accept()
     params.insert( QString( it->first ).toUpper(), *it );
   }
 
-  if ( params["SERVICE"].second.toUpper() == "WMS" )
+  if ( params["SERVICE"].second.toUpper() == "WMS" ||
+       params["SERVICE"].second.toUpper() == "WFS" ||
+       params["SERVICE"].second.toUpper() == "WCS" )
   {
     url.removeEncodedQueryItem( params["SERVICE"].first );
     url.removeEncodedQueryItem( params["REQUEST"].first );
@@ -166,6 +225,28 @@ void QgsNewHttpConnection::accept()
     settings.setValue( key + "/ignoreAxisOrientation", cbxIgnoreAxisOrientation->isChecked() );
     settings.setValue( key + "/invertAxisOrientation", cbxInvertAxisOrientation->isChecked() );
     settings.setValue( key + "/smoothPixmapTransform", cbxSmoothPixmapTransform->isChecked() );
+
+    int dpiMode = 0;
+    switch ( cmbDpiMode->currentIndex() )
+    {
+      case 0: // all => QGIS|UMN|GeoServer
+        dpiMode = 7;
+        break;
+      case 1: // off
+        dpiMode = 0;
+        break;
+      case 2: // QGIS
+        dpiMode = 1;
+        break;
+      case 3: // UMN
+        dpiMode = 2;
+        break;
+      case 4: // GeoServer
+        dpiMode = 4;
+        break;
+    }
+
+    settings.setValue( key + "/dpiMode", dpiMode );
   }
   if ( mBaseKey == "/Qgis/connections-wms/" )
   {
@@ -176,6 +257,8 @@ void QgsNewHttpConnection::accept()
 
   settings.setValue( credentialsKey + "/username", txtUserName->text() );
   settings.setValue( credentialsKey + "/password", txtPassword->text() );
+
+  settings.setValue( credentialsKey + "/authcfg", mAuthConfigSelect->configId() );
 
   settings.setValue( mBaseKey + "/selected", txtName->text() );
 

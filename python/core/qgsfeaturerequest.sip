@@ -8,18 +8,23 @@ class QgsFeatureRequest
   public:
     enum Flag
     {
-      NoGeometry         = 0x01,  //!< Do not fetch geometry
-      SubsetOfAttributes = 0x02,  //!< Fetch only a subset of attributes (setSubsetOfAttributes sets this flag)
-      ExactIntersect     = 0x04   //!< Use exact geometry intersection (slower) instead of bounding boxes
+      NoFlags,
+      NoGeometry,          //!< Geometry is not required. It may still be returned if e.g. required for a filter condition.
+      SubsetOfAttributes,  //!< Fetch only a subset of attributes (setSubsetOfAttributes sets this flag)
+      ExactIntersect       //!< Use exact geometry intersection (slower) instead of bounding boxes
     };
     typedef QFlags<QgsFeatureRequest::Flag> Flags;
 
     enum FilterType
     {
-      FilterNone,   //!< No filter is applied
-      FilterRect,   //!< Filter using a rectangle
-      FilterFid     //!< Filter using feature ID
+      FilterNone,       //!< No filter is applied
+      FilterRect,       //!< Filter using a rectangle, no need to set NoGeometry
+      FilterFid,        //!< Filter using feature ID
+      FilterExpression, //!< Filter using expression
+      FilterFids        //!< Filter using feature IDs
     };
+
+    static const QString AllAttributes;
 
     //! construct a default request: for all features get attributes and geometries
     QgsFeatureRequest();
@@ -27,6 +32,8 @@ class QgsFeatureRequest
     explicit QgsFeatureRequest( QgsFeatureId fid );
     //! construct a request with rectangle filter
     explicit QgsFeatureRequest( const QgsRectangle& rect );
+    //! construct a request with a filter expression
+    explicit QgsFeatureRequest( const QgsExpression& expr, const QgsExpressionContext& context = QgsExpressionContext() );
 
     FilterType filterType() const;
 
@@ -39,8 +46,67 @@ class QgsFeatureRequest
     QgsFeatureRequest& setFilterFid( qint64 fid );
     qint64 filterFid() const;
 
+    //! Set feature ID that should be fetched.
+    QgsFeatureRequest& setFilterFids( const QgsFeatureIds& fids );
+    const QgsFeatureIds& filterFids() const;
+
+    /** Set the filter expression. {@see QgsExpression}
+     * @param expression expression string
+     * @see filterExpression
+     * @see setExpressionContext
+     */
+    QgsFeatureRequest& setFilterExpression( const QString& expression );
+
+    /** Returns the filter expression if set.
+     * @see setFilterExpression
+     * @see expressionContext
+     */
+    QgsExpression* filterExpression() const;
+
+    /** Modifies the existing filter expression to add an additional expression filter. The
+     * filter expressions are combined using AND, so only features matching both
+     * the existing expression and the additional expression will be returned.
+     * @note added in QGIS 2.14
+     */
+    QgsFeatureRequest& combineFilterExpression( const QString& expression );
+
+    /** Returns the expression context used to evaluate filter expressions.
+     * @note added in QGIS 2.12
+     * @see setExpressionContext
+     */
+    QgsExpressionContext* expressionContext();
+
+    /** Sets the expression context used to evaluate filter expressions.
+     * @note added in QGIS 2.12
+     * @see expressionContext
+     */
+    QgsFeatureRequest& setExpressionContext( const QgsExpressionContext& context );
+
+    /**
+     * Disables filter conditions.
+     * The spatial filter (filterRect) will be kept in place.
+     *
+     * @return The object the method is called on for chaining
+     *
+     * @note Added in 2.12
+     */
+    QgsFeatureRequest& disableFilter();
+
+    /** Set the maximum number of features to request.
+     * @param limit maximum number of features, or -1 to request all features.
+     * @see limit()
+     * @note added in QGIS 2.14
+     */
+    QgsFeatureRequest& setLimit( long limit );
+
+    /** Returns the maximum number of features to request, or -1 if no limit set.
+     * @see setLimit
+     * @note added in QGIS 2.14
+     */
+    long limit() const;
+
     //! Set flags that affect how features will be fetched
-    QgsFeatureRequest& setFlags( Flags flags );
+    QgsFeatureRequest& setFlags( const Flags& flags );
     const Flags& flags() const;
 
     //! Set a subset of attributes that will be fetched. Empty list means that all attributes are used.
@@ -51,4 +117,41 @@ class QgsFeatureRequest
     //! Set a subset of attributes by names that will be fetched
     QgsFeatureRequest& setSubsetOfAttributes( const QStringList& attrNames, const QgsFields& fields );
 
+    //! Set a simplification method for geometries that will be fetched
+    //! @note added in 2.2
+    QgsFeatureRequest& setSimplifyMethod( const QgsSimplifyMethod& simplifyMethod );
+    //! Get simplification method for geometries that will be fetched
+    //! @note added in 2.2
+    const QgsSimplifyMethod& simplifyMethod() const;
+
+    /**
+     * Check if a feature is accepted by this requests filter
+     *
+     * @param feature  The feature which will be tested
+     *
+     * @return true, if the filter accepts the feature
+     *
+     * @note added in 2.1
+     */
+    bool acceptFeature( const QgsFeature& feature );
+
+};
+
+
+/** Base class that can be used for any class that is capable of returning features
+ * @note added in 2.4
+ */
+class QgsAbstractFeatureSource
+{
+%TypeHeaderCode
+#include <qgsfeaturerequest.h>
+%End
+  public:
+    virtual ~QgsAbstractFeatureSource();
+
+    virtual QgsFeatureIterator getFeatures( const QgsFeatureRequest& request ) = 0;
+
+  protected:
+    void iteratorOpened( QgsAbstractFeatureIterator* it );
+    void iteratorClosed( QgsAbstractFeatureIterator* it );
 };

@@ -14,7 +14,7 @@ class QgsAttributeTableFilterModel;
 class QgsAttributeTableModel;
 class QgsVectorLayerCache;
 
-class QgsFeatureListModel : public QAbstractProxyModel, public QgsFeatureModel
+class GUI_EXPORT QgsFeatureListModel : public QAbstractProxyModel, public QgsFeatureModel
 {
     Q_OBJECT
 
@@ -31,14 +31,34 @@ class QgsFeatureListModel : public QAbstractProxyModel, public QgsFeatureModel
       bool isEdited;
     };
 
+    enum Role
+    {
+      FeatureInfoRole = Qt::UserRole,
+      FeatureRole
+    };
+
   public:
-    explicit QgsFeatureListModel( QgsAttributeTableFilterModel *sourceModel, QObject* parent = NULL );
+    explicit QgsFeatureListModel( QgsAttributeTableFilterModel *sourceModel, QObject* parent = 0 );
     virtual ~QgsFeatureListModel();
 
     virtual void setSourceModel( QgsAttributeTableFilterModel* sourceModel );
     QgsVectorLayerCache* layerCache();
-    virtual QVariant data( const QModelIndex& index, int role ) const;
-    virtual Qt::ItemFlags flags( const QModelIndex& index ) const;
+    virtual QVariant data( const QModelIndex& index, int role ) const override;
+    virtual Qt::ItemFlags flags( const QModelIndex& index ) const override;
+
+    /**
+     * @brief If true is specified, a NULL value will be injected
+     * @param injectNull state of null value injection
+     * @note added in 2.9
+     */
+    void setInjectNull( bool injectNull );
+
+    /**
+     * @brief Returns the current state of null value injection
+     * @return If a NULL value is added
+     * @note added in 2.9
+     */
+    bool injectNull();
 
     QgsAttributeTableModel* masterModel();
 
@@ -48,7 +68,7 @@ class QgsFeatureListModel : public QAbstractProxyModel, public QgsFeatureModel
      *          If it fails, the old expression will still be applied. Call {@link parserErrorString()}
      *          for a meaningful error message.
      */
-    bool setDisplayExpression( const QString expression );
+    bool setDisplayExpression( const QString& expression );
 
     /**
      * @brief Returns a detailed message about errors while parsing a QgsExpression.
@@ -56,13 +76,13 @@ class QgsFeatureListModel : public QAbstractProxyModel, public QgsFeatureModel
      */
     QString parserErrorString();
 
-    const QString& displayExpression() const;
+    QString displayExpression() const;
     bool featureByIndex( const QModelIndex& index, QgsFeature& feat );
     QgsFeatureId idxToFid( const QModelIndex& index ) const;
     QModelIndex fidToIdx( const QgsFeatureId fid ) const;
 
-    virtual QModelIndex mapToSource( const QModelIndex& proxyIndex ) const;
-    virtual QModelIndex mapFromSource( const QModelIndex& sourceIndex ) const;
+    virtual QModelIndex mapToSource( const QModelIndex& proxyIndex ) const override;
+    virtual QModelIndex mapFromSource( const QModelIndex& sourceIndex ) const override;
 
     virtual QModelIndex mapToMaster( const QModelIndex& proxyIndex ) const;
     virtual QModelIndex mapFromMaster( const QModelIndex& sourceIndex ) const;
@@ -70,12 +90,12 @@ class QgsFeatureListModel : public QAbstractProxyModel, public QgsFeatureModel
     virtual QItemSelection mapSelectionFromMaster( const QItemSelection& selection ) const;
     virtual QItemSelection mapSelectionToMaster( const QItemSelection& selection ) const;
 
-    virtual QModelIndex index( int row, int column, const QModelIndex& parent = QModelIndex() ) const;
-    virtual QModelIndex parent( const QModelIndex& child ) const;
-    virtual int columnCount( const QModelIndex&parent = QModelIndex() ) const;
-    virtual int rowCount( const QModelIndex& parent = QModelIndex() ) const;
+    virtual QModelIndex index( int row, int column, const QModelIndex& parent = QModelIndex() ) const override;
+    virtual QModelIndex parent( const QModelIndex& child ) const override;
+    virtual int columnCount( const QModelIndex&parent = QModelIndex() ) const override;
+    virtual int rowCount( const QModelIndex& parent = QModelIndex() ) const override;
 
-    QModelIndex fidToIndex( QgsFeatureId fid );
+    QModelIndex fidToIndex( QgsFeatureId fid ) override;
     QModelIndexList fidToIndexList( QgsFeatureId fid );
 
   public slots:
@@ -84,11 +104,11 @@ class QgsFeatureListModel : public QAbstractProxyModel, public QgsFeatureModel
     void onBeginInsertRows( const QModelIndex& parent, int first, int last );
     void onEndInsertRows( const QModelIndex& parent, int first, int last );
 
-
   private:
     QgsExpression* mExpression;
     QgsAttributeTableFilterModel* mFilterModel;
     QString mParserErrorString;
+    bool mInjectNull;
 };
 
 Q_DECLARE_METATYPE( QgsFeatureListModel::FeatureInfo )

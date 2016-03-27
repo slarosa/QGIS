@@ -15,13 +15,13 @@
  *                                                                         *
  ***************************************************************************/
 
-#include <QtGui>
+#include <QMessageBox>
+#include <QProgressDialog>
 
 #include "checkDock.h"
 
 #include <qgsvectordataprovider.h>
 #include <qgsvectorlayer.h>
-#include <qgsmaplayer.h>
 #include <qgsmaplayer.h>
 #include <qgsmaplayerregistry.h>
 #include <qgsgeometry.h>
@@ -71,9 +71,9 @@ checkDock::checkDock( QgisInterface* qIface, QWidget* parent )
   mRBFeature2 = new QgsRubberBand( canvas );
   mRBConflict = new QgsRubberBand( canvas );
 
-  mRBFeature1->setColor( "blue" );
-  mRBFeature2->setColor( "green" );
-  mRBConflict->setColor( "red" );
+  mRBFeature1->setColor( QColor( 0, 0, 255, 65 ) );
+  mRBFeature2->setColor( QColor( 0, 255, 0, 65 ) );
+  mRBConflict->setColor( QColor( 255, 0, 0, 65 ) );
 
   mRBFeature1->setWidth( 5 );
   mRBFeature2->setWidth( 5 );
@@ -149,9 +149,12 @@ void checkDock::deleteErrors()
 
   mErrorList.clear();
   mErrorListModel->resetModel();
+
+  qDeleteAll( mRbErrorMarkers );
+  mRbErrorMarkers.clear();
 }
 
-void checkDock::parseErrorListByLayer( QString layerId )
+void checkDock::parseErrorListByLayer( const QString& layerId )
 {
   QgsVectorLayer *layer = qobject_cast<QgsVectorLayer*>( mLayerRegistry->mapLayers()[layerId] );
   QList<TopolError*>::Iterator it = mErrorList.begin();
@@ -212,7 +215,7 @@ void checkDock::errorListClicked( const QModelIndex& index )
   mFixBox->setCurrentIndex( mFixBox->findText( tr( "Select automatic fix" ) ) );
 
   QgsFeature f;
-  QgsGeometry* g;
+  const QgsGeometry* g;
   FeatureLayer fl = mErrorList[row]->featurePairs().first();
   if ( !fl.layer )
   {
@@ -223,7 +226,7 @@ void checkDock::errorListClicked( const QModelIndex& index )
   //fl1.layer->getFeatures( QgsFeatureRequest().setFilterFid( fl1.feature.id() ) ).nextFeature( f1 );
 
   fl.layer->getFeatures( QgsFeatureRequest().setFilterFid( fl.feature.id() ) ).nextFeature( f );
-  g = f.geometry();
+  g = f.constGeometry();
   if ( !g )
   {
     QgsMessageLog::logMessage( tr( "Invalid first geometry" ), tr( "Topology plugin" ) );
@@ -256,7 +259,7 @@ void checkDock::errorListClicked( const QModelIndex& index )
 
 
   fl.layer->getFeatures( QgsFeatureRequest().setFilterFid( fl.feature.id() ) ).nextFeature( f );
-  g = f.geometry();
+  g = f.constGeometry();
   if ( !g )
   {
     QgsMessageLog::logMessage( tr( "Invalid second geometry" ), tr( "Topology plugin" ) );
@@ -363,7 +366,7 @@ void checkDock::runTests( ValidateType type )
       QSettings settings;
       if ( te->conflict()->type() == QGis::Polygon )
       {
-        rb = new QgsRubberBand( qgsInterface->mapCanvas(), true );
+        rb = new QgsRubberBand( qgsInterface->mapCanvas(), QGis::Polygon );
       }
       else
       {
@@ -379,7 +382,6 @@ void checkDock::runTests( ValidateType type )
     disconnect( mTest, SIGNAL( progress( int ) ), &progress, SLOT( setValue( int ) ) );
     mErrorList << errors;
   }
-  mMarkersVisible = true;
   mToggleRubberband->setChecked( true );
   mErrorListModel->resetModel();
 }
@@ -388,14 +390,7 @@ void checkDock::validate( ValidateType type )
 {
   mErrorList.clear();
 
-  QList<QgsRubberBand*>::const_iterator it;
-  for ( it = mRbErrorMarkers.begin(); it != mRbErrorMarkers.end(); ++it )
-  {
-    QgsRubberBand* rb = *it;
-    rb->reset();
-    delete rb;
-  }
-
+  qDeleteAll( mRbErrorMarkers );
   mRbErrorMarkers.clear();
 
   runTests( type );

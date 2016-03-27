@@ -22,8 +22,8 @@
 #include "qgsfeature.h"
 
 
-/**A map tool for showing or hidding a feature's label*/
-class QgsMapToolShowHideLabels : public QgsMapToolLabel
+/** A map tool for showing or hidding a feature's label*/
+class APP_EXPORT QgsMapToolShowHideLabels : public QgsMapToolLabel
 {
     Q_OBJECT
 
@@ -32,13 +32,13 @@ class QgsMapToolShowHideLabels : public QgsMapToolLabel
     ~QgsMapToolShowHideLabels();
 
     //! Overridden mouse move event
-    virtual void canvasMoveEvent( QMouseEvent * e );
+    virtual void canvasMoveEvent( QgsMapMouseEvent* e ) override;
 
     //! Overridden mouse press event
-    virtual void canvasPressEvent( QMouseEvent * e );
+    virtual void canvasPressEvent( QgsMapMouseEvent* e ) override;
 
     //! Overridden mouse release event
-    virtual void canvasReleaseEvent( QMouseEvent * e );
+    virtual void canvasReleaseEvent( QgsMapMouseEvent* e ) override;
 
   protected:
 
@@ -53,9 +53,6 @@ class QgsMapToolShowHideLabels : public QgsMapToolLabel
 
   private:
 
-    //! Pointer to map renderer
-    QgsMapRenderer* mRender;
-
     //! Select valid labels to pin or unpin
     void showHideLabels( QMouseEvent * e );
 
@@ -69,7 +66,7 @@ class QgsMapToolShowHideLabels : public QgsMapToolLabel
 
     //! Show or hide chosen label by setting data defined Show Label to 0
     bool showHideLabel( QgsVectorLayer* vlayer,
-                        int fid,
+                        const QgsFeatureId &fid,
                         bool hide );
 };
 

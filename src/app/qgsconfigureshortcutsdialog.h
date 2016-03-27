@@ -20,7 +20,7 @@
 
 #include "ui_qgsconfigureshortcutsdialog.h"
 
-class QgsConfigureShortcutsDialog : public QDialog, private Ui::QgsConfigureShortcutsDialog
+class APP_EXPORT QgsConfigureShortcutsDialog : public QDialog, private Ui::QgsConfigureShortcutsDialog
 {
     Q_OBJECT
 
@@ -31,13 +31,13 @@ class QgsConfigureShortcutsDialog : public QDialog, private Ui::QgsConfigureShor
     void populateActions();
 
   protected:
-    void keyPressEvent( QKeyEvent * event );
-    void keyReleaseEvent( QKeyEvent * event );
+    void keyPressEvent( QKeyEvent * event ) override;
+    void keyReleaseEvent( QKeyEvent * event ) override;
 
     QAction* currentAction();
 
     void setGettingShortcut( bool getting );
-    void setCurrentActionShortcut( QKeySequence s );
+    void setCurrentActionShortcut( const QKeySequence& s );
     void updateShortcutText();
 
   public slots:

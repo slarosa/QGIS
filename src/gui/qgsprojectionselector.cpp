@@ -26,16 +26,25 @@
 #include <QMessageBox>
 #include <QSettings>
 
-QgsProjectionSelector::QgsProjectionSelector( QWidget* parent, const char *name, Qt::WFlags fl )
+QgsProjectionSelector::QgsProjectionSelector( QWidget* parent, const char *name, const Qt::WindowFlags& fl )
     : QWidget( parent, fl )
+    , mUserProjList( NULL )
+    , mGeoList( NULL )
+    , mProjList( NULL )
     , mProjListDone( false )
     , mUserProjListDone( false )
     , mRecentProjListDone( false )
     , mSearchColumn( NONE )
-    , mSkipFirstRecent( true )
+    , mPushProjectionToFront( false )
 {
   Q_UNUSED( name );
   setupUi( this );
+
+  if ( qobject_cast<QDialog*>( parent ) )
+  {
+    // mark selected projection for push to front if parent dialog is accepted
+    connect( parent, SIGNAL( accepted() ), this, SLOT( pushProjectionToFront() ) );
+  }
 
   // Get the full path name to the sqlite3 spatial reference database.
   mSrsDatabaseFileName = QgsApplication::srsDbFilePath();
@@ -54,46 +63,16 @@ QgsProjectionSelector::QgsProjectionSelector( QWidget* parent, const char *name,
   // Hide (internal) ID column
   lstRecent->setColumnHidden( QGIS_CRS_ID_COLUMN, true );
 
-  // Read settings from persistent storage
-  QSettings settings;
-  mRecentProjections = settings.value( "/UI/recentProjections" ).toStringList();
-  /*** The reading (above) of internal id from persistent storage should be removed sometime in the future */
-  /*** This is kept now for backwards compatibility */
-
-  QStringList projectionsProj4  = settings.value( "/UI/recentProjectionsProj4" ).toStringList();
-  QStringList projectionsAuthId = settings.value( "/UI/recentProjectionsAuthId" ).toStringList();
-  if ( projectionsAuthId.size() >= mRecentProjections.size() )
-  {
-    // We had saved state with AuthId and Proj4. Use that instead
-    // to find out the crs id
-    QgsDebugMsg( "Use popular projection list from AuthId/Proj4 saved state" );
-    mRecentProjections.clear();
-    for ( int i = 0; i <  projectionsAuthId.size(); i++ )
-    {
-      // Create a crs from the EPSG
-      QgsCoordinateReferenceSystem crs;
-      crs.createFromOgcWmsCrs( projectionsAuthId.at( i ) );
-      if ( ! crs.isValid() )
-      {
-        // Couldn't create from EPSG, try the Proj4 string instead
-        if ( ! crs.createFromProj4( projectionsProj4.at( i ) ) )
-        {
-          // No? Skip this entry
-          continue;
-        }
-        //If the CRS can be created but do not correspond to a CRS in the database, skip it (for example a deleted custom CRS)
-        if ( crs.srsid() == 0 )
-        {
-          continue;
-        }
-      }
-      mRecentProjections << QString::number( crs.srsid() );
-    }
-  }
+  mRecentProjections = QgsCoordinateReferenceSystem::recentProjections();
 }
 
 QgsProjectionSelector::~QgsProjectionSelector()
 {
+  if ( !mPushProjectionToFront )
+  {
+    return;
+  }
+
   // Push current projection to front, only if set
   long crsId = selectedCrsId();
   if ( crsId == 0 )
@@ -160,6 +139,8 @@ void QgsProjectionSelector::showEvent( QShowEvent * theEvent )
   // apply deferred selection
   applySelection();
 
+  emit initialized();
+
   // Pass up the inheritance hierarchy
   QWidget::showEvent( theEvent );
 }
@@ -190,9 +171,9 @@ QString QgsProjectionSelector::ogcWmsCrsFilterAsSqlExpression( QSet<QString> * c
 
   // iterate through all incoming CRSs
 
-  foreach ( QString auth_id, crsFilter->values() )
+  Q_FOREACH ( const QString& auth_id, crsFilter->values() )
   {
-    QStringList parts = auth_id.split( ":" );
+    QStringList parts = auth_id.split( ':' );
 
     if ( parts.size() < 2 )
       continue;
@@ -203,18 +184,18 @@ QString QgsProjectionSelector::ogcWmsCrsFilterAsSqlExpression( QSet<QString> * c
   if ( authParts.isEmpty() )
     return sqlExpression;
 
-  if ( authParts.size() > 0 )
+  if ( !authParts.isEmpty() )
   {
     QString prefix = " AND (";
-    foreach ( QString auth_name, authParts.keys() )
+    Q_FOREACH ( const QString& auth_name, authParts.keys() )
     {
       sqlExpression += QString( "%1(upper(auth_name)='%2' AND upper(auth_id) IN ('%3'))" )
-                       .arg( prefix )
-                       .arg( auth_name )
-                       .arg( authParts[auth_name].join( "','" ) );
+                       .arg( prefix,
+                             auth_name,
+                             authParts[auth_name].join( "','" ) );
       prefix = " OR ";
     }
-    sqlExpression += ")";
+    sqlExpression += ')';
   }
 
   QgsDebugMsg( "exiting with '" + sqlExpression + "'." );
@@ -222,7 +203,7 @@ QString QgsProjectionSelector::ogcWmsCrsFilterAsSqlExpression( QSet<QString> * c
   return sqlExpression;
 }
 
-void QgsProjectionSelector::setSelectedCrsName( QString theCRSName )
+void QgsProjectionSelector::setSelectedCrsName( const QString& theCRSName )
 {
   applySelection( NAME_COLUMN, theCRSName );
 }
@@ -232,7 +213,7 @@ void QgsProjectionSelector::setSelectedCrsId( long theCRSID )
   applySelection( QGIS_CRS_ID_COLUMN, QString::number( theCRSID ) );
 }
 
-void QgsProjectionSelector::setSelectedAuthId( QString id )
+void QgsProjectionSelector::setSelectedAuthId( const QString& id )
 {
   applySelection( AUTHID_COLUMN, id );
 }
@@ -261,7 +242,7 @@ void QgsProjectionSelector::applySelection( int column, QString value )
     return;
 
   QList<QTreeWidgetItem*> nodes = lstCoordinateSystems->findItems( value, Qt::MatchExactly | Qt::MatchRecursive, column );
-  if ( nodes.count() > 0 )
+  if ( !nodes.isEmpty() )
   {
     QgsDebugMsg( QString( "found %1,%2" ).arg( column ).arg( value ) );
     lstCoordinateSystems->setCurrentItem( nodes.first() );
@@ -273,6 +254,7 @@ void QgsProjectionSelector::applySelection( int column, QString value )
     lstCoordinateSystems->clearSelection();
     lstRecent->clearSelection();
     teProjection->setText( "" );
+    teSelected->setText( "" );
   }
 }
 
@@ -282,7 +264,7 @@ void QgsProjectionSelector::insertRecent( long theCrsId )
     return;
 
   QList<QTreeWidgetItem*> nodes = lstCoordinateSystems->findItems( QString::number( theCrsId ), Qt::MatchExactly | Qt::MatchRecursive, QGIS_CRS_ID_COLUMN );
-  if ( nodes.count() == 0 )
+  if ( nodes.isEmpty() )
     return;
 
   lstRecent->insertTopLevelItem( 0, new QTreeWidgetItem( lstRecent, QStringList()
@@ -326,7 +308,7 @@ QString QgsProjectionSelector::selectedProj4String()
   {
     databaseFileName = QgsApplication::qgisUserDbFilePath();
     if ( !QFileInfo( databaseFileName ).exists() ) //its unlikely that this condition will ever be reached
-      return QString( "" );
+      return QString();
   }
   else //must be a system projection then
   {
@@ -368,7 +350,7 @@ QString QgsProjectionSelector::selectedProj4String()
   return projString;
 }
 
-QString QgsProjectionSelector::getSelectedExpression( QString expression )
+QString QgsProjectionSelector::getSelectedExpression( const QString& expression )
 {
   // Only return the attribute if there is a node in the tree
   // selected that has an srs_id.  This prevents error if the user
@@ -416,8 +398,8 @@ QString QgsProjectionSelector::getSelectedExpression( QString expression )
   const char *tail;
   sqlite3_stmt *stmt;
   QString sql = QString( "select %1 from tbl_srs where srs_id=%2" )
-                .arg( expression )
-                .arg( lvi->text( QGIS_CRS_ID_COLUMN ) );
+                .arg( expression,
+                      lvi->text( QGIS_CRS_ID_COLUMN ) );
 
   QgsDebugMsg( QString( "Finding selected attribute using : %1" ).arg( sql ) );
   rc = sqlite3_prepare( database, sql.toUtf8(), sql.toUtf8().length(), &stmt, &tail );
@@ -454,7 +436,6 @@ QString QgsProjectionSelector::selectedAuthId()
     return getSelectedExpression( "upper(auth_name||':'||auth_id)" );
 }
 
-
 long QgsProjectionSelector::selectedCrsId()
 {
   QTreeWidgetItem* item = lstCoordinateSystems->currentItem();
@@ -466,7 +447,7 @@ long QgsProjectionSelector::selectedCrsId()
 }
 
 
-void QgsProjectionSelector::setOgcWmsCrsFilter( QSet<QString> crsFilter )
+void QgsProjectionSelector::setOgcWmsCrsFilter( const QSet<QString>& crsFilter )
 {
   mCrsFilter = crsFilter;
   mProjListDone = false;
@@ -501,7 +482,7 @@ void QgsProjectionSelector::loadUserCrsList( QSet<QString> *crsFilter )
   // if it doesnt exist we copy it in from the global resources dir
 
   //return straight away if the user has not created any custom projections
-  if ( !QFileInfo( databaseFileName ).exists( ) )
+  if ( !QFileInfo( databaseFileName ).exists() )
   {
     QgsDebugMsg( "Users qgis.db not found...skipping" );
     mUserProjListDone = true;
@@ -600,22 +581,14 @@ void QgsProjectionSelector::loadCrsList( QSet<QString> *crsFilter )
     showDBMissingWarning( mSrsDatabaseFileName );
     return;
   }
-  // prepare the sql statement
+
   const char *tail;
   sqlite3_stmt *stmt;
-  // get total count of records in the projection table
-  QString sql = "select count(*) from tbl_srs";
-
-  rc = sqlite3_prepare( database, sql.toUtf8(), sql.toUtf8().length(), &stmt, &tail );
-  Q_ASSERT( rc == SQLITE_OK );
-  sqlite3_step( stmt );
-  sqlite3_finalize( stmt );
-
   // Set up the query to retrieve the projection information needed to populate the list
   //note I am giving the full field names for clarity here and in case someone
   //changes the underlying view TS
-  sql = QString( "select description, srs_id, upper(auth_name||':'||auth_id), is_geo, name, parameters, deprecated from vw_srs where %1 order by name,description" )
-        .arg( sqlFilter );
+  QString sql = QString( "select description, srs_id, upper(auth_name||':'||auth_id), is_geo, name, parameters, deprecated from vw_srs where %1 order by name,description" )
+                .arg( sqlFilter );
 
   rc = sqlite3_prepare( database, sql.toUtf8(), sql.toUtf8().length(), &stmt, &tail );
   // XXX Need to free memory from the error msg if one is set
@@ -657,7 +630,7 @@ void QgsProjectionSelector::loadCrsList( QSet<QString> *crsFilter )
         else
         { // Different from last one, need to search
           QList<QTreeWidgetItem*> nodes = lstCoordinateSystems->findItems( srsType, Qt::MatchExactly | Qt::MatchRecursive, NAME_COLUMN );
-          if ( nodes.count() == 0 )
+          if ( nodes.isEmpty() )
           {
             // the node doesn't exist -- create it
             // Make in an italic font to distinguish them from real projections
@@ -720,9 +693,10 @@ void QgsProjectionSelector::on_lstCoordinateSystems_currentItemChanged( QTreeWid
     emit sridSelected( QString::number( selectedCrsId() ) );
 
     teProjection->setText( selectedProj4String() );
+    teSelected->setText( selectedName() );
 
     QList<QTreeWidgetItem*> nodes = lstRecent->findItems( current->text( QGIS_CRS_ID_COLUMN ), Qt::MatchExactly, QGIS_CRS_ID_COLUMN );
-    if ( nodes.count() > 0 )
+    if ( !nodes.isEmpty() )
     {
       QgsDebugMsg( QString( "found srs %1 in recent" ).arg( current->text( QGIS_CRS_ID_COLUMN ) ) );
       lstRecent->setCurrentItem( nodes.first() );
@@ -739,6 +713,7 @@ void QgsProjectionSelector::on_lstCoordinateSystems_currentItemChanged( QTreeWid
     // Not an CRS - remove the highlight so the user doesn't get too confused
     current->setSelected( false );
     teProjection->setText( "" );
+    teSelected->setText( "" );
     lstRecent->clearSelection();
   }
 }
@@ -746,12 +721,6 @@ void QgsProjectionSelector::on_lstCoordinateSystems_currentItemChanged( QTreeWid
 void QgsProjectionSelector::on_lstRecent_currentItemChanged( QTreeWidgetItem *current, QTreeWidgetItem * )
 {
   QgsDebugMsg( "Entered." );
-
-  if ( mSkipFirstRecent )
-  {
-    mSkipFirstRecent = false;
-    return;
-  }
 
   if ( !current )
   {
@@ -762,7 +731,7 @@ void QgsProjectionSelector::on_lstRecent_currentItemChanged( QTreeWidgetItem *cu
   lstRecent->scrollToItem( current );
 
   QList<QTreeWidgetItem*> nodes = lstCoordinateSystems->findItems( current->text( QGIS_CRS_ID_COLUMN ), Qt::MatchExactly | Qt::MatchRecursive, QGIS_CRS_ID_COLUMN );
-  if ( nodes.count() > 0 )
+  if ( !nodes.isEmpty() )
     lstCoordinateSystems->setCurrentItem( nodes.first() );
 }
 
@@ -775,6 +744,7 @@ void QgsProjectionSelector::hideDeprecated( QTreeWidgetItem *item )
     {
       item->setSelected( false );
       teProjection->setText( "" );
+      teSelected->setText( "" );
     }
   }
 
@@ -858,7 +828,14 @@ void QgsProjectionSelector::on_leSearch_textChanged( const QString & theFilterTx
 }
 
 
-long QgsProjectionSelector::getLargestCRSIDMatch( QString theSql )
+void QgsProjectionSelector::pushProjectionToFront()
+{
+  // set flag to push selected projection to front in destructor
+  mPushProjectionToFront = true;
+}
+
+
+long QgsProjectionSelector::getLargestCRSIDMatch( const QString& theSql )
 {
   long srsId = 0;
 
@@ -961,7 +938,7 @@ QStringList QgsProjectionSelector::authorities()
   return authorities;
 }
 
-/*!linfinity qtcreator qgis
+/** Linfinity qtcreator qgis
 * \brief Make the string safe for use in SQL statements.
 *  This involves escaping single quotes, double quotes, backslashes,
 *  and optionally, percentage symbols.  Percentage symbols are used
@@ -970,17 +947,17 @@ QStringList QgsProjectionSelector::authorities()
 * \arg const QString in The input string to make safe.
 * \return The string made safe for SQL statements.
 */
-const QString QgsProjectionSelector::sqlSafeString( const QString theSQL )
+const QString QgsProjectionSelector::sqlSafeString( const QString& theSQL )
 {
   QString retval = theSQL;
-  retval.replace( "\\", "\\\\" );
+  retval.replace( '\\', "\\\\" );
   retval.replace( '\"', "\\\"" );
-  retval.replace( "\'", "\\'" );
-  retval.replace( "%", "\\%" );
+  retval.replace( '\'', "\\'" );
+  retval.replace( '%', "\\%" );
   return retval;
 }
 
-void QgsProjectionSelector::showDBMissingWarning( const QString theFileName )
+void QgsProjectionSelector::showDBMissingWarning( const QString& theFileName )
 {
 
   QMessageBox::critical( this, tr( "Resource Location Error" ),

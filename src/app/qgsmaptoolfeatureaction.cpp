@@ -28,10 +28,10 @@
 #include "qgsvectorlayer.h"
 #include "qgsproject.h"
 #include "qgsmaplayerregistry.h"
+#include "qgsmaplayeractionregistry.h"
 #include "qgisapp.h"
 
 #include <QSettings>
-#include <QMessageBox>
 #include <QMouseEvent>
 #include <QStatusBar>
 
@@ -44,30 +44,23 @@ QgsMapToolFeatureAction::~QgsMapToolFeatureAction()
 {
 }
 
-void QgsMapToolFeatureAction::canvasMoveEvent( QMouseEvent *e )
+void QgsMapToolFeatureAction::canvasMoveEvent( QgsMapMouseEvent* e )
 {
   Q_UNUSED( e );
 }
 
-void QgsMapToolFeatureAction::canvasPressEvent( QMouseEvent *e )
+void QgsMapToolFeatureAction::canvasPressEvent( QgsMapMouseEvent* e )
 {
   Q_UNUSED( e );
 }
 
-void QgsMapToolFeatureAction::canvasReleaseEvent( QMouseEvent *e )
+void QgsMapToolFeatureAction::canvasReleaseEvent( QgsMapMouseEvent* e )
 {
-  if ( !mCanvas || mCanvas->isDrawing() )
-  {
-    return;
-  }
-
   QgsMapLayer *layer = mCanvas->currentLayer();
 
   if ( !layer || layer->type() != QgsMapLayer::VectorLayer )
   {
-    QMessageBox::warning( mCanvas,
-                          tr( "No active vector layer" ),
-                          tr( "To run an action, you must choose a vector layer by clicking on its name in the legend" ) );
+    emit messageEmitted( tr( "To run an action, you must choose an active vector layer." ), QgsMessageBar::INFO );
     return;
   }
 
@@ -78,11 +71,9 @@ void QgsMapToolFeatureAction::canvasReleaseEvent( QMouseEvent *e )
   }
 
   QgsVectorLayer *vlayer = qobject_cast<QgsVectorLayer *>( layer );
-  if ( vlayer->actions()->size() == 0 )
+  if ( vlayer->actions()->size() == 0 && QgsMapLayerActionRegistry::instance()->mapLayerActions( vlayer ).isEmpty() )
   {
-    QMessageBox::warning( mCanvas,
-                          tr( "No actions available" ),
-                          tr( "The active vector layer has no defined actions" ) );
+    emit messageEmitted( tr( "The active vector layer has no defined actions" ), QgsMessageBar::INFO );
     return;
   }
 
@@ -107,13 +98,6 @@ bool QgsMapToolFeatureAction::doAction( QgsVectorLayer *layer, int x, int y )
 
   QgsPoint point = mCanvas->getCoordinateTransform()->toMapCoordinates( x, y );
 
-  // load identify radius from settings
-  QSettings settings;
-  double identifyValue = settings.value( "/Map/identifyRadius", QGis::DEFAULT_IDENTIFY_RADIUS ).toDouble();
-
-  if ( identifyValue <= 0.0 )
-    identifyValue = QGis::DEFAULT_IDENTIFY_RADIUS;
-
   QgsFeatureList featList;
 
   // toLayerCoordinates will throw an exception for an 'invalid' point.
@@ -122,7 +106,7 @@ bool QgsMapToolFeatureAction::doAction( QgsVectorLayer *layer, int x, int y )
   try
   {
     // create the search rectangle
-    double searchRadius = mCanvas->extent().width() * ( identifyValue / 100.0 );
+    double searchRadius = searchRadiusMU( mCanvas );
 
     QgsRectangle r;
     r.setXMinimum( point.x() - searchRadius );
@@ -144,21 +128,31 @@ bool QgsMapToolFeatureAction::doAction( QgsVectorLayer *layer, int x, int y )
     QgsDebugMsg( QString( "Caught CRS exception %1" ).arg( cse.what() ) );
   }
 
-  if ( featList.size() == 0 )
+  if ( featList.isEmpty() )
     return false;
 
-  foreach ( QgsFeature feat, featList )
+  Q_FOREACH ( const QgsFeature& feat, featList )
   {
-    int actionIdx = layer->actions()->defaultAction();
+    if ( layer->actions()->defaultAction() >= 0 )
+    {
+      // define custom substitutions: layer id and clicked coords
+      QMap<QString, QVariant> substitutionMap;
+      substitutionMap.insert( "$layerid", layer->id() );
+      point = toLayerCoordinates( layer, point );
+      substitutionMap.insert( "$clickx", point.x() );
+      substitutionMap.insert( "$clicky", point.y() );
 
-    // define custom substitutions: layer id and clicked coords
-    QMap<QString, QVariant> substitutionMap;
-    substitutionMap.insert( "$layerid", layer->id() );
-    point = toLayerCoordinates( layer, point );
-    substitutionMap.insert( "$clickx", point.x() );
-    substitutionMap.insert( "$clicky", point.y() );
-
-    layer->actions()->doAction( actionIdx, feat, &substitutionMap );
+      int actionIdx = layer->actions()->defaultAction();
+      layer->actions()->doAction( actionIdx, feat, &substitutionMap );
+    }
+    else
+    {
+      QgsMapLayerAction* mapLayerAction = QgsMapLayerActionRegistry::instance()->defaultActionForLayer( layer );
+      if ( mapLayerAction )
+      {
+        mapLayerAction->triggerForFeature( layer, &feat );
+      }
+    }
   }
 
   return true;

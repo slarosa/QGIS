@@ -14,7 +14,7 @@ class QgsLabel
     /* Fields */
     enum LabelField
     {
-      Text = 0,
+      Text,
       Family,
       Size,
       SizeType,
@@ -36,7 +36,7 @@ class QgsLabel
       BorderColor,
       BorderStyle,
       MultilineEnabled,
-      StrikeOut,     // added in 1.5
+      StrikeOut,
       LabelFieldCount
     };
 
@@ -51,7 +51,6 @@ class QgsLabel
      *  \param feature feature to render the label for
      *  \param selected feature is selected
      *  \param classAttributes attributes to create the label from
-     *  \note added in 1.2
      */
     void renderLabel( QgsRenderContext &renderContext, QgsFeature &feature, bool selected, QgsLabelAttributes *classAttributes = 0 );
 
@@ -70,7 +69,7 @@ class QgsLabel
     void setFields( const QgsFields & fields );
 
     //! Available vector fields
-    const QgsFields & fields();
+    QgsFields & fields();
 
     /** Pointer to default attributes.
      * @note this replaces the to-be-deprecated layerAttributes method.

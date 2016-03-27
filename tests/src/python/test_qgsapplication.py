@@ -7,11 +7,14 @@ the Free Software Foundation; either version 2 of the License, or
 """
 __author__ = 'Tim Sutton (tim@linfiniti.com)'
 __date__ = '20/01/2011'
-__copyright__ = 'Copyright 2012, The Quantum GIS Project'
+__copyright__ = 'Copyright 2012, The QGIS Project'
 # This will get replaced with a git SHA1 when you do a git archive
 __revision__ = '$Format:%H$'
 
-from utilities import getQgisTestApp, unittest
+import qgis
+from utilities import getQgisTestApp, unittest, expectedFailure
+
+
 QGISAPP, CANVAS, IFACE, PARENT = getQgisTestApp()
 
 
@@ -19,13 +22,12 @@ class TestPyQgsApplication(unittest.TestCase):
 
     def testInvalidThemeName(self):
         """Check using an invalid theme will fallback to  'default'"""
-        QGISAPP.setThemeName('fooobar')
+        QGISAPP.setUITheme('fooobar')
         myExpectedResult = 'default'
         myResult = QGISAPP.themeName()
         myMessage = ('Expected:\n%s\nGot:\n%s\n' %
-                      (myExpectedResult, myResult))
+                     (myExpectedResult, myResult))
         assert myExpectedResult == myResult, myMessage
 
 if __name__ == '__main__':
     unittest.main()
-

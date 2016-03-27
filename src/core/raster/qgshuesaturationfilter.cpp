@@ -23,12 +23,15 @@
 
 
 QgsHueSaturationFilter::QgsHueSaturationFilter( QgsRasterInterface* input )
-    : QgsRasterInterface( input ),
-    mSaturation( 0 ),
-    mGrayscaleMode( QgsHueSaturationFilter::GrayscaleOff ),
-    mColorizeOn( false ),
-    mColorizeColor( QColor::fromRgb( 255, 128, 128 ) ),
-    mColorizeStrength( 100 )
+    : QgsRasterInterface( input )
+    , mSaturation( 0 )
+    , mSaturationScale( 1 )
+    , mGrayscaleMode( QgsHueSaturationFilter::GrayscaleOff )
+    , mColorizeOn( false )
+    , mColorizeColor( QColor::fromRgb( 255, 128, 128 ) )
+    , mColorizeH( 0 )
+    , mColorizeS( 50 )
+    , mColorizeStrength( 100 )
 {
 }
 
@@ -36,7 +39,7 @@ QgsHueSaturationFilter::~QgsHueSaturationFilter()
 {
 }
 
-QgsRasterInterface * QgsHueSaturationFilter::clone() const
+QgsHueSaturationFilter* QgsHueSaturationFilter::clone() const
 {
   QgsDebugMsg( "Entered hue/saturation filter" );
   QgsHueSaturationFilter * filter = new QgsHueSaturationFilter( 0 );
@@ -157,7 +160,7 @@ QgsRasterBlock * QgsHueSaturationFilter::block( int bandNo, QgsRectangle  const 
   int r, g, b, alpha;
   double alphaFactor = 1.0;
 
-  for ( size_t i = 0; i < ( size_t )width*height; i++ )
+  for ( qgssize i = 0; i < ( qgssize )width*height; i++ )
   {
     if ( inputBlock->color( i ) == myNoDataColor )
     {
@@ -170,6 +173,13 @@ QgsRasterBlock * QgsHueSaturationFilter::block( int bandNo, QgsRectangle  const 
 
     // Alpha must be taken from QRgb, since conversion from QRgb->QColor loses alpha
     alpha = qAlpha( myRgb );
+
+    if ( alpha == 0 )
+    {
+      // totally transparent, no changes required
+      outputBlock->setColor( i, myRgb );
+      continue;
+    }
 
     // Get rgb for color
     myColor.getRgb( &r, &g, &b );
@@ -305,7 +315,7 @@ void QgsHueSaturationFilter::processSaturation( int &r, int &g, int &b, int &h, 
       {
         // Raising the saturation. Use a saturation curve to prevent
         // clipping at maximum saturation with ugly results.
-        s = qMin(( int )( 255. * ( 1 - pow( 1 - ( s / 255. )  , pow( mSaturationScale, 2 ) ) ) ), 255 );
+        s = qMin(( int )( 255. * ( 1 - pow( 1 - ( s / 255. ), pow( mSaturationScale, 2 ) ) ) ), 255 );
       }
 
       // Saturation changed, so update rgb values
@@ -324,7 +334,7 @@ void QgsHueSaturationFilter::setSaturation( int saturation )
   mSaturationScale = (( double ) mSaturation / 100 ) + 1;
 }
 
-void QgsHueSaturationFilter::setColorizeColor( QColor colorizeColor )
+void QgsHueSaturationFilter::setColorizeColor( const QColor& colorizeColor )
 {
   mColorizeColor = colorizeColor;
 

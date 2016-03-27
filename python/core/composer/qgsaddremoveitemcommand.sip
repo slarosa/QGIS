@@ -9,11 +9,11 @@ class QgsAddRemoveItemCommand: QObject, QUndoCommand
 
     enum State
     {
-      Added = 0,
+      Added,
       Removed
     };
 
-    QgsAddRemoveItemCommand( State s, QgsComposerItem* item, QgsComposition* c, const QString& text, QUndoCommand* parent = 0 );
+    QgsAddRemoveItemCommand( State s, QgsComposerItem* item, QgsComposition* c, const QString& text, QUndoCommand* parent /TransferThis/ = 0 );
     ~QgsAddRemoveItemCommand();
 
     void redo();

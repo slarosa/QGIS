@@ -28,11 +28,13 @@
 #
 #---------------------------------------------------------------------
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt4.QtCore import QObject, SIGNAL, QVariant, QFile
+from PyQt4.QtGui import QDialog, QDialogButtonBox, QMessageBox
+from qgis.core import QGis, QgsVectorFileWriter, QgsVectorLayer, QgsMapLayerRegistry, QgsFields, QgsField, QgsFeature, QgsGeometry, NULL
+
 import ftools_utils
-from qgis.core import *
 from ui_frmSpatialJoin import Ui_Dialog
+
 
 def myself(L):
     #median computation
@@ -43,13 +45,19 @@ def myself(L):
     #test for list length
     medianVal = 0
     if nVal > 1:
-        if ( nVal % 2 ) == 0:
+        if (nVal % 2) == 0:
             #index begin at 0
             #remove 1 to index in standard median computation
-            medianVal = 0.5 * ( (L[ (nVal) / 2  - 1]) + (L[ (nVal) / 2 ] ))
+            medianVal = 0.5 * ((L[(nVal) / 2 - 1]) + (L[(nVal) / 2]))
         else:
-            medianVal = L[ (nVal + 1) / 2 - 1]
+            medianVal = L[(nVal + 1) / 2 - 1]
     return medianVal
+
+
+def filter_null(vals):
+    """Takes an iterator of values and returns a new iterator returning the same values but skipping any NULL values"""
+    return (v for v in vals if v is not None)
+
 
 class Dialog(QDialog, Ui_Dialog):
 
@@ -59,25 +67,24 @@ class Dialog(QDialog, Ui_Dialog):
         # Set up the user interface from Designer.
         self.setupUi(self)
         QObject.connect(self.toolOut, SIGNAL("clicked()"), self.outFile)
-        self.setWindowTitle( self.tr("Join attributes by location") )
-        self.buttonOk = self.buttonBox_2.button( QDialogButtonBox.Ok )
+        self.setWindowTitle(self.tr("Join attributes by location"))
+        self.buttonOk = self.buttonBox_2.button(QDialogButtonBox.Ok)
         # populate layer list
         self.progressBar.setValue(0)
-        mapCanvas = self.iface.mapCanvas()
         layers = ftools_utils.getLayerNames([QGis.Point, QGis.Line, QGis.Polygon])
         self.inShape.addItems(layers)
         self.joinShape.addItems(layers)
 
     def accept(self):
-        self.buttonOk.setEnabled( False )
+        self.buttonOk.setEnabled(False)
         if self.inShape.currentText() == "":
-            QMessageBox.information(self, self.tr("Spatial Join"), self.tr("Please specify target vector layer") )
+            QMessageBox.information(self, self.tr("Spatial Join"), self.tr("Please specify target vector layer"))
         elif self.outShape.text() == "":
-            QMessageBox.information(self, self.tr("Spatial Join"), self.tr("Please specify output shapefile") )
+            QMessageBox.information(self, self.tr("Spatial Join"), self.tr("Please specify output shapefile"))
         elif self.joinShape.currentText() == "":
-            QMessageBox.information(self, self.tr("Spatial Join"), self.tr("Please specify join vector layer") )
+            QMessageBox.information(self, self.tr("Spatial Join"), self.tr("Please specify join vector layer"))
         elif self.rdoSummary.isChecked() and not (self.chkMean.isChecked() or self.chkSum.isChecked() or self.chkMin.isChecked() or self.chkMax.isChecked() or self.chkMean.isChecked() or self.chkMedian.isChecked()):
-            QMessageBox.information(self, self.tr("Spatial Join"), self.tr("Please specify at least one summary statistic") )
+            QMessageBox.information(self, self.tr("Spatial Join"), self.tr("Please specify at least one summary statistic"))
         else:
             inName = self.inShape.currentText()
             joinName = self.joinShape.currentText()
@@ -85,51 +92,54 @@ class Dialog(QDialog, Ui_Dialog):
             if self.rdoSummary.isChecked():
                 summary = True
                 sumList = []
-                if self.chkSum.isChecked(): sumList.append("SUM")
-                if self.chkMean.isChecked(): sumList.append("MEAN")
-                if self.chkMin.isChecked(): sumList.append("MIN")
-                if self.chkMax.isChecked(): sumList.append("MAX")
-                if self.chkMedian.isChecked(): sumList.append("MED")
+                if self.chkSum.isChecked():
+                    sumList.append("SUM")
+                if self.chkMean.isChecked():
+                    sumList.append("MEAN")
+                if self.chkMin.isChecked():
+                    sumList.append("MIN")
+                if self.chkMax.isChecked():
+                    sumList.append("MAX")
+                if self.chkMedian.isChecked():
+                    sumList.append("MED")
             else:
                 summary = False
                 sumList = ["all"]
-            if self.rdoKeep.isChecked(): keep = True
-            else: keep = False
-            if outPath.contains("\\"):
-                outName = outPath.right((outPath.length() - outPath.lastIndexOf("\\")) - 1)
+            if self.rdoKeep.isChecked():
+                keep = True
             else:
-                outName = outPath.right((outPath.length() - outPath.lastIndexOf("/")) - 1)
-            if outName.endsWith(".shp"):
-                outName = outName.left(outName.length() - 4)
+                keep = False
+            outName = ftools_utils.getShapefileName(outPath)
             res = self.compute(inName, joinName, outPath, summary, sumList, keep, self.progressBar)
             self.outShape.clear()
             if res:
-              addToTOC = QMessageBox.question(self, self.tr("Spatial Join"),
-                      self.tr("Created output shapefile:\n%1\n\nWould you like to add the new layer to the TOC?")
-                      .arg(unicode(outPath)), QMessageBox.Yes, QMessageBox.No, QMessageBox.NoButton)
-              if addToTOC == QMessageBox.Yes:
-                self.vlayer = QgsVectorLayer(outPath, unicode(outName), "ogr")
-                QgsMapLayerRegistry.instance().addMapLayers([self.vlayer])
+                addToTOC = QMessageBox.question(
+                    self, self.tr("Spatial Join"),
+                    self.tr("Created output shapefile:\n%s\n\nWould you like to add the new layer to the TOC?") % (unicode(outPath)),
+                    QMessageBox.Yes, QMessageBox.No, QMessageBox.NoButton)
+                if addToTOC == QMessageBox.Yes:
+                    self.vlayer = QgsVectorLayer(outPath, unicode(outName), "ogr")
+                    QgsMapLayerRegistry.instance().addMapLayers([self.vlayer])
         self.progressBar.setValue(0)
-        self.buttonOk.setEnabled( True )
+        self.buttonOk.setEnabled(True)
 
     def outFile(self):
         self.outShape.clear()
-        ( self.shapefileName, self.encoding ) = ftools_utils.saveDialog( self )
+        (self.shapefileName, self.encoding) = ftools_utils.saveDialog(self)
         if self.shapefileName is None or self.encoding is None:
             return
-        self.outShape.setText( QString( self.shapefileName ) )
+        self.outShape.setText(self.shapefileName)
 
     def compute(self, inName, joinName, outName, summary, sumList, keep, progressBar):
         layer1 = ftools_utils.getVectorLayerByName(inName)
         provider1 = layer1.dataProvider()
-        fieldList1 = ftools_utils.getFieldList(layer1).toList()
+        fieldList1 = ftools_utils.getFieldList(layer1)
 
         layer2 = ftools_utils.getVectorLayerByName(joinName)
         provider2 = layer2.dataProvider()
 
-        fieldList2 = ftools_utils.getFieldList(layer2).toList()
-        fieldList = []
+        fieldList2 = ftools_utils.getFieldList(layer2)
+        fieldList = QgsFields()
         if provider1.crs() != provider2.crs():
             QMessageBox.warning(self, self.tr("CRS warning!"), self.tr("Warning: Input layers have non-matching CRS.\nThis may cause unexpected results."))
         if not summary:
@@ -143,35 +153,27 @@ class Dialog(QDialog, Ui_Dialog):
                 if fieldList2[j].type() == QVariant.Int or fieldList2[j].type() == QVariant.Double:
                     numFields[j] = []
                     for i in sumList:
-                        field = QgsField(i + unicode(fieldList2[j].name()), QVariant.Double, "real", 24, 16, self.tr("Summary field") )
+                        field = QgsField(i + unicode(fieldList2[j].name()), QVariant.Double, "real", 24, 16, self.tr("Summary field"))
                         fieldList.append(field)
-            field = QgsField("COUNT", QVariant.Double, "real", 24, 16, self.tr("Summary field") )
+            field = QgsField("COUNT", QVariant.Double, "real", 24, 16, self.tr("Summary field"))
             fieldList.append(field)
             fieldList2 = ftools_utils.testForUniqueness(fieldList1, fieldList)
             fieldList1.extend(fieldList)
             seq = range(0, len(fieldList1))
             fieldList1 = dict(zip(seq, fieldList1))
 
-        # check for correct field names
-        print fieldList1
-        longNames = ftools_utils.checkFieldNameLength( fieldList1.values() )
-        if not longNames.isEmpty():
-            QMessageBox.warning( self, self.tr( 'Incorrect field names' ),
-                        self.tr( 'No output will be created.\nFollowing field names are longer than 10 characters:\n%1' )
-                        .arg( longNames.join( '\n' ) ) )
-            return False
-
         sRs = provider1.crs()
         progressBar.setValue(13)
         check = QFile(self.shapefileName)
         if check.exists():
             if not QgsVectorFileWriter.deleteShapeFile(self.shapefileName):
-                QMessageBox.warning( self, self.tr( 'Error deleting shapefile' ),
-                            self.tr( "Can't delete existing shapefile\n%1" ).arg( self.shapefileName ) )
+                QMessageBox.warning(
+                    self, self.tr('Error deleting shapefile'),
+                    self.tr("Can't delete existing shapefile\n%s") % (self.shapefileName))
                 return False
         fields = QgsFields()
         for f in fieldList1.values():
-          fields.append(f)
+            fields.append(f)
         writer = QgsVectorFileWriter(self.shapefileName, self.encoding, fields, provider1.geometryType(), sRs)
         #writer = QgsVectorFileWriter(outName, "UTF-8", fieldList1, provider1.geometryType(), sRs)
         inFeat = QgsFeature()
@@ -183,6 +185,12 @@ class Dialog(QDialog, Ui_Dialog):
         add = 85.00 / provider1.featureCount()
 
         index = ftools_utils.createIndex(provider2)
+
+        # cache all features from provider2 to avoid huge number of feature requests in the inner loop
+        mapP2 = {}
+        for f in provider2.getFeatures():
+            mapP2[f.id()] = QgsFeature(f)
+
         fit1 = provider1.getFeatures()
         while fit1.nextFeature(inFeat):
             inGeom = inFeat.geometry()
@@ -194,23 +202,25 @@ class Dialog(QDialog, Ui_Dialog):
                 #(check, joinList) = layer2.featuresInRectangle(inGeom.buffer(10,2).boundingBox(), True, True)
                 #layer2.select(inGeom.buffer(10,2).boundingBox(), False)
                 #joinList = layer2.selectedFeatures()
-                joinList = index.intersects( inGeom.buffer(10,2).boundingBox() )
-                if len(joinList) > 0: check = 0
-                else: check = 1
+                joinList = index.intersects(inGeom.buffer(10, 2).boundingBox())
+                if len(joinList) > 0:
+                    check = 0
+                else:
+                    check = 1
             else:
                 #(check, joinList) = layer2.featuresInRectangle(inGeom.boundingBox(), True, True)
                 #layer2.select(inGeom.boundingBox(), False)
                 #joinList = layer2.selectedFeatures()
-                joinList = index.intersects( inGeom.boundingBox() )
-                if len(joinList) > 0: check = 0
-                else: check = 1
+                joinList = index.intersects(inGeom.boundingBox())
+                if len(joinList) > 0:
+                    check = 0
+                else:
+                    check = 1
             if check == 0:
                 count = 0
                 for i in joinList:
-                    #tempGeom = i.geometry()
-                    provider2.getFeatures( QgsFeatureRequest().setFilterFid( int(i) ) ).nextFeature( inFeatB )
-                    tmpGeom = QgsGeometry( inFeatB.geometry() )
-                    if inGeom.intersects(tmpGeom):
+                    inFeatB = mapP2[i]  # cached feature from provider2
+                    if inGeom.intersects(inFeatB.geometry()):
                         count = count + 1
                         none = False
                         atMap2 = inFeatB.attributes()
@@ -222,18 +232,34 @@ class Dialog(QDialog, Ui_Dialog):
                             break
                         else:
                             for j in numFields.keys():
-                                numFields[j].append(atMap2[j].toDouble()[0])
+                                numFields[j].append(atMap2[j])
                 if summary and not none:
                     atMap = atMap1
                     for j in numFields.keys():
                         for k in sumList:
-                            if k == "SUM": atMap.append(QVariant(sum(numFields[j])))
-                            elif k == "MEAN": atMap.append(QVariant(sum(numFields[j]) / count))
-                            elif k == "MIN": atMap.append(QVariant(min(numFields[j])))
-                            elif k == "MED": atMap.append(QVariant(myself(numFields[j])))
-                            else: atMap.append(QVariant(max(numFields[j])))
+                            if k == "SUM":
+                                atMap.append(sum(filter_null(numFields[j])))
+                            elif k == "MEAN":
+                                try:
+                                    nn_count = sum(1 for _ in filter_null(numFields[j]))
+                                    atMap.append(sum(filter_null(numFields[j])) / nn_count)
+                                except ZeroDivisionError:
+                                    atMap.append(NULL)
+                            elif k == "MIN":
+                                try:
+                                    atMap.append(min(filter_null(numFields[j])))
+                                except ValueError:
+                                    atMap.append(NULL)
+                            elif k == "MED":
+                                atMap.append(myself(numFields[j]))
+                            else:
+                                try:
+                                    atMap.append(max(filter_null(numFields[j])))
+                                except ValueError:
+                                    atMap.append(NULL)
+
                         numFields[j] = []
-                    atMap.append(QVariant(count))
+                    atMap.append(count)
                     atMap = dict(zip(seq, atMap))
             if none:
                 outFeat.setAttributes(atMap1)

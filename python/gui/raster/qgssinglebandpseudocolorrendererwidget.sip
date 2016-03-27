@@ -5,6 +5,12 @@ class QgsSingleBandPseudoColorRendererWidget : QgsRasterRendererWidget
 %End
 
   public:
+    enum Mode
+    {
+      Continuous,    // Using breaks from color palette
+      EqualInterval,
+    };
+
     QgsSingleBandPseudoColorRendererWidget( QgsRasterLayer* layer, const QgsRectangle &extent = QgsRectangle() );
     ~QgsSingleBandPseudoColorRendererWidget();
 

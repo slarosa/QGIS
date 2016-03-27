@@ -20,8 +20,8 @@
 #define QGSPLUGINREGISTRY_H
 
 #include <QMap>
+#include "qgspluginmetadata.h"
 
-class QgsPluginMetadata;
 class QgsPythonUtils;
 class QgisPlugin;
 class QgisInterface;
@@ -34,9 +34,9 @@ class QString;
 *
 * plugin key is:
 * - C++ plugins: base name of plugin library, e.g. libgrassplugin
-* - Python plugins: module name (directory) of plugin, e.g. plugin_installer
+* - Python plugins: module name (directory) of plugin, e.g. db_manager
 */
-class QgsPluginRegistry
+class APP_EXPORT QgsPluginRegistry
 {
   public:
     //! Returns the instance pointer, creating the object on the first call
@@ -46,22 +46,22 @@ class QgsPluginRegistry
     void setQgisInterface( QgisInterface* iface );
 
     //! Check whether this module is loaded
-    bool isLoaded( QString key );
+    bool isLoaded( const QString& key ) const;
 
     //! Retrieve library of the plugin
-    QString library( QString key );
+    QString library( const QString& key );
 
     //! Retrieve a pointer to a loaded plugin
-    QgisPlugin * plugin( QString key );
+    QgisPlugin * plugin( const QString& key );
 
     //! Return whether the plugin is pythonic
-    bool isPythonPlugin( QString key );
+    bool isPythonPlugin( const QString& key ) const;
 
     //! Add a plugin to the map of loaded plugins
-    void addPlugin( QString key, QgsPluginMetadata metadata );
+    void addPlugin( const QString& key, const QgsPluginMetadata& metadata );
 
     //! Remove a plugin from the list of loaded plugins
-    void removePlugin( QString key );
+    void removePlugin( const QString& key );
 
     //! Unload plugins
     void unloadAll();
@@ -73,17 +73,22 @@ class QgsPluginRegistry
     void dump();
 
     //! C++ plugin loader
-    void loadCppPlugin( QString mFullPath );
+    void loadCppPlugin( const QString& mFullPath );
     //! Python plugin loader
-    void loadPythonPlugin( QString packageName );
+    void loadPythonPlugin( const QString& packageName );
+
+    //! C++ plugin unloader
+    void unloadCppPlugin( const QString& theFullPathName );
+    //! Python plugin unloader
+    void unloadPythonPlugin( const QString& packageName );
 
     //! Overloaded version of the next method that will load from multiple directories not just one
-    void restoreSessionPlugins( QStringList thePluginDirList );
+    void restoreSessionPlugins( const QStringList& thePluginDirList );
     //! Load any plugins used in the last qgis session
-    void restoreSessionPlugins( QString thePluginDirString );
+    void restoreSessionPlugins( const QString& thePluginDirString );
 
     //! Check whether plugin is compatible with current version of QGIS
-    bool isPythonPluginCompatible( QString packageName );
+    bool isPythonPluginCompatible( const QString& packageName ) const;
 
     //! Returns metadata of all loaded plugins
     QList<QgsPluginMetadata*> pluginData();
@@ -93,12 +98,13 @@ class QgsPluginRegistry
     QgsPluginRegistry();
 
     //! Try to load and get metadata from c++ plugin, return true on success
-    bool checkCppPlugin( QString pluginFullPath );
+    bool checkCppPlugin( const QString& pluginFullPath );
     //! Try to load and get metadata from Python plugin, return true on success
-    bool checkPythonPlugin( QString packageName );
+    bool checkPythonPlugin( const QString& packageName );
 
-    //! Check current QGIS version against plugin's minimal requested QGIS version
-    bool checkQgisVersion( QString minVersion );
+    //! Check current QGIS version against requested minimal and optionally maximal QGIS version
+    //! if maxVersion not specified, the default value is assumed: floor(minVersion) + 0.99.99
+    bool checkQgisVersion( const QString& minVersion, const QString& maxVersion = "" ) const;
 
   private:
     static QgsPluginRegistry* _instance;

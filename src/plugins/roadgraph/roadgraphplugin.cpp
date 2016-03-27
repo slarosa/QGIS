@@ -74,12 +74,12 @@ static const QgisPlugin::PLUGINTYPE sPluginType = QgisPlugin::UI;
  * an interface object that provides access to exposed functions in QGIS.
  * @param theQgisInterface - Pointer to the QGIS interface object
  */
-RoadGraphPlugin::RoadGraphPlugin( QgisInterface * theQgisInterface ):
-    QgisPlugin( sName, sDescription, sCategory, sPluginVersion, sPluginType ),
-    mQGisIface( theQgisInterface )
+RoadGraphPlugin::RoadGraphPlugin( QgisInterface * theQgisInterface )
+    : QgisPlugin( sName, sDescription, sCategory, sPluginVersion, sPluginType )
+    , mQGisIface( theQgisInterface )
+    , mQSettingsAction( 0 )
+    , mQShortestPathDock( 0 )
 {
-
-  mQShortestPathDock = NULL;
   mSettings = new RgLineVectorLayerSettings();
   mTimeUnitName = "h";
   mDistanceUnitName = "km";
@@ -98,11 +98,12 @@ RoadGraphPlugin::~RoadGraphPlugin()
 void RoadGraphPlugin::initGui()
 {
   // create shorttest path dock
-  mQShortestPathDock = new RgShortestPathWidget( mQGisIface->mainWindow() , this );
+  mQShortestPathDock = new RgShortestPathWidget( mQGisIface->mainWindow(), this );
   mQGisIface->addDockWidget( Qt::LeftDockWidgetArea, mQShortestPathDock );
 
   // Create the action for tool
   mQSettingsAction  = new QAction( QIcon( ":/roadgraph/road.png" ), tr( "Settings" ), this );
+  mQSettingsAction->setObjectName( "mQSettingsAction" );
 
   // Set the what's this text
   mQSettingsAction->setWhatsThis( tr( "Road graph plugin settings" ) );
@@ -211,9 +212,10 @@ const QgsGraphDirector* RoadGraphPlugin::director() const
   }
   if ( layer == NULL )
     return NULL;
-  if ( layer->geometryType() == QGis::Line )
+  if ( layer->wkbType() == QGis::WKBLineString
+       || layer->wkbType() == QGis::WKBMultiLineString )
   {
-    QgsVectorDataProvider *provider = dynamic_cast< QgsVectorDataProvider* >( layer->dataProvider() );
+    QgsVectorDataProvider *provider = layer->dataProvider();
     if ( provider == NULL )
       return NULL;
     SpeedUnit speedUnit = SpeedUnit::byName( mSettings->mSpeedUnitName );

@@ -12,14 +12,12 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-#include <QtTest>
+#include <QtTest/QtTest>
 #include <QObject>
 #include <QString>
 #include <QStringList>
-#include <QObject>
 #include <QPainter>
 #include <QTime>
-#include <iostream>
 
 #include <QApplication>
 #include <QDesktopServices>
@@ -35,6 +33,11 @@
 #include <qgsfield.h>
 #include <qgis.h> //defines GEOWkt
 #include <qgsproviderregistry.h>
+#include <qgslogger.h>
+
+#if defined(linux)
+#include <langinfo.h>
+#endif
 
 
 /** \ingroup UnitTests
@@ -45,12 +48,16 @@
  */
 class Regression1141: public QObject
 {
-    Q_OBJECT;
+    Q_OBJECT
+
+  public:
+    Regression1141();
+
   private slots:
     void initTestCase();// will be called before the first testfunction is executed.
     void cleanupTestCase();// will be called after the last testfunction was executed.
-    void init() {};// will be called before each testfunction is executed.
-    void cleanup() {};// will be called after every testfunction.
+    void init() {} // will be called before each testfunction is executed.
+    void cleanup() {} // will be called after every testfunction.
 
     /** This method tests that we can create a shpfile with diacriticals in its name
      *    and with fields that have diacriticals in their names*/
@@ -64,6 +71,12 @@ class Regression1141: public QObject
     QString mFileName;
 };
 
+Regression1141::Regression1141()
+    : mError( QgsVectorFileWriter::NoError )
+{
+
+}
+
 void Regression1141::initTestCase()
 {
   //
@@ -74,7 +87,7 @@ void Regression1141::initTestCase()
   QgsApplication::initQgis();
   QgsApplication::showSettings();
   // compute our test file name:
-  QString myTmpDir = QDir::tempPath() + QDir::separator() ;
+  QString myTmpDir = QDir::tempPath() + '/';
   mFileName = myTmpDir +  "ąęćń.shp";
 }
 
@@ -84,12 +97,23 @@ void Regression1141::cleanupTestCase()
   //
   // Runs after all tests are done
   //
+  QgsApplication::exitQgis();
 }
 
 
 
 void Regression1141::diacriticalTest()
 {
+#if defined(linux)
+  const char *cs = nl_langinfo( CODESET );
+  QgsDebugMsg( QString( "CODESET:%1" ).arg( cs ? cs : "unset" ) );
+  if ( !cs || strcmp( cs, "UTF-8" ) != 0 )
+  {
+    QSKIP( "This test requires a UTF-8 locale", SkipSingle );
+    return;
+  }
+#endif
+
   //create some objects that will be used in all tests...
   mEncoding = "UTF-8";
   QgsField myField( "ąęćń", QVariant::Int, "int", 10, 0, "Value on lon" );
@@ -102,42 +126,45 @@ void Regression1141::diacriticalTest()
   {
     qDebug( "Creating test dataset: " );
 
-    QgsVectorFileWriter myWriter( mFileName,
-                                  mEncoding,
-                                  mFields,
-                                  QGis::WKBPoint,
-                                  &mCRS );
-
-    QgsPoint myPoint = QgsPoint( 10.0, 10.0 );
-    // NOTE: don't delete this pointer again -
-    // ownership is passed to the feature which will
-    // delete it in its dtor!
-    QgsGeometry * mypPointGeometry = QgsGeometry::fromPoint( myPoint );
-    QgsFeature myFeature;
-    myFeature.setGeometry( mypPointGeometry );
-    myFeature.initAttributes( 1 );
-    myFeature.setAttribute( 0, 10 );
-    //
-    // Write the feature to the filewriter
-    // and check for errors
-    //
-    QVERIFY( myWriter.addFeature( myFeature ) );
-    mError = myWriter.hasError();
-
-    if ( mError == QgsVectorFileWriter::ErrDriverNotFound )
     {
-      std::cout << "Driver not found error" << std::endl;
-    }
-    else if ( mError == QgsVectorFileWriter::ErrCreateDataSource )
-    {
-      std::cout << "Create data source error" << std::endl;
-    }
-    else if ( mError == QgsVectorFileWriter::ErrCreateLayer )
-    {
-      std::cout << "Create layer error" << std::endl;
+      QgsVectorFileWriter myWriter( mFileName,
+                                    mEncoding,
+                                    mFields,
+                                    QGis::WKBPoint,
+                                    &mCRS );
+
+      QgsPoint myPoint = QgsPoint( 10.0, 10.0 );
+      // NOTE: don't delete this pointer again -
+      // ownership is passed to the feature which will
+      // delete it in its dtor!
+      QgsGeometry * mypPointGeometry = QgsGeometry::fromPoint( myPoint );
+      QgsFeature myFeature;
+      myFeature.setGeometry( mypPointGeometry );
+      myFeature.initAttributes( 1 );
+      myFeature.setAttribute( 0, 10 );
+      //
+      // Write the feature to the filewriter
+      // and check for errors
+      //
+      QVERIFY( myWriter.addFeature( myFeature ) );
+      mError = myWriter.hasError();
+
+      if ( mError == QgsVectorFileWriter::ErrDriverNotFound )
+      {
+        std::cout << "Driver not found error" << std::endl;
+      }
+      else if ( mError == QgsVectorFileWriter::ErrCreateDataSource )
+      {
+        std::cout << "Create data source error" << std::endl;
+      }
+      else if ( mError == QgsVectorFileWriter::ErrCreateLayer )
+      {
+        std::cout << "Create layer error" << std::endl;
+      }
+
+      QVERIFY( mError == QgsVectorFileWriter::NoError );
     }
 
-    QVERIFY( mError == QgsVectorFileWriter::NoError );
     // Now check we can delete it again ok
     QVERIFY( QgsVectorFileWriter::deleteShapeFile( mFileName ) );
 
@@ -146,4 +173,4 @@ void Regression1141::diacriticalTest()
 
 
 QTEST_MAIN( Regression1141 )
-#include "moc_regression1141.cxx"
+#include "regression1141.moc"

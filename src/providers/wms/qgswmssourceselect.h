@@ -33,6 +33,7 @@ class QButtonGroup;
 class QgsNumericSortTreeWidgetItem;
 class QDomDocument;
 class QDomElement;
+class QgsWmsCapabilities;
 
 /*!
  * \brief   Dialog to create connections and add layers from WMS, etc.
@@ -49,7 +50,7 @@ class QgsWMSSourceSelect : public QDialog, private Ui::QgsWMSSourceSelectBase
 
   public:
     //! Constructor
-    QgsWMSSourceSelect( QWidget *parent = 0, Qt::WFlags fl = QgisGui::ModalDialogFlags, bool managerMode = false, bool embeddedMode = false );
+    QgsWMSSourceSelect( QWidget *parent = 0, Qt::WindowFlags fl = QgisGui::ModalDialogFlags, bool managerMode = false, bool embeddedMode = false );
     //! Destructor
     ~QgsWMSSourceSelect();
 
@@ -66,7 +67,7 @@ class QgsWMSSourceSelect : public QDialog, private Ui::QgsWMSSourceSelectBase
     //! Loads connections from the file
     void on_btnLoad_clicked();
 
-    /*! Connects to the database using the stored connection parameters.
+    /** Connects to the database using the stored connection parameters.
     * Once connected, available layers are displayed.
     */
     void on_btnConnect_clicked();
@@ -102,21 +103,6 @@ class QgsWMSSourceSelect : public QDialog, private Ui::QgsWMSSourceSelectBase
 
     //! Connection name
     QString connName();
-
-    //! Connection info (uri)
-    QString connectionInfo();
-
-    //! Connection Proxy Host
-    QString connProxyHost();
-
-    //! Connection Proxy Port
-    int connProxyPort();
-
-    //! Connection Proxy User
-    QString connProxyUser();
-
-    //! Connection Proxy Pass
-    QString connProxyPass();
 
     //! Set the server connection combo box to that stored in the config file.
     void setConnectionListPosition();
@@ -159,7 +145,7 @@ class QgsWMSSourceSelect : public QDialog, private Ui::QgsWMSSourceSelectBase
      * \retval false if the layers could not be retrieved or parsed -
      *         see mWmsProvider->errorString() for more info
      */
-    bool populateLayerList( QgsWmsProvider *wmsProvider );
+    bool populateLayerList( const QgsWmsCapabilities& capabilities );
 
     //! create an item including possible parents
     QgsNumericSortTreeWidgetItem *createItem( int id,
@@ -170,16 +156,15 @@ class QgsWMSSourceSelect : public QDialog, private Ui::QgsWMSSourceSelectBase
         const QMap<int, QStringList> &layerParentNames );
 
     //! Returns a textual description for the authority id
-    QString descriptionForAuthId( QString authId );
+    QString descriptionForAuthId( const QString& authId );
 
     //! Keeps the layer order list up-to-date with changed layers and styles
-    void updateLayerOrderTab( const QStringList& newLayerList, const QStringList& newStyleList );
+    void updateLayerOrderTab( const QStringList& newLayerList, const QStringList& newStyleList, const QStringList &newTitleList );
 
     //! Name for selected connection
     QString mConnName;
 
     //! URI for selected connection
-    QString mConnectionInfo;
     QgsDataSourceURI mUri;
 
     //! layer name derived from latest layer selection (updated as long it's not edited manually)
@@ -196,10 +181,10 @@ class QgsWMSSourceSelect : public QDialog, private Ui::QgsWMSSourceSelectBase
     void addWMSListItem( const QDomElement& el, int row, int column );
 
     void applySelectionConstraints( QTreeWidgetItem *item );
-    void collectNamedLayers( QTreeWidgetItem *item, QStringList &layers, QStringList &styles );
+    void collectNamedLayers( QTreeWidgetItem *item, QStringList &layers, QStringList &styles, QStringList &titles );
     void enableLayersForCrs( QTreeWidgetItem *item );
 
-    void collectSelectedLayers( QStringList &layers, QStringList &styles );
+    void collectSelectedLayers( QStringList &layers, QStringList &styles, QStringList &titles );
     QString selectedImageEncoding();
 
     QList<QTreeWidgetItem*> mCurrentSelection;

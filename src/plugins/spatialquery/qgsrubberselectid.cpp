@@ -68,11 +68,11 @@ void QgsRubberSelectId::addFeature( QgsVectorLayer* lyr, QgsFeatureId fid )
   {
     return;
   }
-  if ( !feat.geometry() )
+  if ( !feat.constGeometry() )
   {
     return;
   }
-  mRubberBand->setToGeometry( feat.geometry(), lyr );
+  mRubberBand->setToGeometry( feat.constGeometry(), lyr );
 } // void QgsRubberSelectId::addFeature( QgsVectorLayer* mLayer, int Id )
 
 void QgsRubberSelectId::show()
@@ -82,7 +82,7 @@ void QgsRubberSelectId::show()
 
 void QgsRubberSelectId::setStyle()
 {
-  QColor color = QColor( mColorRGB[0], mColorRGB[1], mColorRGB[2] );
+  QColor color = QColor( mColorRGB[0], mColorRGB[1], mColorRGB[2], 65 );
   mRubberBand->setColor( color );
   mRubberBand->setWidth( mWidth );
 }

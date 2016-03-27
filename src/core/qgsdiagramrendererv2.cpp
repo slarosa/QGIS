@@ -13,16 +13,41 @@
  *                                                                         *
  ***************************************************************************/
 #include "qgsdiagramrendererv2.h"
+#include "qgsvectorlayer.h"
 #include "diagram/qgstextdiagram.h"
 #include "diagram/qgspiediagram.h"
 #include "diagram/qgshistogramdiagram.h"
 #include "qgsrendercontext.h"
+#include "qgslayertreemodellegendnode.h"
+#include "qgsfontutils.h"
+
 #include <QDomElement>
 #include <QPainter>
 
-
-void QgsDiagramLayerSettings::readXML( const QDomElement& elem )
+QgsDiagramLayerSettings::QgsDiagramLayerSettings()
+    : placement( AroundPoint )
+    , placementFlags( OnLine )
+    , priority( 5 )
+    , obstacle( false )
+    , dist( 0.0 )
+    , renderer( 0 )
+    , ct( 0 )
+    , xform( 0 )
+    , xPosColumn( -1 )
+    , yPosColumn( -1 )
+    , showAll( true )
 {
+}
+
+QgsDiagramLayerSettings::~QgsDiagramLayerSettings()
+{
+  delete renderer;
+}
+
+void QgsDiagramLayerSettings::readXML( const QDomElement& elem, const QgsVectorLayer* layer )
+{
+  Q_UNUSED( layer )
+
   placement = ( Placement )elem.attribute( "placement" ).toInt();
   placementFlags = ( LinePlacementFlags )elem.attribute( "linePlacementFlags" ).toInt();
   priority = elem.attribute( "priority" ).toInt();
@@ -30,10 +55,13 @@ void QgsDiagramLayerSettings::readXML( const QDomElement& elem )
   dist = elem.attribute( "dist" ).toDouble();
   xPosColumn = elem.attribute( "xPosColumn" ).toInt();
   yPosColumn = elem.attribute( "yPosColumn" ).toInt();
+  showAll = ( elem.attribute( "showAll", "0" ) != "0" );
 }
 
-void QgsDiagramLayerSettings::writeXML( QDomElement& layerElem, QDomDocument& doc ) const
+void QgsDiagramLayerSettings::writeXML( QDomElement& layerElem, QDomDocument& doc, const QgsVectorLayer* layer ) const
 {
+  Q_UNUSED( layer )
+
   QDomElement diagramLayerElem = doc.createElement( "DiagramLayerSettings" );
   diagramLayerElem.setAttribute( "placement", placement );
   diagramLayerElem.setAttribute( "linePlacementFlags", placementFlags );
@@ -42,12 +70,19 @@ void QgsDiagramLayerSettings::writeXML( QDomElement& layerElem, QDomDocument& do
   diagramLayerElem.setAttribute( "dist", QString::number( dist ) );
   diagramLayerElem.setAttribute( "xPosColumn", xPosColumn );
   diagramLayerElem.setAttribute( "yPosColumn", yPosColumn );
+  diagramLayerElem.setAttribute( "showAll", showAll );
   layerElem.appendChild( diagramLayerElem );
 }
 
-void QgsDiagramSettings::readXML( const QDomElement& elem )
+void QgsDiagramSettings::readXML( const QDomElement& elem, const QgsVectorLayer* layer )
 {
-  font.fromString( elem.attribute( "font" ) );
+  Q_UNUSED( layer );
+
+  enabled = ( elem.attribute( "enabled", "1" ) != "0" );
+  if ( !QgsFontUtils::setFromXmlChildNode( font, elem, "fontProperties" ) )
+  {
+    font.fromString( elem.attribute( "font" ) );
+  }
   backgroundColor.setNamedColor( elem.attribute( "backgroundColor" ) );
   backgroundColor.setAlpha( elem.attribute( "backgroundAlpha" ).toInt() );
   size.setWidth( elem.attribute( "width" ).toDouble() );
@@ -60,6 +95,14 @@ void QgsDiagramSettings::readXML( const QDomElement& elem )
 
   minScaleDenominator = elem.attribute( "minScaleDenominator", "-1" ).toDouble();
   maxScaleDenominator = elem.attribute( "maxScaleDenominator", "-1" ).toDouble();
+  if ( elem.hasAttribute( "scaleBasedVisibility" ) )
+  {
+    scaleBasedVisibility = ( elem.attribute( "scaleBasedVisibility", "1" ) != "0" );
+  }
+  else
+  {
+    scaleBasedVisibility = minScaleDenominator >= 0 && maxScaleDenominator >= 0;
+  }
 
   //mm vs map units
   if ( elem.attribute( "sizeType" ) == "MM" )
@@ -117,29 +160,56 @@ void QgsDiagramSettings::readXML( const QDomElement& elem )
 
   //colors
   categoryColors.clear();
-  QStringList colorList = elem.attribute( "colors" ).split( "/" );
-  QStringList::const_iterator colorIt = colorList.constBegin();
-  for ( ; colorIt != colorList.constEnd(); ++colorIt )
-  {
-    QColor newColor( *colorIt );
-    newColor.setAlpha( 255 - transparency );
-    categoryColors.append( QColor( newColor ) );
-  }
+  QDomNodeList attributes = elem.elementsByTagName( "attribute" );
 
-  //attribute indices
-  categoryIndices.clear();
-  QStringList catList = elem.attribute( "categories" ).split( "/" );
-  QStringList::const_iterator catIt = catList.constBegin();
-  for ( ; catIt != catList.constEnd(); ++catIt )
+  if ( attributes.length() > 0 )
   {
-    categoryIndices.append( catIt->toInt() );
+    for ( int i = 0; i < attributes.size(); i++ )
+    {
+      QDomElement attrElem = attributes.at( i ).toElement();
+      QColor newColor( attrElem.attribute( "color" ) );
+      newColor.setAlpha( 255 - transparency );
+      categoryColors.append( newColor );
+      categoryAttributes.append( attrElem.attribute( "field" ) );
+      categoryLabels.append( attrElem.attribute( "label" ) );
+      if ( categoryLabels.back().isEmpty() )
+      {
+        categoryLabels.back() = categoryAttributes.back();
+      }
+    }
+  }
+  else
+  {
+    // Restore old format attributes and colors
+
+    QStringList colorList = elem.attribute( "colors" ).split( '/' );
+    QStringList::const_iterator colorIt = colorList.constBegin();
+    for ( ; colorIt != colorList.constEnd(); ++colorIt )
+    {
+      QColor newColor( *colorIt );
+      newColor.setAlpha( 255 - transparency );
+      categoryColors.append( QColor( newColor ) );
+    }
+
+    //attribute indices
+    categoryAttributes.clear();
+    QStringList catList = elem.attribute( "categories" ).split( '/' );
+    QStringList::const_iterator catIt = catList.constBegin();
+    for ( ; catIt != catList.constEnd(); ++catIt )
+    {
+      categoryAttributes.append( *catIt );
+      categoryLabels.append( *catIt );
+    }
   }
 }
 
-void QgsDiagramSettings::writeXML( QDomElement& rendererElem, QDomDocument& doc ) const
+void QgsDiagramSettings::writeXML( QDomElement& rendererElem, QDomDocument& doc, const QgsVectorLayer* layer ) const
 {
+  Q_UNUSED( layer );
+
   QDomElement categoryElem = doc.createElement( "DiagramCategory" );
-  categoryElem.setAttribute( "font", font.toString() );
+  categoryElem.setAttribute( "enabled", enabled );
+  categoryElem.appendChild( QgsFontUtils::toXmlElement( font, doc, "fontProperties" ) );
   categoryElem.setAttribute( "backgroundColor", backgroundColor.name() );
   categoryElem.setAttribute( "backgroundAlpha", backgroundColor.alpha() );
   categoryElem.setAttribute( "width", QString::number( size.width() ) );
@@ -147,6 +217,7 @@ void QgsDiagramSettings::writeXML( QDomElement& rendererElem, QDomDocument& doc 
   categoryElem.setAttribute( "penColor", penColor.name() );
   categoryElem.setAttribute( "penAlpha", penColor.alpha() );
   categoryElem.setAttribute( "penWidth", QString::number( penWidth ) );
+  categoryElem.setAttribute( "scaleBasedVisibility", scaleBasedVisibility );
   categoryElem.setAttribute( "minScaleDenominator", QString::number( minScaleDenominator ) );
   categoryElem.setAttribute( "maxScaleDenominator", QString::number( maxScaleDenominator ) );
   categoryElem.setAttribute( "transparency", QString::number( transparency ) );
@@ -209,31 +280,22 @@ void QgsDiagramSettings::writeXML( QDomElement& rendererElem, QDomDocument& doc 
   categoryElem.setAttribute( "angleOffset", QString::number( angleOffset ) );
 
   QString colors;
-  for ( int i = 0; i < categoryColors.size(); ++i )
+  int nCats = qMin( categoryColors.size(), categoryAttributes.size() );
+  for ( int i = 0; i < nCats; ++i )
   {
-    if ( i > 0 )
-    {
-      colors.append( "/" );
-    }
-    colors.append( categoryColors.at( i ).name() );
-  }
-  categoryElem.setAttribute( "colors", colors );
+    QDomElement attributeElem = doc.createElement( "attribute" );
 
-  QString categories;
-  for ( int i = 0; i < categoryIndices.size(); ++i )
-  {
-    if ( i > 0 )
-    {
-      categories.append( "/" );
-    }
-    categories.append( QString::number( categoryIndices.at( i ) ) );
+    attributeElem.setAttribute( "field", categoryAttributes.at( i ) );
+    attributeElem.setAttribute( "color", categoryColors.at( i ).name() );
+    attributeElem.setAttribute( "label", categoryLabels.at( i ) );
+    categoryElem.appendChild( attributeElem );
   }
-  categoryElem.setAttribute( "categories", categories );
 
   rendererElem.appendChild( categoryElem );
 }
 
-QgsDiagramRendererV2::QgsDiagramRendererV2(): mDiagram( 0 )
+QgsDiagramRendererV2::QgsDiagramRendererV2()
+    : mDiagram( 0 )
 {
 }
 
@@ -248,7 +310,12 @@ void QgsDiagramRendererV2::setDiagram( QgsDiagram* d )
   mDiagram = d;
 }
 
-void QgsDiagramRendererV2::renderDiagram( const QgsAttributes& att, QgsRenderContext& c, const QPointF& pos )
+QgsDiagramRendererV2::QgsDiagramRendererV2( const QgsDiagramRendererV2& other )
+    : mDiagram( other.mDiagram ? other.mDiagram->clone() : 0 )
+{
+}
+
+void QgsDiagramRendererV2::renderDiagram( const QgsFeature& feature, QgsRenderContext& c, const QPointF& pos )
 {
   if ( !mDiagram )
   {
@@ -256,23 +323,23 @@ void QgsDiagramRendererV2::renderDiagram( const QgsAttributes& att, QgsRenderCon
   }
 
   QgsDiagramSettings s;
-  if ( !diagramSettings( att, c, s ) )
+  if ( !diagramSettings( feature, c, s ) )
   {
     return;
   }
 
-  mDiagram->renderDiagram( att, c, s, pos );
+  mDiagram->renderDiagram( feature, c, s, pos );
 }
 
-QSizeF QgsDiagramRendererV2::sizeMapUnits( const QgsAttributes& attributes, const QgsRenderContext& c )
+QSizeF QgsDiagramRendererV2::sizeMapUnits( const QgsFeature& feature, const QgsRenderContext& c )
 {
   QgsDiagramSettings s;
-  if ( !diagramSettings( attributes, c, s ) )
+  if ( !diagramSettings( feature, c, s ) )
   {
     return QSizeF();
   }
 
-  QSizeF size = diagramSize( attributes, c );
+  QSizeF size = diagramSize( feature, c );
   if ( s.sizeType == QgsDiagramSettings::MM )
   {
     convertSizeToMapUnits( size, c );
@@ -305,8 +372,10 @@ int QgsDiagramRendererV2::dpiPaintDevice( const QPainter* painter )
   return -1;
 }
 
-void QgsDiagramRendererV2::_readXML( const QDomElement& elem )
+void QgsDiagramRendererV2::_readXML( const QDomElement& elem, const QgsVectorLayer* layer )
 {
+  Q_UNUSED( layer )
+
   delete mDiagram;
   QString diagramType = elem.attribute( "diagramType" );
   if ( diagramType == "Pie" )
@@ -327,9 +396,11 @@ void QgsDiagramRendererV2::_readXML( const QDomElement& elem )
   }
 }
 
-void QgsDiagramRendererV2::_writeXML( QDomElement& rendererElem, QDomDocument& doc ) const
+void QgsDiagramRendererV2::_writeXML( QDomElement& rendererElem, QDomDocument& doc, const QgsVectorLayer* layer ) const
 {
   Q_UNUSED( doc );
+  Q_UNUSED( layer )
+
   if ( mDiagram )
   {
     rendererElem.setAttribute( "diagramType", mDiagram->diagramName() );
@@ -344,16 +415,21 @@ QgsSingleCategoryDiagramRenderer::~QgsSingleCategoryDiagramRenderer()
 {
 }
 
-bool QgsSingleCategoryDiagramRenderer::diagramSettings( const QgsAttributes&, const QgsRenderContext& c, QgsDiagramSettings& s )
+QgsSingleCategoryDiagramRenderer* QgsSingleCategoryDiagramRenderer::clone() const
+{
+  return new QgsSingleCategoryDiagramRenderer( *this );
+}
+
+bool QgsSingleCategoryDiagramRenderer::diagramSettings( const QgsFeature&, const QgsRenderContext& c, QgsDiagramSettings& s )
 {
   Q_UNUSED( c );
   s = mSettings;
   return true;
 }
 
-QSizeF QgsSingleCategoryDiagramRenderer::diagramSize( const QgsAttributes &attributes, const QgsRenderContext &c )
+QSizeF QgsSingleCategoryDiagramRenderer::diagramSize( const QgsFeature &feature, const QgsRenderContext &c )
 {
-  return mDiagram->diagramSize( attributes, c, mSettings );
+  return mDiagram->diagramSize( feature.attributes(), c, mSettings );
 }
 
 QList<QgsDiagramSettings> QgsSingleCategoryDiagramRenderer::diagramSettings() const
@@ -363,7 +439,7 @@ QList<QgsDiagramSettings> QgsSingleCategoryDiagramRenderer::diagramSettings() co
   return settingsList;
 }
 
-void QgsSingleCategoryDiagramRenderer::readXML( const QDomElement& elem )
+void QgsSingleCategoryDiagramRenderer::readXML( const QDomElement& elem, const QgsVectorLayer* layer )
 {
   QDomElement categoryElem = elem.firstChildElement( "DiagramCategory" );
   if ( categoryElem.isNull() )
@@ -371,25 +447,31 @@ void QgsSingleCategoryDiagramRenderer::readXML( const QDomElement& elem )
     return;
   }
 
-  mSettings.readXML( categoryElem );
-  _readXML( elem );
+  mSettings.readXML( categoryElem, layer );
+  _readXML( elem, layer );
 }
 
-void QgsSingleCategoryDiagramRenderer::writeXML( QDomElement& layerElem, QDomDocument& doc ) const
+void QgsSingleCategoryDiagramRenderer::writeXML( QDomElement& layerElem, QDomDocument& doc, const QgsVectorLayer* layer ) const
 {
   QDomElement rendererElem = doc.createElement( "SingleCategoryDiagramRenderer" );
-  mSettings.writeXML( rendererElem, doc );
-  _writeXML( rendererElem, doc );
+  mSettings.writeXML( rendererElem, doc, layer );
+  _writeXML( rendererElem, doc, layer );
   layerElem.appendChild( rendererElem );
 }
 
 
 QgsLinearlyInterpolatedDiagramRenderer::QgsLinearlyInterpolatedDiagramRenderer(): QgsDiagramRendererV2()
 {
+  mInterpolationSettings.classificationAttributeIsExpression = false;
 }
 
 QgsLinearlyInterpolatedDiagramRenderer::~QgsLinearlyInterpolatedDiagramRenderer()
 {
+}
+
+QgsLinearlyInterpolatedDiagramRenderer* QgsLinearlyInterpolatedDiagramRenderer::clone() const
+{
+  return new QgsLinearlyInterpolatedDiagramRenderer( *this );
 }
 
 QList<QgsDiagramSettings> QgsLinearlyInterpolatedDiagramRenderer::diagramSettings() const
@@ -399,29 +481,24 @@ QList<QgsDiagramSettings> QgsLinearlyInterpolatedDiagramRenderer::diagramSetting
   return settingsList;
 }
 
-bool QgsLinearlyInterpolatedDiagramRenderer::diagramSettings( const QgsAttributes& attributes, const QgsRenderContext& c, QgsDiagramSettings& s )
+bool QgsLinearlyInterpolatedDiagramRenderer::diagramSettings( const QgsFeature& feature, const QgsRenderContext& c, QgsDiagramSettings& s )
 {
   s = mSettings;
-  s.size = diagramSize( attributes, c );
+  s.size = diagramSize( feature, c );
   return true;
 }
 
-QList<int> QgsLinearlyInterpolatedDiagramRenderer::diagramAttributes() const
+QList<QString> QgsLinearlyInterpolatedDiagramRenderer::diagramAttributes() const
 {
-  QList<int> attributes = mSettings.categoryIndices;
-  if ( !attributes.contains( mInterpolationSettings.classificationAttribute ) )
-  {
-    attributes.push_back( mInterpolationSettings.classificationAttribute );
-  }
-  return attributes;
+  return mSettings.categoryAttributes;
 }
 
-QSizeF QgsLinearlyInterpolatedDiagramRenderer::diagramSize( const QgsAttributes& attributes, const QgsRenderContext& c )
+QSizeF QgsLinearlyInterpolatedDiagramRenderer::diagramSize( const QgsFeature& feature, const QgsRenderContext& c )
 {
-  return mDiagram->diagramSize( attributes, c, mSettings, mInterpolationSettings );
+  return mDiagram->diagramSize( feature, c, mSettings, mInterpolationSettings );
 }
 
-void QgsLinearlyInterpolatedDiagramRenderer::readXML( const QDomElement& elem )
+void QgsLinearlyInterpolatedDiagramRenderer::readXML( const QDomElement& elem, const QgsVectorLayer* layer )
 {
   mInterpolationSettings.lowerValue = elem.attribute( "lowerValue" ).toDouble();
   mInterpolationSettings.upperValue = elem.attribute( "upperValue" ).toDouble();
@@ -429,16 +506,24 @@ void QgsLinearlyInterpolatedDiagramRenderer::readXML( const QDomElement& elem )
   mInterpolationSettings.lowerSize.setHeight( elem.attribute( "lowerHeight" ).toDouble() );
   mInterpolationSettings.upperSize.setWidth( elem.attribute( "upperWidth" ).toDouble() );
   mInterpolationSettings.upperSize.setHeight( elem.attribute( "upperHeight" ).toDouble() );
-  mInterpolationSettings.classificationAttribute = elem.attribute( "classificationAttribute" ).toInt();
+  mInterpolationSettings.classificationAttributeIsExpression = elem.hasAttribute( "classificationAttributeExpression" );
+  if ( mInterpolationSettings.classificationAttributeIsExpression )
+  {
+    mInterpolationSettings.classificationAttributeExpression = elem.attribute( "classificationAttributeExpression" );
+  }
+  else
+  {
+    mInterpolationSettings.classificationAttribute = elem.attribute( "classificationAttribute" ).toInt();
+  }
   QDomElement settingsElem = elem.firstChildElement( "DiagramCategory" );
   if ( !settingsElem.isNull() )
   {
-    mSettings.readXML( settingsElem );
+    mSettings.readXML( settingsElem, layer );
   }
-  _readXML( elem );
+  _readXML( elem, layer );
 }
 
-void QgsLinearlyInterpolatedDiagramRenderer::writeXML( QDomElement& layerElem, QDomDocument& doc ) const
+void QgsLinearlyInterpolatedDiagramRenderer::writeXML( QDomElement& layerElem, QDomDocument& doc, const QgsVectorLayer* layer ) const
 {
   QDomElement rendererElem = doc.createElement( "LinearlyInterpolatedDiagramRenderer" );
   rendererElem.setAttribute( "lowerValue", QString::number( mInterpolationSettings.lowerValue ) );
@@ -447,8 +532,43 @@ void QgsLinearlyInterpolatedDiagramRenderer::writeXML( QDomElement& layerElem, Q
   rendererElem.setAttribute( "lowerHeight", QString::number( mInterpolationSettings.lowerSize.height() ) );
   rendererElem.setAttribute( "upperWidth", QString::number( mInterpolationSettings.upperSize.width() ) );
   rendererElem.setAttribute( "upperHeight", QString::number( mInterpolationSettings.upperSize.height() ) );
-  rendererElem.setAttribute( "classificationAttribute", mInterpolationSettings.classificationAttribute );
-  mSettings.writeXML( rendererElem, doc );
-  _writeXML( rendererElem, doc );
+  if ( mInterpolationSettings.classificationAttributeIsExpression )
+  {
+    rendererElem.setAttribute( "classificationAttributeExpression", mInterpolationSettings.classificationAttributeExpression );
+  }
+  else
+  {
+    rendererElem.setAttribute( "classificationAttribute", mInterpolationSettings.classificationAttribute );
+  }
+  mSettings.writeXML( rendererElem, doc, layer );
+  _writeXML( rendererElem, doc, layer );
   layerElem.appendChild( rendererElem );
+}
+
+QList< QgsLayerTreeModelLegendNode* > QgsDiagramSettings::legendItems( QgsLayerTreeLayer* nodeLayer ) const
+{
+  QList< QgsLayerTreeModelLegendNode * > list;
+  list.reserve( categoryLabels.size() );
+  for ( int i = 0 ; i < categoryLabels.size(); ++i )
+  {
+    QPixmap pix( 16, 16 );
+    pix.fill( categoryColors[i] );
+    list << new QgsSimpleLegendNode( nodeLayer, categoryLabels[i], QIcon( pix ), 0, QString( "diagram_%1" ).arg( QString::number( i ) ) );
+  }
+  return list;
+}
+
+QList< QgsLayerTreeModelLegendNode* > QgsDiagramRendererV2::legendItems( QgsLayerTreeLayer* ) const
+{
+  return QList< QgsLayerTreeModelLegendNode * >();
+}
+
+QList< QgsLayerTreeModelLegendNode* > QgsSingleCategoryDiagramRenderer::legendItems( QgsLayerTreeLayer* nodeLayer ) const
+{
+  return mSettings.legendItems( nodeLayer );
+}
+
+QList< QgsLayerTreeModelLegendNode* > QgsLinearlyInterpolatedDiagramRenderer::legendItems( QgsLayerTreeLayer* nodeLayer ) const
+{
+  return mSettings.legendItems( nodeLayer );
 }

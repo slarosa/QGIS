@@ -3,7 +3,7 @@
      --------------------------------------
     Date                 : Jan 2012
     Copyright            : (C) 2013 Matthias Kuhn
-    Email                : matthias dot kuhn at gmx dot ch
+    Email                : matthias at opengis dot ch
  ***************************************************************************
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -13,8 +13,8 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef QGSATTRIBUTELISTVIEW_H
-#define QGSATTRIBUTELISTVIEW_H
+#ifndef QGSFEATURELISTVIEW_H
+#define QGSFEATURELISTVIEW_H
 
 #include <QListView>
 #include <qdebug.h>
@@ -25,6 +25,7 @@ class QgsAttributeTableFilterModel;
 class QgsFeatureListModel;
 class QgsFeatureSelectionModel;
 class QgsAttributeTableModel;
+class QgsIFeatureSelectionManager;
 class QgsVectorLayer;
 class QgsVectorLayerCache;
 class QgsFeatureListViewDelegate;
@@ -53,7 +54,7 @@ class GUI_EXPORT QgsFeatureListView : public QListView
     /**
      * Destructor
      */
-    virtual ~QgsFeatureListView() {};
+    virtual ~QgsFeatureListView() {}
 
     /**
      * Returns the layer cache
@@ -82,7 +83,7 @@ class GUI_EXPORT QgsFeatureListView : public QListView
      *
      * @see QgsExpression
      */
-    bool setDisplayExpression( const QString displayExpression );
+    bool setDisplayExpression( const QString& displayExpression );
 
     /**
      * Returns the expression which is currently used to render the features.
@@ -91,7 +92,7 @@ class GUI_EXPORT QgsFeatureListView : public QListView
      *
      * @see QgsExpression
      */
-    const QString& displayExpression() const;
+    const QString displayExpression() const;
 
     /**
      * Returns a detailed message about errors while parsing a QgsExpression.
@@ -100,11 +101,31 @@ class GUI_EXPORT QgsFeatureListView : public QListView
      */
     QString parserErrorString();
 
+    /**
+     * Get the currentEditSelection
+     *
+     * @return A list of edited feature ids
+     */
+    QgsFeatureIds currentEditSelection();
+
+    /**
+     * Sets if the currently shown form has received any edit events so far.
+     *
+     * @param state The state
+     */
+    void setCurrentFeatureEdited( bool state );
+
+    /**
+     * @brief setFeatureSelectionManager
+     * @param featureSelectionManager We will take ownership
+     */
+    void setFeatureSelectionManager( QgsIFeatureSelectionManager* featureSelectionManager );
   protected:
-    virtual void mouseMoveEvent( QMouseEvent *event );
-    virtual void mousePressEvent( QMouseEvent *event );
-    virtual void mouseReleaseEvent( QMouseEvent *event );
-    virtual void keyPressEvent( QKeyEvent *event );
+    virtual void mouseMoveEvent( QMouseEvent *event ) override;
+    virtual void mousePressEvent( QMouseEvent *event ) override;
+    virtual void mouseReleaseEvent( QMouseEvent *event ) override;
+    virtual void keyPressEvent( QKeyEvent *event ) override;
+    virtual void contextMenuEvent( QContextMenuEvent *event ) override;
 
   signals:
     /**
@@ -118,7 +139,9 @@ class GUI_EXPORT QgsFeatureListView : public QListView
      * Is emitted, whenever the display expression is successfully changed
      * @param expression The expression that was applied
      */
-    void displayExpressionChanged( const QString expression );
+    void displayExpressionChanged( const QString& expression );
+
+    void aboutToChangeEditSelection( bool& ok );
 
   public slots:
     /**
@@ -129,11 +152,19 @@ class GUI_EXPORT QgsFeatureListView : public QListView
     void setEditSelection( const QgsFeatureIds &fids );
 
     /**
+     * Set the feature(s) to be edited
+     *
+     * @param index The selection to set
+     * @param command selection update mode
+     */
+    void setEditSelection( const QModelIndex& index, const QItemSelectionModel::SelectionFlags& command );
+
+    /**
      * Select all currently visible features
      */
-    virtual void selectAll();
+    virtual void selectAll() override;
 
-    void repaintRequested( QModelIndexList indexes );
+    void repaintRequested( const QModelIndexList& indexes );
     void repaintRequested();
 
   private slots:
@@ -145,6 +176,7 @@ class GUI_EXPORT QgsFeatureListView : public QListView
     QgsFeatureListModel *mModel;
     QItemSelectionModel* mCurrentEditSelectionModel;
     QgsFeatureSelectionModel* mFeatureSelectionModel;
+    QgsIFeatureSelectionManager* mFeatureSelectionManager;
     QgsFeatureListViewDelegate* mItemDelegate;
     bool mEditSelectionDrag; // Is set to true when the user initiated a left button click over an edit button and still keeps pressing /**< TODO */
     int mRowAnchor;

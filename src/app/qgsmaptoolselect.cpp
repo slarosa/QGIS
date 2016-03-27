@@ -25,15 +25,19 @@
 
 #include <QMouseEvent>
 #include <QRect>
+#include <QColor>
 
 
 QgsMapToolSelect::QgsMapToolSelect( QgsMapCanvas* canvas )
     : QgsMapTool( canvas )
 {
+  mToolName = tr( "Select" );
   mCursor = Qt::ArrowCursor;
+  mFillColor = QColor( 254, 178, 76, 63 );
+  mBorderColour = QColor( 254, 58, 29, 100 );
 }
 
-void QgsMapToolSelect::canvasReleaseEvent( QMouseEvent * e )
+void QgsMapToolSelect::canvasReleaseEvent( QgsMapMouseEvent* e )
 {
   QgsVectorLayer* vlayer = QgsMapToolSelectUtils::getCurrentVectorLayer( mCanvas );
   if ( vlayer == NULL )
@@ -41,11 +45,13 @@ void QgsMapToolSelect::canvasReleaseEvent( QMouseEvent * e )
     return;
   }
   QgsRubberBand rubberBand( mCanvas, QGis::Polygon );
+  rubberBand.setFillColor( mFillColor );
+  rubberBand.setBorderColor( mBorderColour );
   QRect selectRect( 0, 0, 0, 0 );
   QgsMapToolSelectUtils::expandSelectRectangle( selectRect, vlayer, e->pos() );
   QgsMapToolSelectUtils::setRubberBand( mCanvas, selectRect, &rubberBand );
   QgsGeometry* selectGeom = rubberBand.asGeometry();
-  bool doDifference = e->modifiers() & Qt::ControlModifier ? true : false;
+  bool doDifference = e->modifiers() & Qt::ControlModifier;
   QgsMapToolSelectUtils::setSelectFeatures( mCanvas, selectGeom, false, doDifference, true );
   delete selectGeom;
   rubberBand.reset( QGis::Polygon );

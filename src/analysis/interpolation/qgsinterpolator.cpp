@@ -19,13 +19,17 @@
 #include "qgsvectordataprovider.h"
 #include "qgsvectorlayer.h"
 #include "qgsgeometry.h"
+#include "qgswkbptr.h"
 
-QgsInterpolator::QgsInterpolator( const QList<LayerData>& layerData ): mDataIsCached( false ), mLayerData( layerData )
+QgsInterpolator::QgsInterpolator( const QList<LayerData>& layerData )
+    : mDataIsCached( false )
+    , mLayerData( layerData )
 {
 
 }
 
 QgsInterpolator::QgsInterpolator()
+    : mDataIsCached( false )
 {
 
 }
@@ -90,7 +94,7 @@ int QgsInterpolator::cacheBaseData()
         }
       }
 
-      if ( addVerticesToCache( theFeature.geometry(), v_it->zCoordInterpolation, attributeValue ) != 0 )
+      if ( addVerticesToCache( theFeature.constGeometry(), v_it->zCoordInterpolation, attributeValue ) != 0 )
       {
         return 3;
       }
@@ -100,15 +104,13 @@ int QgsInterpolator::cacheBaseData()
   return 0;
 }
 
-int QgsInterpolator::addVerticesToCache( QgsGeometry* geom, bool zCoord, double attributeValue )
+int QgsInterpolator::addVerticesToCache( const QgsGeometry *geom, bool zCoord, double attributeValue )
 {
   if ( !geom )
-  {
     return 1;
-  }
 
   bool hasZValue = false;
-  unsigned char* currentWkbPtr = geom->asWkb();
+  QgsConstWkbPtr currentWkbPtr( geom->asWkb() + 1 + sizeof( int ) );
   vertexData theVertex; //the current vertex
 
   QGis::WkbType wkbType = geom->wkbType();
@@ -116,16 +118,13 @@ int QgsInterpolator::addVerticesToCache( QgsGeometry* geom, bool zCoord, double 
   {
     case QGis::WKBPoint25D:
       hasZValue = true;
+      //intentional fall-through
     case QGis::WKBPoint:
     {
-      currentWkbPtr += ( 1 + sizeof( int ) );
-      theVertex.x = *(( double * )( currentWkbPtr ) );
-      currentWkbPtr += sizeof( double );
-      theVertex.y = *(( double * )( currentWkbPtr ) );
+      currentWkbPtr >> theVertex.x >> theVertex.y;
       if ( zCoord && hasZValue )
       {
-        currentWkbPtr += sizeof( double );
-        theVertex.z = *(( double * )( currentWkbPtr ) );
+        currentWkbPtr >> theVertex.z;
       }
       else
       {
@@ -136,21 +135,17 @@ int QgsInterpolator::addVerticesToCache( QgsGeometry* geom, bool zCoord, double 
     }
     case QGis::WKBLineString25D:
       hasZValue = true;
+      //intentional fall-through
     case QGis::WKBLineString:
     {
-      currentWkbPtr += ( 1 + sizeof( int ) );
-      int* npoints = ( int* )currentWkbPtr;
-      currentWkbPtr += sizeof( int );
-      for ( int index = 0; index < *npoints; ++index )
+      int nPoints;
+      currentWkbPtr >> nPoints;
+      for ( int index = 0; index < nPoints; ++index )
       {
-        theVertex.x = *(( double * )( currentWkbPtr ) );
-        currentWkbPtr += sizeof( double );
-        theVertex.y = *(( double * )( currentWkbPtr ) );
-        currentWkbPtr += sizeof( double );
+        currentWkbPtr >> theVertex.x >> theVertex.y;
         if ( zCoord && hasZValue ) //skip z-coordinate for 25D geometries
         {
-          theVertex.z = *(( double * )( currentWkbPtr ) );
-          currentWkbPtr += sizeof( double );
+          currentWkbPtr >> theVertex.z;
         }
         else
         {
@@ -163,25 +158,22 @@ int QgsInterpolator::addVerticesToCache( QgsGeometry* geom, bool zCoord, double 
 #if 0
     case QGis::WKBPolygon25D:
       hasZValue = true;
+      //intentional fall-through
     case QGis::WKBPolygon:
     {
-      int* nrings = ( int* )( mGeometry + 5 );
-      int* npoints;
-      unsigned char* ptr = mGeometry + 9;
-      for ( int index = 0; index < *nrings; ++index )
+      int nRings;
+      wkbPtr >> nRings;
+      for ( int index = 0; index < nRings; ++index )
       {
-        npoints = ( int* )ptr;
-        ptr += sizeof( int );
+        int nPoints;
+        wkbPtr >> nPoints;
         for ( int index2 = 0; index2 < *npoints; ++index2 )
         {
-          tempx = ( double* )ptr;
-          ptr += sizeof( double );
-          tempy = ( double* )ptr;
-          if ( point.sqrDist( *tempx, *tempy ) < actdist )
+          double x, y;
+          wkbPtr >> x >> y;
+          if ( point.sqrDist( x, y ) < actdist )
           {
-            x = *tempx;
-            y = *tempy;
-            actdist = point.sqrDist( *tempx, *tempy );
+            actdist = point.sqrDist( x, y );
             vertexnr = vertexcounter;
             //assign the rubber band indices
             if ( index2 == 0 )
@@ -200,10 +192,9 @@ int QgsInterpolator::addVerticesToCache( QgsGeometry* geom, bool zCoord, double 
               afterVertex = vertexcounter + 1;
             }
           }
-          ptr += sizeof( double );
           if ( hasZValue ) //skip z-coordinate for 25D geometries
           {
-            ptr += sizeof( double );
+            wkbPtr += sizeof( double );
           }
           ++vertexcounter;
         }
@@ -212,55 +203,47 @@ int QgsInterpolator::addVerticesToCache( QgsGeometry* geom, bool zCoord, double 
     }
     case QGis::WKBMultiPoint25D:
       hasZValue = true;
+      //intentional fall-through
     case QGis::WKBMultiPoint:
     {
-      unsigned char* ptr = mGeometry + 5;
-      int* npoints = ( int* )ptr;
-      ptr += sizeof( int );
-      for ( int index = 0; index < *npoints; ++index )
+      int nPoints;
+      wkbPtr >> nPoints;
+      for ( int index = 0; index < nPoints; ++index )
       {
-        ptr += ( 1 + sizeof( int ) ); //skip endian and point type
-        tempx = ( double* )ptr;
-        tempy = ( double* )( ptr + sizeof( double ) );
-        if ( point.sqrDist( *tempx, *tempy ) < actdist )
+        wkbPtr +=  1 + sizeof( int ); //skip endian and point type
+
+        double x, y;
+        wkbPtr >> x >> y;
+        if ( point.sqrDist( x, y ) < actdist )
         {
-          x = *tempx;
-          y = *tempy;
-          actdist = point.sqrDist( *tempx, *tempy );
+          actdist = point.sqrDist( x, y );
           vertexnr = index;
         }
-        ptr += ( 2 * sizeof( double ) );
         if ( hasZValue ) //skip z-coordinate for 25D geometries
         {
-          ptr += sizeof( double );
+          wkbPtr += sizeof( double );
         }
       }
       break;
     }
     case QGis::WKBMultiLineString25D:
       hasZValue = true;
+      //intentional fall-through
     case QGis::WKBMultiLineString:
     {
-      unsigned char* ptr = mGeometry + 5;
-      int* nlines = ( int* )ptr;
-      int* npoints = 0;
-      ptr += sizeof( int );
-      for ( int index = 0; index < *nlines; ++index )
+      int nLines;
+      wkbPtr >> nLines;
+      for ( int index = 0; index < nLines; ++index )
       {
-        ptr += ( sizeof( int ) + 1 );
-        npoints = ( int* )ptr;
-        ptr += sizeof( int );
-        for ( int index2 = 0; index2 < *npoints; ++index2 )
+        int nPoints;
+        wkbPtr >> nPoints;
+        for ( int index2 = 0; index2 < nPoints; ++index2 )
         {
-          tempx = ( double* )ptr;
-          ptr += sizeof( double );
-          tempy = ( double* )ptr;
-          ptr += sizeof( double );
-          if ( point.sqrDist( *tempx, *tempy ) < actdist )
+          double x, y;
+          wkbPtr >> x >> y;
+          if ( point.sqrDist( x, y ) < actdist )
           {
-            x = *tempx;
-            y = *tempy;
-            actdist = point.sqrDist( *tempx, *tempy );
+            actdist = point.sqrDist( x, y );
             vertexnr = vertexcounter;
 
             if ( index2 == 0 )//assign the rubber band indices
@@ -271,7 +254,7 @@ int QgsInterpolator::addVerticesToCache( QgsGeometry* geom, bool zCoord, double 
             {
               beforeVertex = vertexnr - 1;
             }
-            if ( index2 == ( *npoints ) - 1 )
+            if ( index2 == nPoints - 1 )
             {
               afterVertex = -1;
             }
@@ -282,7 +265,7 @@ int QgsInterpolator::addVerticesToCache( QgsGeometry* geom, bool zCoord, double 
           }
           if ( hasZValue ) //skip z-coordinate for 25D geometries
           {
-            ptr += sizeof( double );
+            wkbPtr += sizeof( double );
           }
           ++vertexcounter;
         }
@@ -291,44 +274,39 @@ int QgsInterpolator::addVerticesToCache( QgsGeometry* geom, bool zCoord, double 
     }
     case QGis::WKBMultiPolygon25D:
       hasZValue = true;
+      //intentional fall-through
     case QGis::WKBMultiPolygon:
     {
-      unsigned char* ptr = mGeometry + 5;
-      int* npolys = ( int* )ptr;
-      int* nrings;
-      int* npoints;
-      ptr += sizeof( int );
-      for ( int index = 0; index < *npolys; ++index )
+      int nPolys;
+      wkbPtr >> nPolys;
+      for ( int index = 0; index < nPolys; ++index )
       {
-        ptr += ( 1 + sizeof( int ) ); //skip endian and polygon type
-        nrings = ( int* )ptr;
-        ptr += sizeof( int );
-        for ( int index2 = 0; index2 < *nrings; ++index2 )
+        wkbPtr += 1 + sizeof( int ); //skip endian and polygon type
+        int nRings;
+        wkbPtr >> nRings;
+        for ( int index2 = 0; index2 < nRings; ++index2 )
         {
-          npoints = ( int* )ptr;
-          ptr += sizeof( int );
-          for ( int index3 = 0; index3 < *npoints; ++index3 )
+          int nPoints;
+          wkbPtr >> nPoints;
+          for ( int index3 = 0; index3 < nPoints; ++index3 )
           {
-            tempx = ( double* )ptr;
-            ptr += sizeof( double );
-            tempy = ( double* )ptr;
-            if ( point.sqrDist( *tempx, *tempy ) < actdist )
+            double x, y;
+            wkbPtr >> x >> y;
+            if ( point.sqrDist( x, y ) < actdist )
             {
-              x = *tempx;
-              y = *tempy;
-              actdist = point.sqrDist( *tempx, *tempy );
+              actdist = point.sqrDist( x, y );
               vertexnr = vertexcounter;
 
               //assign the rubber band indices
               if ( index3 == 0 )
               {
-                beforeVertex = vertexcounter + ( *npoints - 2 );
+                beforeVertex = vertexcounter + ( nPoints - 2 );
                 afterVertex = vertexcounter + 1;
               }
               else if ( index3 == ( *npoints - 1 ) )
               {
                 beforeVertex = vertexcounter - 1;
-                afterVertex = vertexcounter - ( *npoints - 2 );
+                afterVertex = vertexcounter - ( nPoints - 2 );
               }
               else
               {
@@ -336,10 +314,9 @@ int QgsInterpolator::addVerticesToCache( QgsGeometry* geom, bool zCoord, double 
                 afterVertex = vertexcounter + 1;
               }
             }
-            ptr += sizeof( double );
             if ( hasZValue ) //skip z-coordinate for 25D geometries
             {
-              ptr += sizeof( double );
+              wkbPtr += sizeof( double );
             }
             ++vertexcounter;
           }

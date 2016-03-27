@@ -266,7 +266,7 @@ static QgsFeatureRendererV2* readOldUniqueValueRenderer( const QDomNode& rnode, 
       QString label = meta.label;
       if ( label.isEmpty() )
         label = value.toString();
-      cats.append( QgsRendererCategoryV2( value, symbolv2, label ) );
+      cats.append( QgsRendererCategoryV2( value, symbolv2, label, true ) );
     }
 
     symbolnode = symbolnode.nextSibling();
@@ -386,7 +386,7 @@ QString QgsSymbologyV2Conversion::penStyle2QString( Qt::PenStyle penstyle )
   }
 }
 
-Qt::PenStyle QgsSymbologyV2Conversion::qString2PenStyle( QString penString )
+Qt::PenStyle QgsSymbologyV2Conversion::qString2PenStyle( const QString& penString )
 {
   if ( penString == "NoPen" )
   {
@@ -495,7 +495,7 @@ QString QgsSymbologyV2Conversion::brushStyle2QString( Qt::BrushStyle brushstyle 
   }
 }
 
-Qt::BrushStyle QgsSymbologyV2Conversion::qString2BrushStyle( QString brushString )
+Qt::BrushStyle QgsSymbologyV2Conversion::qString2BrushStyle( const QString& brushString )
 {
   if ( brushString == "NoBrush" )
   {

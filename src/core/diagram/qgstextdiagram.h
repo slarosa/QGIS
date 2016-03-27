@@ -48,11 +48,14 @@ class CORE_EXPORT QgsTextDiagram: public QgsDiagram
 
     QgsTextDiagram();
     ~QgsTextDiagram();
-    void renderDiagram( const QgsAttributes& att, QgsRenderContext& c, const QgsDiagramSettings& s, const QPointF& position );
-    QSizeF diagramSize( const QgsAttributes& attributes, const QgsRenderContext& c, const QgsDiagramSettings& s );
-    QSizeF diagramSize( const QgsAttributes& attributes, const QgsRenderContext& c, const QgsDiagramSettings& s, const QgsDiagramInterpolationSettings& is );
+    virtual QgsTextDiagram* clone() const override;
 
-    QString diagramName() const { return DIAGRAM_NAME_TEXT; }
+    void renderDiagram( const QgsFeature& feature, QgsRenderContext& c, const QgsDiagramSettings& s, const QPointF& position ) override;
+
+    QSizeF diagramSize( const QgsAttributes& attributes, const QgsRenderContext& c, const QgsDiagramSettings& s ) override;
+    QSizeF diagramSize( const QgsFeature& feature, const QgsRenderContext& c, const QgsDiagramSettings& s, const QgsDiagramInterpolationSettings& is ) override;
+
+    QString diagramName() const override { return DIAGRAM_NAME_TEXT; }
 
   private:
     Orientation mOrientation;
@@ -60,7 +63,7 @@ class CORE_EXPORT QgsTextDiagram: public QgsDiagram
     QBrush mBrush; //transparent brush
     QPen mPen;
 
-    /**Calculates intersection points between a line and an ellipse
+    /** Calculates intersection points between a line and an ellipse
       @return intersection points*/
     void lineEllipseIntersection( const QPointF& lineStart, const QPointF& lineEnd, const QPointF& ellipseMid, double r1, double r2, QList<QPointF>& result ) const;
 };

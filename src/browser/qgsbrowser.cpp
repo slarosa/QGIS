@@ -26,6 +26,7 @@
 #include "qgsencodingfiledialog.h"
 #include "qgsgenericprojectionselector.h"
 #include "qgslogger.h"
+#include "qgsconditionalstyle.h"
 #include "qgsmaplayerregistry.h"
 #include "qgsproviderregistry.h"
 #include "qgsvectorlayer.h"
@@ -33,8 +34,15 @@
 #include "qgsnewvectorlayerdialog.h"
 #include "qgsattributetablemodel.h"
 #include "qgsattributetablefiltermodel.h"
+#include "qgscredentialdialog.h"
 
-QgsBrowser::QgsBrowser( QWidget *parent, Qt::WFlags flags )
+#ifdef ANDROID
+#define QGIS_ICON_SIZE 32
+#else
+#define QGIS_ICON_SIZE 24
+#endif
+
+QgsBrowser::QgsBrowser( QWidget *parent, const Qt::WindowFlags& flags )
     : QMainWindow( parent, flags )
     , mDirtyMetadata( true )
     , mDirtyPreview( true )
@@ -71,13 +79,20 @@ QgsBrowser::QgsBrowser( QWidget *parent, Qt::WFlags flags )
 
   mapCanvas->setCanvasColor( Qt::white );
 
+  //Set the icon size of for all the toolbars created in the future.
   QSettings settings;
-  QString lastPath =  settings.value( "/Browser/lastExpanded" ).toString();
-  QgsDebugMsg( "lastPath = " + lastPath );
-  if ( !lastPath.isEmpty() )
+  int size = settings.value( "/IconSize", QGIS_ICON_SIZE ).toInt();
+  setIconSize( QSize( size, size ) );
+
+  //Change all current icon sizes.
+  QList<QToolBar *> toolbars = findChildren<QToolBar *>();
+  Q_FOREACH ( QToolBar * toolbar, toolbars )
   {
-    expandPath( lastPath );
+    toolbar->setIconSize( QSize( size, size ) );
   }
+
+  // set graphical credential requester
+  new QgsCredentialDialog( this );
 }
 
 QgsBrowser::~QgsBrowser()
@@ -85,7 +100,7 @@ QgsBrowser::~QgsBrowser()
 
 }
 
-void QgsBrowser::expandPath( QString path )
+void QgsBrowser::expandPath( const QString& path )
 {
   QModelIndex idx = mModel->findPath( path );
   if ( idx.isValid() )
@@ -193,7 +208,7 @@ bool QgsBrowser::layerClicked( QgsLayerItem *item )
   if ( !item )
     return false;
 
-  mActionSetProjection->setEnabled( item->capabilities() & QgsLayerItem::SetCrs );
+  mActionSetProjection->setEnabled( item->capabilities2().testFlag( QgsLayerItem::SetCrs ) );
 
   QString uri = item->uri();
   if ( !uri.isEmpty() )
@@ -237,34 +252,18 @@ void QgsBrowser::itemDoubleClicked( const QModelIndex& index )
   QgsDebugMsg( QString( "%1 %2 %3" ).arg( index.row() ).arg( index.column() ).arg( item->name() ) );
 }
 
-void QgsBrowser::itemExpanded( const QModelIndex& index )
-{
-  QSettings settings;
-  QgsDataItem *item = mModel->dataItem( index );
-  if ( !item )
-    return;
-
-#if 0
-  if ( item->mType == QgsDataItem::Directory || item->mType == QgsDataItem::Collection )
-  {
-    QgsDirectoryItem *i = qobject_cast<QgsDirectoryItem*>( item );
-    settings.setValue( "/Browser/lastExpandedDir", i->mPath );
-  }
-#endif
-
-  // TODO: save separately each type (FS, WMS)
-  settings.setValue( "/Browser/lastExpanded", item->path() );
-  QgsDebugMsg( "last expanded: " + item->path() );
-}
-
 void QgsBrowser::newVectorLayer()
 {
   // Set file dialog to last selected dir
-  QSettings settings;
-  QString lastPath =  settings.value( "/Browser/lastExpanded" ).toString();
-  if ( !lastPath.isEmpty() )
+  QModelIndex selectedIndex = treeView->selectionModel()->currentIndex();
+  if ( selectedIndex.isValid() )
   {
-    settings.setValue( "/UI/lastVectorFileFilterDir", lastPath );
+    QgsDirectoryItem * dirItem = qobject_cast<QgsDirectoryItem *>( mModel->dataItem( selectedIndex ) );
+    if ( dirItem )
+    {
+      QSettings settings;
+      settings.setValue( "/UI/lastVectorFileFilterDir", dirItem->dirPath() );
+    }
   }
 
   QString fileName = QgsNewVectorLayerDialog::runAndCreateLayer( this );
@@ -336,8 +335,8 @@ void QgsBrowser::saveWindowState()
   QSettings settings;
   settings.setValue( "/Windows/Browser/state", saveState() );
   settings.setValue( "/Windows/Browser/geometry", saveGeometry() );
-  settings.setValue( "/Windows/Browser/sizes/0", splitter->sizes()[0] );
-  settings.setValue( "/Windows/Browser/sizes/1", splitter->sizes()[1] );
+  settings.setValue( "/Windows/Browser/sizes/0", splitter->sizes().at( 0 ) );
+  settings.setValue( "/Windows/Browser/sizes/1", splitter->sizes().at( 1 ) );
 }
 
 void QgsBrowser::restoreWindowState()
@@ -391,20 +390,9 @@ void QgsBrowser::keyReleaseEvent( QKeyEvent * e )
 
 void QgsBrowser::stopRendering()
 {
-  // you might have seen this already in QgisApp
   QgsDebugMsg( "Entered" );
   if ( mapCanvas )
-  {
-    QgsMapRenderer* mypMapRenderer = mapCanvas->mapRenderer();
-    if ( mypMapRenderer )
-    {
-      QgsRenderContext* mypRenderContext = mypMapRenderer->rendererContext();
-      if ( mypRenderContext )
-      {
-        mypRenderContext->setRenderingStopped( true );
-      }
-    }
-  }
+    mapCanvas->stopRendering();
 }
 
 QgsBrowser::Tab QgsBrowser::activeTab()
@@ -456,7 +444,7 @@ void QgsBrowser::updateCurrentTab()
       QgsRasterLayer *rlayer = qobject_cast< QgsRasterLayer * >( mLayer );
       if ( rlayer )
       {
-        connect( rlayer->dataProvider(), SIGNAL( dataChanged() ), rlayer, SLOT( clearCacheImage() ) );
+        connect( rlayer->dataProvider(), SIGNAL( dataChanged() ), rlayer, SLOT( triggerRepaint() ) );
         connect( rlayer->dataProvider(), SIGNAL( dataChanged() ), mapCanvas, SLOT( refresh() ) );
       }
     }

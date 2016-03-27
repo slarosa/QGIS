@@ -4,7 +4,7 @@
 #    ---------------------
 #    Date                 : July 2007
 #    Copyright            : (C) 2007 by Tim Sutton
-#    Email                : tim dot linfiniti at com
+#    Email                : tim at linfiniti dot com
 ###########################################################################
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
@@ -20,6 +20,8 @@
 # 3. remove the .pro
 # Note the .pro file must NOT be named qgis.pro as this
 # name is reserved for the Windows qmake project file
+
+echo "deprecated - use push_ts.sh and pull_ts.sh" >&2
 
 set -e
 
@@ -52,8 +54,6 @@ cleanup() {
 	trap "" EXIT
 }
 
-trap cleanup EXIT
-
 PATH=$QTDIR/bin:$PATH
 
 if type qmake-qt4 >/dev/null 2>&1; then
@@ -62,14 +62,20 @@ else
 	QMAKE=qmake
 fi
 
+if ! type pylupdate4 >/dev/null 2>&1; then
+      echo "pylupdate4 not found"
+      exit 1
+fi
+
 if type lupdate-qt4 >/dev/null 2>&1; then
 	LUPDATE=lupdate-qt4
 else
 	LUPDATE=lupdate
 fi
 
-exclude=
-opts=
+exclude="--exclude i18n/qgis_en.ts"
+opts="-locations none"
+fast=
 while (( $# > 0 )); do
   arg=$1
   shift
@@ -83,6 +89,8 @@ while (( $# > 0 )); do
     else
       add="$add $arg"
     fi
+  elif [ "$arg" = "-f" ]; then
+    fast=--remove-files
   elif [ -f "i18n/qgis_$arg.ts" ]; then
     exclude="$exclude --exclude i18n/qgis_$arg.ts"
   else
@@ -90,16 +98,16 @@ while (( $# > 0 )); do
   fi
 done
 
-if [ -n "$exclude" -o -n "$add" ]; then
+trap cleanup EXIT
+
+if [ "$exclude" != "--exclude i18n/qgis_en.ts" -o -n "$add" ]; then
   echo Saving excluded translations
-  tar --remove-files -cf i18n/qgis_ts.tar i18n/qgis_*.ts$exclude
+  tar $fast -cf i18n/qgis_ts.tar i18n/qgis_*.ts $exclude
 fi
+
 echo Updating python translations
 cd python
-pylupdate4 console/console.py \
-console/console_sci.py \
-console/console_editor.py \
-console/console_output.py utils.py -ts python-i18n.ts
+pylupdate4 utils.py {console,pyplugin_installer}/*.{py,ui} -ts python-i18n.ts
 perl ../scripts/ts2cpp.pl python-i18n.ts python-i18n.cpp
 rm python-i18n.ts
 cd ..
@@ -128,12 +136,14 @@ if [ -n "$add" ]; then
 	done
 fi
 echo Updating translations
-$LUPDATE$opts -verbose qgis_ts.pro
+$LUPDATE $opts -verbose qgis_ts.pro
+
+if [ -z "$fast" ]; then
+	echo Updating TRANSLATORS File
+	./scripts/tsstat.pl >doc/TRANSLATORS
+fi
 
 cleanup
-
-echo Updating TRANSLATORS File
-./scripts/tsstat.pl > doc/TRANSLATORS
 
 if [ -n "$add" ]; then
 	for i in $add; do

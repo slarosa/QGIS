@@ -20,14 +20,16 @@
 
 #include "qgsmaptoolannotation.h"
 
-class QgsMapToolTextAnnotation: public QgsMapToolAnnotation
+class APP_EXPORT QgsMapToolTextAnnotation: public QgsMapToolAnnotation
 {
+    Q_OBJECT
+
   public:
     QgsMapToolTextAnnotation( QgsMapCanvas* canvas );
     ~QgsMapToolTextAnnotation();
 
   protected:
-    QgsAnnotationItem* createItem( QMouseEvent* e );
+    QgsAnnotationItem* createItem( QMouseEvent* e ) override;
 };
 
 #endif // QGSMAPTOOLTEXTANNOTATION_H

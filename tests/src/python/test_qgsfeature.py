@@ -8,20 +8,21 @@ the Free Software Foundation; either version 2 of the License, or
 """
 __author__ = 'Germán Carrillo'
 __date__ = '06/10/2012'
-__copyright__ = 'Copyright 2012, The Quantum GIS Project'
+__copyright__ = 'Copyright 2012, The QGIS Project'
 # This will get replaced with a git SHA1 when you do a git archive
 __revision__ = '$Format:%H$'
 
+import qgis
 import os
 
-from PyQt4.QtCore import QVariant
-from qgis.core import QgsFeature, QgsGeometry, QgsPoint, QgsVectorLayer
+from qgis.core import QgsFeature, QgsGeometry, QgsPoint, QgsVectorLayer, NULL
 from utilities import (unitTestDataPath,
                        getQgisTestApp,
                        TestCase,
-                       unittest,
-                       #expectedFailure
+                       unittest
                        )
+from unittest import expectedFailure
+
 QGISAPP, CANVAS, IFACE, PARENT = getQgisTestApp()
 
 
@@ -31,7 +32,7 @@ class TestQgsFeature(TestCase):
         feat = QgsFeature()
         feat.initAttributes(1)
         feat.setAttribute(0, "text")
-        feat.setGeometry(QgsGeometry.fromPoint(QgsPoint(123,456)))
+        feat.setGeometry(QgsGeometry.fromPoint(QgsPoint(123, 456)))
         myId = feat.id()
         myExpectedId = 0
         myMessage = '\nExpected: %s\nGot: %s' % (myExpectedId, myId)
@@ -44,9 +45,10 @@ class TestQgsFeature(TestCase):
         fit = provider.getFeatures()
         feat = QgsFeature()
         fit.nextFeature(feat)
+        fit.close()
         myValidValue = feat.isValid()
         myMessage = '\nExpected: %s\nGot: %s' % ("True", myValidValue)
-        assert myValidValue == True, myMessage
+        assert myValidValue, myMessage
 
     def test_Attributes(self):
         myPath = os.path.join(unitTestDataPath(), 'lines.shp')
@@ -55,38 +57,45 @@ class TestQgsFeature(TestCase):
         fit = provider.getFeatures()
         feat = QgsFeature()
         fit.nextFeature(feat)
+        fit.close()
         myAttributes = feat.attributes()
-        myExpectedAttributes = [ QVariant("Highway"), QVariant(1) ]
+        myExpectedAttributes = ["Highway", 1]
 
         # Only for printing purposes
-        myAttributeDict = [
-            str(myAttributes[0].toString()),
-            int(myAttributes[1].toString()) ]
-        myExpectedAttributes = [ "Highway",  1 ]
-        myMessage = '\nExpected: %s\nGot: %s' % (myExpectedAttributes,
-            myAttributes)
+        myExpectedAttributes = ["Highway", 1]
+        myMessage = '\nExpected: %s\nGot: %s' % (
+            myExpectedAttributes,
+            myAttributes
+        )
 
         assert myAttributes == myExpectedAttributes, myMessage
+
+    def test_SetAttribute(self):
+        feat = QgsFeature()
+        feat.initAttributes(1)
+        feat.setAttributes([0])
+        feat.setAttributes([NULL])
+        assert [NULL] == feat.attributes()
 
     def test_DeleteAttribute(self):
         feat = QgsFeature()
         feat.initAttributes(3)
-        feat[0] = QVariant("text1")
-        feat[1] = QVariant("text2")
-        feat[2] = QVariant("text3")
+        feat[0] = "text1"
+        feat[1] = "text2"
+        feat[2] = "text3"
         feat.deleteAttribute(1)
-        myAttrs = [ str(feat[0].toString()), str(feat[1].toString()) ]
-        myExpectedAttrs = [ "text1", "text3" ]
+        myAttrs = [feat[0], feat[1]]
+        myExpectedAttrs = ["text1", "text3"]
         myMessage = '\nExpected: %s\nGot: %s' % (str(myExpectedAttrs), str(myAttrs))
         assert myAttrs == myExpectedAttrs, myMessage
 
     def test_SetGeometry(self):
         feat = QgsFeature()
-        feat.setGeometry(QgsGeometry.fromPoint(QgsPoint(123,456)))
+        feat.setGeometry(QgsGeometry.fromPoint(QgsPoint(123, 456)))
         myGeometry = feat.geometry()
         myExpectedGeometry = "!None"
         myMessage = '\nExpected: %s\nGot: %s' % (myExpectedGeometry, myGeometry)
-        assert myGeometry != None, myMessage
+        assert myGeometry is not None, myMessage
 
 if __name__ == '__main__':
     unittest.main()

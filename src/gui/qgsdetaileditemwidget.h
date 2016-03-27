@@ -24,14 +24,14 @@
  * A widget renderer for detailed item views.
  * @see also QgsDetailedItem and QgsDetailedItemData.
  */
-class QgsDetailedItemWidget :
+class GUI_EXPORT QgsDetailedItemWidget :
       public QWidget, private Ui::QgsDetailedItemWidgetBase
 {
     Q_OBJECT
   public:
     QgsDetailedItemWidget( QWidget * parent = 0 );
     ~QgsDetailedItemWidget();
-    void setData( QgsDetailedItemData theData );
+    void setData( const QgsDetailedItemData& theData );
     void setChecked( bool theFlag );
   private:
     QgsDetailedItemData mData;

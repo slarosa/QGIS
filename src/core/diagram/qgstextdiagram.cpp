@@ -15,6 +15,7 @@
 #include "qgstextdiagram.h"
 #include "qgsdiagramrendererv2.h"
 #include "qgsrendercontext.h"
+#include "qgsexpression.h"
 
 #include <QPainter>
 
@@ -30,11 +31,28 @@ QgsTextDiagram::~QgsTextDiagram()
 {
 }
 
-QSizeF QgsTextDiagram::diagramSize( const QgsAttributes& attributes, const QgsRenderContext& c, const QgsDiagramSettings& s, const QgsDiagramInterpolationSettings& is )
+QgsTextDiagram* QgsTextDiagram::clone() const
 {
-  Q_UNUSED( c );
+  return new QgsTextDiagram( *this );
+}
 
-  QVariant attrVal = attributes[is.classificationAttribute];
+QSizeF QgsTextDiagram::diagramSize( const QgsFeature& feature, const QgsRenderContext& c, const QgsDiagramSettings& s, const QgsDiagramInterpolationSettings& is )
+{
+  QgsExpressionContext expressionContext = c.expressionContext();
+  expressionContext.setFeature( feature );
+  if ( feature.fields() )
+    expressionContext.setFields( *feature.fields() );
+
+  QVariant attrVal;
+  if ( is.classificationAttributeIsExpression )
+  {
+    QgsExpression* expression = getExpression( is.classificationAttributeExpression, expressionContext );
+    attrVal = expression->evaluate( &expressionContext );
+  }
+  else
+  {
+    attrVal = feature.attributes().at( is.classificationAttribute );
+  }
 
   if ( !attrVal.isValid() )
   {
@@ -84,17 +102,10 @@ QSizeF QgsTextDiagram::diagramSize( const QgsAttributes& attributes, const QgsRe
   return s.size;
 }
 
-void QgsTextDiagram::renderDiagram( const QgsAttributes& att, QgsRenderContext& c, const QgsDiagramSettings& s, const QPointF& position )
+void QgsTextDiagram::renderDiagram( const QgsFeature& feature, QgsRenderContext& c, const QgsDiagramSettings& s, const QPointF& position )
 {
   QPainter* p = c.painter();
   if ( !p )
-  {
-    return;
-  }
-
-  double scaleDenominator = c.rendererScale();
-  if (( s.minScaleDenominator != -1 && scaleDenominator < s.minScaleDenominator )
-      || ( s.maxScaleDenominator != -1 && scaleDenominator > s.maxScaleDenominator ) )
   {
     return;
   }
@@ -108,12 +119,12 @@ void QgsTextDiagram::renderDiagram( const QgsAttributes& att, QgsRenderContext& 
   double baseY = position.y() - h;
 
   QList<QPointF> textPositions; //midpoints for text placement
-  int nCategories = s.categoryIndices.size();
+  int nCategories = s.categoryAttributes.size();
   for ( int i = 0; i < nCategories; ++i )
   {
     if ( mOrientation == Horizontal )
     {
-      textPositions.push_back( QPointF( baseX + ( w / nCategories ) * i + w / nCategories / 2.0 , baseY + h / 2.0 ) );
+      textPositions.push_back( QPointF( baseX + ( w / nCategories ) * i + w / nCategories / 2.0, baseY + h / 2.0 ) );
     }
     else //vertical
     {
@@ -160,11 +171,11 @@ void QgsTextDiagram::renderDiagram( const QgsAttributes& att, QgsRenderContext& 
     {
       if ( mOrientation == Horizontal )
       {
-        p->drawLine( QPointF( baseX + w / nCategories * i , baseY ), QPointF( baseX + w / nCategories * i, baseY + h ) );
+        p->drawLine( QPointF( baseX + w / nCategories * i, baseY ), QPointF( baseX + w / nCategories * i, baseY + h ) );
       }
       else
       {
-        p->drawLine( QPointF( baseX, baseY + h / nCategories * i ) , QPointF( baseX + w,  baseY + h / nCategories * i ) );
+        p->drawLine( QPointF( baseX, baseY + h / nCategories * i ), QPointF( baseX + w, baseY + h / nCategories * i ) );
       }
     }
   }
@@ -208,9 +219,16 @@ void QgsTextDiagram::renderDiagram( const QgsAttributes& att, QgsRenderContext& 
   QFontMetricsF fontMetrics( sFont );
   p->setFont( sFont );
 
+  QgsExpressionContext expressionContext = c.expressionContext();
+  expressionContext.setFeature( feature );
+  if ( feature.fields() )
+    expressionContext.setFields( *feature.fields() );
+
   for ( int i = 0; i < textPositions.size(); ++i )
   {
-    QString val = att[ s.categoryIndices.at( i )].toString();
+    QgsExpression* expression = getExpression( s.categoryAttributes.at( i ), expressionContext );
+    QString val = expression->evaluate( &expressionContext ).toString();
+
     //find out dimesions
     double textWidth = fontMetrics.width( val );
     double textHeight = fontMetrics.height();

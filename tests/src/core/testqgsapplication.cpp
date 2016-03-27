@@ -12,9 +12,7 @@ Email                : sherman at mrcc dot com
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-#include <QtTest>
-#include <iostream>
-
+#include <QtTest/QtTest>
 #include <QPixmap>
 
 #define CPL_SUPRESS_CPLUSPLUS
@@ -25,11 +23,12 @@ Email                : sherman at mrcc dot com
 
 class TestQgsApplication: public QObject
 {
-    Q_OBJECT;
+    Q_OBJECT
   private slots:
     void checkPaths();
     void checkGdalSkip();
     void initTestCase();
+    void cleanupTestCase();
   private:
     QString getQgisPath();
 };
@@ -44,7 +43,12 @@ void TestQgsApplication::initTestCase()
   QgsApplication::init();
   QgsApplication::initQgis();
   qDebug( "%s", QgsApplication::showSettings().toUtf8().constData() );
-};
+}
+
+void TestQgsApplication::cleanupTestCase()
+{
+  QgsApplication::exitQgis();
+}
 
 void TestQgsApplication::checkPaths()
 {
@@ -52,17 +56,16 @@ void TestQgsApplication::checkPaths()
   qDebug( "Checking authors file exists:" );
   qDebug( "%s", myPath.toLocal8Bit().constData() );
   QVERIFY( !myPath.isEmpty() );
-};
+}
 
 void TestQgsApplication::checkGdalSkip()
 {
   GDALAllRegister();
   QgsApplication::skipGdalDriver( "GTiff" );
-  QVERIFY( QgsApplication::skippedGdalDrivers( ).contains( "GTiff" ) );
+  QVERIFY( QgsApplication::skippedGdalDrivers().contains( "GTiff" ) );
   QgsApplication::restoreGdalDriver( "GTiff" );
-  QVERIFY( !QgsApplication::skippedGdalDrivers( ).contains( "GTiff" ) );
+  QVERIFY( !QgsApplication::skippedGdalDrivers().contains( "GTiff" ) );
 }
 
 QTEST_MAIN( TestQgsApplication )
-#include "moc_testqgsapplication.cxx"
-
+#include "testqgsapplication.moc"

@@ -18,8 +18,9 @@
 
 #include "offline_editing_progress_dialog.h"
 
-QgsOfflineEditingProgressDialog::QgsOfflineEditingProgressDialog( QWidget* parent /*= 0*/, Qt::WFlags fl /*= 0*/ )
+QgsOfflineEditingProgressDialog::QgsOfflineEditingProgressDialog( QWidget* parent /*= 0*/, Qt::WindowFlags fl /*= 0*/ )
     : QDialog( parent, fl )
+    , mProgressUpdate( 0 )
 {
   setupUi( this );
 }

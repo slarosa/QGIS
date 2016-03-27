@@ -23,7 +23,7 @@
 
 class QPainter;
 
-class QgsDecorationItem: public QObject
+class APP_EXPORT QgsDecorationItem: public QObject
 {
     Q_OBJECT
   public:
@@ -56,7 +56,7 @@ class QgsDecorationItem: public QObject
 
   protected:
 
-    /**True if decoration item has to be displayed*/
+    /** True if decoration item has to be displayed*/
     bool mEnabled;
 
     QString mName;

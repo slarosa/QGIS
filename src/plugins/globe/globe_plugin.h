@@ -45,23 +45,30 @@ using namespace osgEarth::Util::Controls;
 #include <osgEarthUtil/ElevationManager>
 #include <osgEarthUtil/ObjectPlacer>
 #endif
+#include <osgEarth/Version>
+
+#if 0
+#include <iostream>
+#endif
 
 class QAction;
 class QToolBar;
 class QgisInterface;
 
+namespace osgEarth { namespace QtGui { class ViewerWidget; } }
+namespace osgEarth { namespace Util { class SkyNode; class VerticalScale; } }
 
 class GlobePlugin : public QObject, public QgisPlugin
 {
     Q_OBJECT
 
   public:
-    GlobePlugin( QgisInterface* theQgisInterface );
+    explicit GlobePlugin( QgisInterface* theQgisInterface );
     virtual ~GlobePlugin();
 
   public slots:
     //! init the gui
-    virtual void initGui();
+    virtual void initGui() override;
     //! Show the dialog box
     void run();
     //! Show the settings dialog box
@@ -69,18 +76,26 @@ class GlobePlugin : public QObject, public QgisPlugin
     //!  Reset globe
     void reset();
     //! unload the plugin
-    void unload();
+    void unload() override;
     //! show the help document
     void help();
 
-    //! Emitted when a new set of image layers has been received
+    //! Called when a new set of image layers has been received
     void imageLayersChanged();
-    //! Emitted when a new set of elevation layers has been received
+    //! Called when a new set of elevation layers has been received
     void elevationLayersChanged();
+    //! Set a different base map (QString::NULL will disable the base map)
+    void setBaseMap( QString url );
+    //! Called when the extents of the map change
+    void setSkyParameters( bool enabled, const QDateTime& dateTime, bool autoAmbience );
     //! Called when the extents of the map change
     void extentsChanged();
     //! Sync globe extent to mapCanavas
     void syncExtent();
+#if OSGEARTH_VERSION_GREATER_OR_EQUAL( 2, 5, 0 )
+    //! Set vertical scale
+    void setVerticalScale( double scale );
+#endif
 
     //! called when a project has been read successfully
     void projectReady();
@@ -106,6 +121,8 @@ class GlobePlugin : public QObject, public QgisPlugin
     //! Place an OSG model on the globe
     void placeNode( osg::Node* node, double lat, double lon, double alt = 0.0 );
 
+    osgViewer::Viewer* osgViewer() { return mOsgViewer; }
+
     //! Recursive copy folder
     static void copyFolder( QString sourceFolder, QString destFolder );
 
@@ -118,23 +135,30 @@ class GlobePlugin : public QObject, public QgisPlugin
     void setupControls();
 
   private://! Checks if the globe is open
-    int mPluginType;
     //! Pointer to the QGIS interface object
     QgisInterface *mQGisIface;
     //!pointer to the qaction for this plugin
     QAction * mQActionPointer;
     //!pointer to the qaction for this plugin
     QAction * mQActionSettingsPointer;
+    QAction * mQActionUnload;
     //! OSG Viewer
     osgViewer::Viewer* mOsgViewer;
     //! QT viewer widget
-    QWidget* mViewerWidget;
+    osgEarth::QtGui::ViewerWidget* mViewerWidget;
     //! Settings Dialog
     QgsGlobePluginDialog *mSettingsDialog;
     //! OSG root node
     osg::Group* mRootNode;
     //! Map node
     osgEarth::MapNode* mMapNode;
+    //! Base layer
+    osg::ref_ptr<osgEarth::ImageLayer> mBaseLayer;
+    //! Sky node
+    osg::ref_ptr<osgEarth::Util::SkyNode> mSkyNode;
+#if OSGEARTH_VERSION_GREATER_OR_EQUAL( 2, 5, 0 )
+    osg::ref_ptr<osgEarth::Util::VerticalScale> mVerticalScale;
+#endif
     //! QGIS maplayer
     osgEarth::ImageLayer* mQgisMapLayer;
     //! Tile source
@@ -157,6 +181,10 @@ class GlobePlugin : public QObject, public QgisPlugin
     //! coordinates of the right-clicked point on the globe
     double mSelectedLat, mSelectedLon, mSelectedElevation;
 
+#if 0
+    std::streambuf *mCoutRdBuf, *mCerrRdBuf;
+#endif
+
   signals:
     //! emits current mouse position
     void xyCoordinates( const QgsPoint & p );
@@ -167,9 +195,9 @@ class GlobePlugin : public QObject, public QgisPlugin
 class FlyToExtentHandler : public osgGA::GUIEventHandler
 {
   public:
-    FlyToExtentHandler( GlobePlugin* globe ) : mGlobe( globe ) { }
+    explicit FlyToExtentHandler( GlobePlugin* globe ) : mGlobe( globe ) { }
 
-    bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa );
+    bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa ) override;
 
   private:
     GlobePlugin* mGlobe;
@@ -183,7 +211,7 @@ class QueryCoordinatesHandler : public osgGA::GUIEventHandler
   public:
     QueryCoordinatesHandler( GlobePlugin* globe, osgEarth::Util::ElevationManager* elevMan,
                              const osgEarth::SpatialReference* mapSRS )
-        :  mGlobe( globe ), _mapSRS( mapSRS ), _elevMan( elevMan ), _mouseDown( false ) { }
+        :  mGlobe( globe ), _mapSRS( mapSRS ), _elevMan( elevMan ) { }
 
     bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa );
 
@@ -193,7 +221,6 @@ class QueryCoordinatesHandler : public osgGA::GUIEventHandler
     GlobePlugin* mGlobe;
     osg::ref_ptr<const SpatialReference> _mapSRS;
     osg::ref_ptr<osgEarth::Util::ElevationManager> _elevMan;
-    bool _mouseDown;
 };
 #endif
 
@@ -201,15 +228,12 @@ class QueryCoordinatesHandler : public osgGA::GUIEventHandler
 class KeyboardControlHandler : public osgGA::GUIEventHandler
 {
   public:
-    KeyboardControlHandler( osgEarth::Util::EarthManipulator* manip, QgisInterface *qGisIface ) : _manip( manip ), mQGisIface( qGisIface ) { }
+    explicit KeyboardControlHandler( osgEarth::Util::EarthManipulator* manip ) : _manip( manip ) { }
 
-    bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa );
+    bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa ) override;
 
   private:
     osg::observer_ptr<osgEarth::Util::EarthManipulator> _manip;
-
-    //! Pointer to the QGIS interface object
-    QgisInterface *mQGisIface;
 };
 
 
@@ -228,16 +252,16 @@ namespace osgEarth
         public:
           virtual void onMouseDown( class Control* control, int mouseButtonMask ) { Q_UNUSED( control ); Q_UNUSED( mouseButtonMask ); }
           virtual void onClick( class Control* control, int mouseButtonMask, const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa ) { Q_UNUSED( control ); Q_UNUSED( mouseButtonMask ); Q_UNUSED( ea ); Q_UNUSED( aa ); }
-          virtual void onClick( class Control* control, int mouseButtonMask ) { Q_UNUSED( control ); Q_UNUSED( mouseButtonMask ); }
+          virtual void onClick( class Control* control, int mouseButtonMask ) override { Q_UNUSED( control ); Q_UNUSED( mouseButtonMask ); }
       };
 
       class NavigationControl : public ImageControl
       {
         public:
-          NavigationControl( osg::Image* image = 0L ) : ImageControl( image ),  _mouse_down_event( NULL ) {}
+          explicit NavigationControl( osg::Image* image = 0L ) : ImageControl( image ), _mouse_down_event( NULL ) {}
 
         protected:
-          virtual bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa, ControlContext& cx );
+          virtual bool handle( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa, ControlContext& cx ) override;
 
         private:
           osg::ref_ptr<const osgGA::GUIEventAdapter> _mouse_down_event;

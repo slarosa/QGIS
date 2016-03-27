@@ -65,24 +65,28 @@ class CORE_EXPORT QgsClipper
     static const double MIN_Y;
 
 
-    // A handy way to refer to the four boundaries
+    //! A handy way to refer to the four boundaries
     enum Boundary {XMax, XMin, YMax, YMin};
 
-    // Trims the given feature to a rectangular box. Returns the trimmed
-    // feature in x and y. The shapeOpen parameter determines whether
-    // the function treats the points as a closed shape (polygon), or as
-    // an open shape (linestring).
+    /**
+     * Trims the given feature to a rectangular box. Returns the trimmed
+     * feature in x and y. The shapeOpen parameter determines whether
+     * the function treats the points as a closed shape (polygon), or as
+     * an open shape (linestring).
+     *
+     * @note not available in python bindings on android
+     */
     static void trimFeature( QVector<double>& x,
                              QVector<double>& y,
                              bool shapeOpen );
 
     static void trimPolygon( QPolygonF& pts, const QgsRectangle& clipRect );
 
-    /**Reads a polyline from WKB and clips it to clipExtent
+    /** Reads a polyline from WKB and clips it to clipExtent
       @param wkb pointer to the start of the line wkb
       @param clipExtent clipping bounds
       @param line out: clipped line coordinates*/
-    static unsigned char* clippedLineWKB( unsigned char* wkb, const QgsRectangle& clipExtent, QPolygonF& line );
+    static const unsigned char* clippedLineWKB( const unsigned char* wkb, const QgsRectangle& clipExtent, QPolygonF& line );
 
   private:
 
@@ -118,7 +122,7 @@ class CORE_EXPORT QgsClipper
     //Implementation of 'Fast clipping' algorithm (Sobkow et al. 1987, Computers & Graphics Vol.11, 4, p.459-467)
     static bool clipLineSegment( double xLeft, double xRight, double yBottom, double yTop, double& x0, double& y0, double& x1, double& y1 );
 
-    /**Connects two lines split by the clip (by inserting points on the clip border)
+    /** Connects two lines split by the clip (by inserting points on the clip border)
       @param x0 x-coordinate of the first line end
       @param y0 y-coordinate of the first line end
       @param x1 x-coordinate of the second line start
@@ -179,11 +183,11 @@ inline void QgsClipper::trimPolygon( QPolygonF& pts, const QgsRectangle& clipRec
   tmpPts.reserve( pts.size() );
 
   trimPolygonToBoundary( pts, tmpPts, clipRect, XMax, clipRect.xMaximum() );
-  pts.clear();
+  pts.resize( 0 );
   trimPolygonToBoundary( tmpPts, pts, clipRect, YMax, clipRect.yMaximum() );
-  tmpPts.clear();
+  tmpPts.resize( 0 );
   trimPolygonToBoundary( pts, tmpPts, clipRect, XMin, clipRect.xMinimum() );
-  pts.clear();
+  pts.resize( 0 );
   trimPolygonToBoundary( tmpPts, pts, clipRect, YMin, clipRect.yMinimum() );
 }
 

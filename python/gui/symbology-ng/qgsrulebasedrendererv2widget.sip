@@ -35,10 +35,17 @@ class QgsRuleBasedRendererV2Model : QAbstractItemModel
 
     void insertRule( const QModelIndex& parent, int before, QgsRuleBasedRendererV2::Rule* newrule );
     void updateRule( const QModelIndex& parent, int row );
+    // update rule and all its descendants
+    void updateRule( const QModelIndex& index );
     void removeRule( const QModelIndex& index );
 
     void willAddRules( const QModelIndex& parent, int count ); // call beginInsertRows
     void finishedAddingRules(); // call endInsertRows
+
+    //! @note not available in python bindungs
+    // void setFeatureCounts( QMap<QgsRuleBasedRendererV2::Rule*, QgsRuleBasedRendererV2Count> theCountMap );
+    void clearFeatureCounts();
+
 };
 
 class QgsRuleBasedRendererV2Widget : QgsRendererV2Widget
@@ -62,6 +69,8 @@ class QgsRuleBasedRendererV2Widget : QgsRendererV2Widget
     void editRule();
     void editRule( const QModelIndex& index );
     void removeRule();
+    void countFeatures();
+    void clearFeatureCounts();
 
     void refineRuleScales();
     void refineRuleCategories();
@@ -70,12 +79,12 @@ class QgsRuleBasedRendererV2Widget : QgsRendererV2Widget
     void setRenderingOrder();
 
     void currentRuleChanged( const QModelIndex& current = QModelIndex(), const QModelIndex& previous = QModelIndex() );
+    void selectedRulesChanged();
 
     void saveSectionWidth( int section, int oldSize, int newSize );
     void restoreSectionWidths();
 
   protected:
-
     void refineRule( int type );
     void refineRuleCategoriesGui( const QModelIndexList& index );
     void refineRuleRangesGui( const QModelIndexList& index );
@@ -84,7 +93,9 @@ class QgsRuleBasedRendererV2Widget : QgsRendererV2Widget
     QgsRuleBasedRendererV2::Rule* currentRule();
 
     QList<QgsSymbolV2*> selectedSymbols();
+    QList<QgsRuleBasedRendererV2::Rule*> selectedRules();
     void refreshSymbolView();
+    void keyPressEvent( QKeyEvent* event );
 };
 
 ///////
@@ -96,7 +107,7 @@ class QgsRendererRulePropsDialog : QDialog
 %End
 
   public:
-    QgsRendererRulePropsDialog( QgsRuleBasedRendererV2::Rule* rule, QgsVectorLayer* layer, QgsStyleV2* style, QWidget* parent = 0 );
+    QgsRendererRulePropsDialog( QgsRuleBasedRendererV2::Rule* rule, QgsVectorLayer* layer, QgsStyleV2* style, QWidget* parent /TransferThis/ = 0, QgsMapCanvas* mapCanvas = 0 );
     ~QgsRendererRulePropsDialog();
 
     QgsRuleBasedRendererV2::Rule* rule();

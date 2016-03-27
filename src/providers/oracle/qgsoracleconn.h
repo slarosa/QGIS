@@ -45,9 +45,16 @@ struct QgsOracleLayerProperty
   QStringList          pkCols;
   QString              sql;
 
-  int size() { Q_ASSERT( types.size() == srids.size() ); return types.size(); }
+  int size() const { Q_ASSERT( types.size() == srids.size() ); return types.size(); }
 
-  QgsOracleLayerProperty at( int i )
+  bool operator==( const QgsOracleLayerProperty& other )
+  {
+    return types == other.types && srids == other.srids && ownerName == other.ownerName &&
+           tableName == other.tableName && geometryColName == other.geometryColName &&
+           isView == other.isView && pkCols == other.pkCols && sql == other.sql;
+  }
+
+  QgsOracleLayerProperty at( int i ) const
   {
     QgsOracleLayerProperty property;
 
@@ -66,17 +73,17 @@ struct QgsOracleLayerProperty
   }
 
 #if QGISDEBUG
-  QString toString()
+  QString toString() const
   {
     QString typeString;
-    foreach ( QGis::WkbType type, types )
+    Q_FOREACH ( QGis::WkbType type, types )
     {
       if ( !typeString.isEmpty() )
         typeString += "|";
       typeString += QString::number( type );
     }
     QString sridString;
-    foreach ( int srid, srids )
+    Q_FOREACH ( int srid, srids )
     {
       if ( !sridString.isEmpty() )
         sridString += "|";
@@ -96,9 +103,9 @@ struct QgsOracleLayerProperty
 #endif
 };
 
-class QgsOracleConn : public QThread
+class QgsOracleConn : public QObject
 {
-    Q_OBJECT;
+    Q_OBJECT
   public:
     static QgsOracleConn *connectDb( QgsDataSourceURI uri );
     void disconnect();
@@ -109,7 +116,7 @@ class QgsOracleConn : public QThread
 
     /** Quote a value for placement in a SQL string.
      */
-    static QString quotedValue( QVariant value );
+    static QString quotedValue( const QVariant &value, QVariant::Type type = QVariant::Invalid );
 
     //! Get the list of supported layers
     bool supportedLayers( QVector<QgsOracleLayerProperty> &layers,
@@ -122,10 +129,10 @@ class QgsOracleConn : public QThread
     /** Gets information about the spatial tables */
     bool tableInfo( bool geometryTablesOnly, bool userTablesOnly, bool allowGeometrylessTables );
 
-    /** get primary key candidates (all int4 columns) */
+    /** Get primary key candidates (all int4 columns) */
     QStringList pkCandidates( QString ownerName, QString viewName );
 
-    QString fieldExpression( const QgsField &fld );
+    static QString fieldExpression( const QgsField &fld );
 
     QString connInfo();
 
@@ -157,7 +164,7 @@ class QgsOracleConn : public QThread
     operator QSqlDatabase() { return mDatabase; }
 
   private:
-    QgsOracleConn( QgsDataSourceURI uri );
+    explicit QgsOracleConn( QgsDataSourceURI uri );
     ~QgsOracleConn();
 
     bool exec( QSqlQuery &qry, QString sql );

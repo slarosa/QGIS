@@ -18,7 +18,7 @@
 #include "qgsmessageviewer.h"
 #include <QSettings>
 
-QgsMessageViewer::QgsMessageViewer( QWidget *parent, Qt::WFlags fl, bool deleteOnClose )
+QgsMessageViewer::QgsMessageViewer( QWidget *parent, const Qt::WindowFlags& fl, bool deleteOnClose )
     : QDialog( parent, fl )
 {
   setupUi( this );
@@ -31,10 +31,15 @@ QgsMessageViewer::QgsMessageViewer( QWidget *parent, Qt::WFlags fl, bool deleteO
   setCheckBoxState( Qt::Unchecked );
 
   mCheckBoxQSettingsLabel = "";
+
+  QSettings settings;
+  restoreGeometry( settings.value( "/Windows/MessageViewer/geometry" ).toByteArray() );
 }
 
 QgsMessageViewer::~QgsMessageViewer()
 {
+  QSettings settings;
+  settings.setValue( "/Windows/MessageViewer/geometry", saveGeometry() );
 }
 
 void QgsMessageViewer::setMessageAsHtml( const QString &msg )
@@ -100,7 +105,7 @@ Qt::CheckState QgsMessageViewer::checkBoxState()
   return checkBox->checkState();
 }
 
-void QgsMessageViewer::setCheckBoxQSettingsLabel( QString label )
+void QgsMessageViewer::setCheckBoxQSettingsLabel( const QString& label )
 {
   mCheckBoxQSettingsLabel = label;
 }

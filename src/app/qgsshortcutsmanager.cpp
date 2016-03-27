@@ -17,11 +17,16 @@
 
 #include <QSettings>
 
+QgsShortcutsManager* QgsShortcutsManager::mInstance = NULL;
+
 QgsShortcutsManager::QgsShortcutsManager( QObject *parent ) : QObject( parent )
 {
 }
 
-QgsShortcutsManager* QgsShortcutsManager::mInstance = NULL;
+QgsShortcutsManager::~QgsShortcutsManager()
+{
+  mInstance = 0;
+}
 
 QgsShortcutsManager* QgsShortcutsManager::instance( QObject *parent )
 {
@@ -30,7 +35,7 @@ QgsShortcutsManager* QgsShortcutsManager::instance( QObject *parent )
   return mInstance;
 }
 
-bool QgsShortcutsManager::registerAction( QAction* action, QString defaultShortcut )
+bool QgsShortcutsManager::registerAction( QAction* action, const QString& defaultShortcut )
 {
   mActions.insert( action, defaultShortcut );
   connect( action, SIGNAL( destroyed() ), this, SLOT( actionDestroyed() ) );
@@ -42,8 +47,7 @@ bool QgsShortcutsManager::registerAction( QAction* action, QString defaultShortc
   QSettings settings;
   QString shortcut = settings.value( "/shortcuts/" + actionText, defaultShortcut ).toString();
 
-  if ( !shortcut.isEmpty() )
-    action->setShortcut( shortcut );
+  action->setShortcut( shortcut );
 
   return true;
 }
@@ -67,7 +71,7 @@ QString QgsShortcutsManager::actionDefaultShortcut( QAction* action )
   return mActions.value( action );
 }
 
-bool QgsShortcutsManager::setActionShortcut( QAction* action, QString shortcut )
+bool QgsShortcutsManager::setActionShortcut( QAction* action, const QString& shortcut )
 {
   action->setShortcut( shortcut );
 
@@ -80,7 +84,7 @@ bool QgsShortcutsManager::setActionShortcut( QAction* action, QString shortcut )
   return true;
 }
 
-QAction* QgsShortcutsManager::actionForShortcut( QKeySequence s )
+QAction* QgsShortcutsManager::actionForShortcut( const QKeySequence& s )
 {
   if ( s.isEmpty() )
     return NULL;
@@ -94,7 +98,7 @@ QAction* QgsShortcutsManager::actionForShortcut( QKeySequence s )
   return NULL;
 }
 
-QAction* QgsShortcutsManager::actionByName( QString name )
+QAction* QgsShortcutsManager::actionByName( const QString& name )
 {
   for ( ActionsHash::iterator it = mActions.begin(); it != mActions.end(); ++it )
   {
@@ -107,7 +111,7 @@ QAction* QgsShortcutsManager::actionByName( QString name )
 
 void QgsShortcutsManager::registerAllChildrenActions( QObject* object )
 {
-  foreach ( QObject* child, object->children() )
+  Q_FOREACH ( QObject* child, object->children() )
   {
     if ( child->inherits( "QAction" ) )
     {

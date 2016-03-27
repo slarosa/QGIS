@@ -24,9 +24,9 @@
   Shortcuts manager is a singleton class that contains a list of actions from main window
   that have been registered and their shortcut can be changed.
   */
-class QgsShortcutsManager : public QObject
+class APP_EXPORT QgsShortcutsManager : public QObject
 {
-    Q_OBJECT;
+    Q_OBJECT
   public:
 
     //! return instance of the manager
@@ -36,7 +36,7 @@ class QgsShortcutsManager : public QObject
     void registerAllChildrenActions( QObject* object );
 
     //! add action to the manager so the shortcut can be changed in GUI
-    bool registerAction( QAction* action, QString defaultShortcut = QString() );
+    bool registerAction( QAction* action, const QString& defaultShortcut = QString() );
 
     //! remove action from the manager
     bool unregisterAction( QAction* action );
@@ -48,13 +48,15 @@ class QgsShortcutsManager : public QObject
     QString actionDefaultShortcut( QAction* action );
 
     //! modify action's shortcut
-    bool setActionShortcut( QAction* action, QString shortcut );
+    bool setActionShortcut( QAction* action, const QString& shortcut );
 
     //! return action which is associated for the shortcut, NULL if no action is associated
-    QAction* actionForShortcut( QKeySequence s );
+    QAction* actionForShortcut( const QKeySequence& s );
 
     // return action by it's name. NULL if nothing found
-    QAction* actionByName( QString name );
+    QAction* actionByName( const QString& name );
+
+    ~QgsShortcutsManager();
 
   public slots:
     void actionDestroyed();

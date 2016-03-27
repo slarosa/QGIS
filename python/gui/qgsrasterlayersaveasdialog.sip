@@ -1,6 +1,7 @@
 class QgsRasterLayerSaveAsDialog : QDialog
 {
 %TypeHeaderCode
+#include <qgsextentgroupbox.h>
 #include <qgsrasterlayersaveasdialog.h>
 %End
   public:
@@ -15,12 +16,6 @@ class QgsRasterLayerSaveAsDialog : QDialog
       CurrentCrs,
       UserCrs
     };
-    enum ExtentState
-    {
-      OriginalExtent,
-      CurrentExtent,
-      UserExtent,
-    };
     enum ResolutionState
     {
       OriginalResolution,
@@ -30,7 +25,7 @@ class QgsRasterLayerSaveAsDialog : QDialog
     QgsRasterLayerSaveAsDialog( QgsRasterLayer* rasterLayer,
                                 QgsRasterDataProvider* sourceProvider, const QgsRectangle& currentExtent,
                                 const QgsCoordinateReferenceSystem& layerCrs, const QgsCoordinateReferenceSystem& currentCrs,
-                                QWidget* parent = 0, Qt::WindowFlags f = 0 );
+                                QWidget* parent /TransferThis/ = 0, const Qt::WindowFlags& f = 0 );
     ~QgsRasterLayerSaveAsDialog();
 
     Mode mode() const;

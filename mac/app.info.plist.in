@@ -15,7 +15,7 @@
 	<key>CFBundleSignature</key>
 	<string>QGIS</string>
 	<key>CFBundleGetInfoString</key>
-	<string>${QGIS_APP_NAME} ${COMPLETE_VERSION}-${RELEASE_NAME} (${REVISION}), © 2002-2013 QGIS Development Team</string>
+	<string>${QGIS_APP_NAME} ${COMPLETE_VERSION}-${RELEASE_NAME} (${REVISION}), © 2002-2015 QGIS Development Team</string>
 	<key>CFBundleShortVersionString</key>
 	<string>${COMPLETE_VERSION}</string>
 	<key>CFBundleVersion</key>
@@ -179,6 +179,30 @@
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>dem</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>QGIS style document</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleTypeIconFile</key>
+			<string>qml.icns</string>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>qml</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Memory layer document</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleTypeIconFile</key>
+			<string>mldata.icns</string>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>mldata</string>
 			</array>
 		</dict>
 	</array>

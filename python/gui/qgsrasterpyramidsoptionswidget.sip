@@ -9,7 +9,7 @@ class QgsRasterPyramidsOptionsWidget: QWidget
 
   public:
 
-    QgsRasterPyramidsOptionsWidget( QWidget* parent = 0, QString provider = "gdal" );
+    QgsRasterPyramidsOptionsWidget( QWidget* parent /TransferThis/ = 0, const QString& provider = "gdal" );
     ~QgsRasterPyramidsOptionsWidget();
 
     QStringList configOptions() const;
@@ -34,4 +34,5 @@ class QgsRasterPyramidsOptionsWidget: QWidget
 
   signals:
     void overviewListChanged();
+    void someValueChanged(); /* emitted when any other setting changes */
 };

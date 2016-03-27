@@ -33,7 +33,6 @@ QgsAttributeTableFilterModel::QgsAttributeTableFilterModel( QgsMapCanvas* canvas
     , mFilterMode( ShowAll )
     , mSelectedOnTop( false )
 {
-  mMasterSelection = new QItemSelectionModel( this, this );
   setSourceModel( sourceModel );
   setDynamicSortFilter( true );
   setSortRole( QgsAttributeTableModel::SortRole );
@@ -49,11 +48,11 @@ bool QgsAttributeTableFilterModel::lessThan( const QModelIndex &left, const QMod
 
     if ( leftSelected && !rightSelected )
     {
-      return true;
+      return sortOrder() == Qt::AscendingOrder;
     }
     else if ( rightSelected && !leftSelected )
     {
-      return false;
+      return sortOrder() == Qt::DescendingOrder;
     }
   }
 
@@ -77,6 +76,12 @@ bool QgsAttributeTableFilterModel::lessThan( const QModelIndex &left, const QMod
 
     case QVariant::Double:
       return leftData.toDouble() < rightData.toDouble();
+
+    case QVariant::Date:
+      return leftData.toDate() < rightData.toDate();
+
+    case QVariant::DateTime:
+      return leftData.toDateTime() < rightData.toDateTime();
 
     default:
       return leftData.toString().localeAwareCompare( rightData.toString() ) < 0;
@@ -109,8 +114,6 @@ void QgsAttributeTableFilterModel::setSelectedOnTop( bool selectedOnTop )
 void QgsAttributeTableFilterModel::setSourceModel( QgsAttributeTableModel* sourceModel )
 {
   mTableModel = sourceModel;
-  delete mMasterSelection;
-  mMasterSelection = new QItemSelectionModel( sourceModel, this );
 
   QSortFilterProxyModel::setSourceModel( sourceModel );
 }
@@ -120,11 +123,22 @@ bool QgsAttributeTableFilterModel::selectedOnTop()
   return mSelectedOnTop;
 }
 
-void QgsAttributeTableFilterModel::setFilteredFeatures( QgsFeatureIds ids )
+void QgsAttributeTableFilterModel::setFilteredFeatures( const QgsFeatureIds& ids )
 {
   mFilteredFeatures = ids;
   setFilterMode( ShowFilteredList );
   invalidateFilter();
+}
+
+QgsFeatureIds QgsAttributeTableFilterModel::filteredFeatures()
+{
+  QgsFeatureIds ids;
+  for ( int i = 0; i < rowCount(); ++i )
+  {
+    QModelIndex row = index( i, 0 );
+    ids << rowToId( row );
+  }
+  return ids;
 }
 
 void QgsAttributeTableFilterModel::setFilterMode( FilterMode filterMode )
@@ -158,19 +172,15 @@ bool QgsAttributeTableFilterModel::filterAcceptsRow( int sourceRow, const QModel
   {
     case ShowAll:
       return true;
-      break;
 
     case ShowFilteredList:
       return mFilteredFeatures.contains( masterModel()->rowToId( sourceRow ) );
-      break;
 
     case ShowSelected:
-      return layer()->selectedFeaturesIds().contains( masterModel()->rowToId( sourceRow ) );
-      break;
+      return layer()->selectedFeaturesIds().isEmpty() || layer()->selectedFeaturesIds().contains( masterModel()->rowToId( sourceRow ) );
 
     case ShowVisible:
       return mFilteredFeatures.contains( masterModel()->rowToId( sourceRow ) );
-      break;
 
     case ShowEdited:
     {
@@ -179,17 +189,16 @@ bool QgsAttributeTableFilterModel::filterAcceptsRow( int sourceRow, const QModel
       {
         const QList<QgsFeatureId> addedFeatures = editBuffer->addedFeatures().keys();
         const QList<QgsFeatureId> changedFeatures = editBuffer->changedAttributeValues().keys();
+        const QList<QgsFeatureId> changedGeometries = editBuffer->changedGeometries().keys();
         const QgsFeatureId fid = masterModel()->rowToId( sourceRow );
-        return addedFeatures.contains( fid ) || changedFeatures.contains( fid );
+        return addedFeatures.contains( fid ) || changedFeatures.contains( fid ) || changedGeometries.contains( fid );
       }
       return false;
-      break;
     }
 
     default:
       Q_ASSERT( false ); // In debug mode complain
       return true; // In release mode accept row
-      break;
   }
   // returns are handled in their respective case statement above
 }
@@ -220,8 +229,11 @@ void QgsAttributeTableFilterModel::generateListOfVisibleFeatures()
     return;
 
   bool filter = false;
-  QgsRectangle rect = mCanvas->mapRenderer()->mapToLayerCoordinates( layer(), mCanvas->extent() );
+  QgsRectangle rect = mCanvas->mapSettings().mapToLayerCoordinates( layer(), mCanvas->extent() );
   QgsRenderContext renderContext;
+  renderContext.expressionContext() << QgsExpressionContextUtils::globalScope()
+  << QgsExpressionContextUtils::projectScope()
+  << QgsExpressionContextUtils::layerScope( layer() );
   QgsFeatureRendererV2* renderer = layer()->rendererV2();
 
   mFilteredFeatures.clear();
@@ -232,9 +244,10 @@ void QgsAttributeTableFilterModel::generateListOfVisibleFeatures()
     return;
   }
 
+  const QgsMapSettings& ms = mCanvas->mapSettings();
   if ( layer()->hasScaleBasedVisibility() &&
-       ( layer()->minimumScale() > mCanvas->mapRenderer()->scale() ||
-         layer()->maximumScale() <= mCanvas->mapRenderer()->scale() ) )
+       ( layer()->minimumScale() > ms.scale() ||
+         layer()->maximumScale() <= ms.scale() ) )
   {
     QgsDebugMsg( "Out of scale limits" );
   }
@@ -246,23 +259,33 @@ void QgsAttributeTableFilterModel::generateListOfVisibleFeatures()
       // mapRenderer()->renderContext()->scale is not automaticaly updated when
       // render extent changes (because it's scale is used to identify if changed
       // since last render) -> use local context
-      renderContext.setExtent( mCanvas->mapRenderer()->rendererContext()->extent() );
-      renderContext.setMapToPixel( mCanvas->mapRenderer()->rendererContext()->mapToPixel() );
-      renderContext.setRendererScale( mCanvas->mapRenderer()->scale() );
+      renderContext.setExtent( ms.visibleExtent() );
+      renderContext.setMapToPixel( ms.mapToPixel() );
+      renderContext.setRendererScale( ms.scale() );
     }
 
     filter = renderer && renderer->capabilities() & QgsFeatureRendererV2::Filter;
   }
 
-  renderer->startRender( renderContext, layer() );
+  renderer->startRender( renderContext, layer()->fields() );
 
-  QgsFeatureIterator features = masterModel()->layerCache()->getFeatures( QgsFeatureRequest().setFlags( QgsFeatureRequest::NoGeometry ).setFilterRect( rect ) );
+  QgsFeatureRequest r( masterModel()->request() );
+  if ( !r.filterRect().isNull() )
+  {
+    r.setFilterRect( r.filterRect().intersect( &rect ) );
+  }
+  else
+  {
+    r.setFilterRect( rect );
+  }
+  QgsFeatureIterator features = masterModel()->layerCache()->getFeatures( r );
 
   QgsFeature f;
 
   while ( features.nextFeature( f ) )
   {
-    if ( !filter || renderer->willRenderFeature( f ) )
+    renderContext.expressionContext().setFeature( f );
+    if ( !filter || renderer->willRenderFeature( f, renderContext ) )
     {
       mFilteredFeatures << f.id();
     }
@@ -300,7 +323,7 @@ QModelIndex QgsAttributeTableFilterModel::fidToIndex( QgsFeatureId fid )
 QModelIndexList QgsAttributeTableFilterModel::fidToIndexList( QgsFeatureId fid )
 {
   QModelIndexList indexes;
-  foreach ( QModelIndex idx, masterModel()->idToIndexList( fid ) )
+  Q_FOREACH ( const QModelIndex& idx, masterModel()->idToIndexList( fid ) )
   {
     indexes.append( mapFromMaster( idx ) );
   }

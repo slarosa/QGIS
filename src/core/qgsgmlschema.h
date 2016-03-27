@@ -19,6 +19,7 @@
 #include "qgis.h"
 #include "qgsapplication.h"
 #include "qgsdataprovider.h"
+#include "qgserror.h"
 #include "qgsfeature.h"
 #include "qgsfield.h"
 #include "qgslogger.h"
@@ -38,8 +39,8 @@ class QgsCoordinateReferenceSystem;
 class CORE_EXPORT QgsGmlFeatureClass
 {
   public:
-    QgsGmlFeatureClass( );
-    QgsGmlFeatureClass( QString name, QString path );
+    QgsGmlFeatureClass();
+    QgsGmlFeatureClass( const QString& name, const QString& path );
 
     ~QgsGmlFeatureClass();
 
@@ -71,7 +72,7 @@ class CORE_EXPORT QgsGmlFeatureClass
     QStringList mGeometryAttributes;
 };
 
-class CORE_EXPORT QgsGmlSchema: public QObject
+class CORE_EXPORT QgsGmlSchema : public QObject
 {
     Q_OBJECT
   public:
@@ -84,6 +85,7 @@ class CORE_EXPORT QgsGmlSchema: public QObject
 
     /** Guess GML schema from data if XSD does not exist.
       * Currently only recognizes UMN Mapserver GetFeatureInfo GML response.
+      * Supports only UTF-8, UTF-16, ISO-8859-1, US-ASCII XML encodings.
       * @param data GML data
       * @return true in case of success */
     bool guessSchema( const QByteArray &data );
@@ -91,14 +93,14 @@ class CORE_EXPORT QgsGmlSchema: public QObject
     /** Get list of dot separated paths to feature classes parsed from GML or XSD */
     QStringList typeNames() const;
 
-    /** Get map of fields parsed from XSD by parseXSD */
-    //QMap<int, QgsField> fields();
-
     /** Get fields for type/class name parsed from GML or XSD */
     QList<QgsField> fields( const QString & typeName );
 
     /** Get list of geometry attributes for type/class name */
     QStringList geometryAttributes( const QString & typeName );
+
+    /** Get error if parseXSD() or guessSchema() failed */
+    QgsError error() const { return mError; }
 
   private:
 
@@ -106,13 +108,14 @@ class CORE_EXPORT QgsGmlSchema: public QObject
     {
       none,
       boundingBox,
+      featureMembers, // gml:featureMembers
       featureMember, // gml:featureMember
       feature,  // feature element containint attrs and geo (inside gml:featureMember)
       attribute,
       geometry
     };
 
-    /**XML handler methods*/
+    /** XML handler methods*/
     void startElement( const XML_Char* el, const XML_Char** attr );
     void endElement( const XML_Char* el );
     void characters( const XML_Char* chars, int len );
@@ -128,14 +131,16 @@ class CORE_EXPORT QgsGmlSchema: public QObject
     {
       static_cast<QgsGmlSchema*>( data )->characters( chars, len );
     }
+    // Add attribute or reset its type according to value of current feature
+    void addAttribute( const QString& name, const QString& value );
 
     //helper routines
 
-    /**Reads attribute as string
+    /** Reads attribute as string
       @return attribute value or an empty string if no such attribute*/
     QString readAttribute( const QString& attributeName, const XML_Char** attr ) const;
 
-    /**Returns pointer to main window or 0 if it does not exist*/
+    /** Returns pointer to main window or 0 if it does not exist*/
     QWidget* findMainWindow() const;
 
     /** Get dom elements by path */
@@ -170,18 +175,18 @@ class CORE_EXPORT QgsGmlSchema: public QObject
     /** Safely (if empty) pop from mode stack */
     ParseMode modeStackPop() { return mParseModeStack.isEmpty() ? none : mParseModeStack.pop(); }
 
-    /**Keep track about the most important nested elements*/
+    /** Keep track about the most important nested elements*/
     //std::stack<ParseMode> mParseModeStack;
     QStack<ParseMode> mParseModeStack;
-    /**This contains the character data if an important element has been encountered*/
+    /** This contains the character data if an important element has been encountered*/
     QString mStringCash;
     QgsFeature* mCurrentFeature;
     QString mCurrentFeatureId;
     int mFeatureCount;
     QString mAttributeName;
-    /**Coordinate separator for coordinate strings. Usually "," */
+    /** Coordinate separator for coordinate strings. Usually "," */
     QString mCoordinateSeparator;
-    /**Tuple separator for coordinate strings. Usually " " */
+    /** Tuple separator for coordinate strings. Usually " " */
     QString mTupleSeparator;
 
     /* Schema information guessed/parsed from GML in getSchema() */
@@ -202,6 +207,9 @@ class CORE_EXPORT QgsGmlSchema: public QObject
 
     /* Feature classes map with element paths as keys */
     QMap<QString, QgsGmlFeatureClass> mFeatureClassMap;
+
+    /* Error set if something failed */
+    QgsError mError;
 };
 
 #endif

@@ -21,8 +21,6 @@
   Handler for missing layers within project.
 
   Gives user a chance to select path to the missing layers.
-
-  @note added in 1.4
  */
 class GUI_EXPORT QgsProjectBadLayerGuiHandler : public QObject, public QgsProjectBadLayerHandler
 {
@@ -31,8 +29,8 @@ class GUI_EXPORT QgsProjectBadLayerGuiHandler : public QObject, public QgsProjec
   public:
     QgsProjectBadLayerGuiHandler();
 
-    /** implementation of the handler */
-    virtual void handleBadLayers( QList<QDomNode> layers, QDomDocument projectDom );
+    /** Implementation of the handler */
+    virtual void handleBadLayers( const QList<QDomNode>& layers, const QDomDocument& projectDom ) override;
 
     /** Flag to store the Ignore button press of MessageBox used by QgsLegend */
     static bool mIgnore;
@@ -46,13 +44,13 @@ class GUI_EXPORT QgsProjectBadLayerGuiHandler : public QObject, public QgsProjec
     enum ProviderType { IS_FILE, IS_DATABASE, IS_URL, IS_Unknown };
 
 
-    /** returns data type associated with the given QgsProject file Dom node
+    /** Returns data type associated with the given QgsProject file Dom node
 
       The Dom node should represent the state associated with a specific layer.
       */
     DataType dataType( QDomNode & layerNode );
 
-    /** return the data source for the given layer
+    /** Return the data source for the given layer
 
       The QDomNode is a QgsProject Dom node corresponding to a map layer state.
 
@@ -60,7 +58,7 @@ class GUI_EXPORT QgsProjectBadLayerGuiHandler : public QObject, public QgsProjec
     */
     QString dataSource( QDomNode & layerNode );
 
-    /** return the physical storage type associated with the given layer
+    /** Return the physical storage type associated with the given layer
 
       The QDomNode is a QgsProject Dom node corresponding to a map layer state.
 
@@ -75,13 +73,13 @@ class GUI_EXPORT QgsProjectBadLayerGuiHandler : public QObject, public QgsProjec
     */
     ProviderType providerType( QDomNode & layerNode );
 
-    /** set the datasource element to the new value */
-    void setDataSource( QDomNode & layerNode, QString const & dataSource );
+    /** Set the datasource element to the new value */
+    void setDataSource( QDomNode & layerNode, const QString &dataSource );
 
-    /** this is used to locate files that have moved or otherwise are missing */
-    bool findMissingFile( QString const & fileFilters, QDomNode & layerNode );
+    /** This is used to locate files that have moved or otherwise are missing */
+    bool findMissingFile( const QString &fileFilters, QDomNode &layerNode );
 
-    /** find relocated data source for the given layer
+    /** Find relocated data source for the given layer
 
       This QDom object represents a QgsProject node that maps to a specific layer.
 
@@ -93,13 +91,13 @@ class GUI_EXPORT QgsProjectBadLayerGuiHandler : public QObject, public QgsProjec
       XXX Only implemented for file based layers.  It will need to be extended for
       XXX other data source types such as databases.
     */
-    bool findLayer( QString const & fileFilters, QDomNode const & constLayerNode );
+    bool findLayer( const QString &fileFilters, const QDomNode &constLayerNode );
 
-    /** find relocated data sources for given layers
+    /** Find relocated data sources for given layers
 
       These QDom objects represent QgsProject nodes that map to specific layers.
     */
-    void findLayers( QString const & fileFilters, QList<QDomNode> const & layerNodes );
+    void findLayers( const QString &fileFilters, const QList<QDomNode> &layerNodes );
 
 };
 

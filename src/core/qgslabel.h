@@ -41,7 +41,6 @@ class QgsLabelAttributes;
 
 typedef QList<int> QgsAttributeList;
 
-typedef QMap<int, QgsField> QgsFieldMap;
 class QgsFields;
 
 /** \ingroup core
@@ -81,7 +80,7 @@ class CORE_EXPORT QgsLabel
       BorderColor,
       BorderStyle,
       MultilineEnabled,
-      StrikeOut,     // added in 1.5
+      StrikeOut,
       LabelFieldCount
     };
 
@@ -96,7 +95,6 @@ class CORE_EXPORT QgsLabel
      *  \param feature feature to render the label for
      *  \param selected feature is selected
      *  \param classAttributes attributes to create the label from
-     *  \note added in 1.2
      */
     void renderLabel( QgsRenderContext &renderContext, QgsFeature &feature, bool selected, QgsLabelAttributes *classAttributes = 0 );
 
@@ -149,23 +147,21 @@ class CORE_EXPORT QgsLabel
     bool scaleBasedVisibility() const;
 
   private:
-    /** Does the actual rendering of a label at the given point
-     *
-     */
+    /** Does the actual rendering of a label at the given point */
     void renderLabel( QgsRenderContext &renderContext, QgsPoint point,
-                      QString text, QFont font, QPen pen,
+                      const QString& text, const QFont& font, const QPen& pen,
                       int dx, int dy,
                       double xoffset, double yoffset,
                       double ang,
                       int width, int height, int alignment );
 
-    bool readLabelField( QDomElement &el, int attr, QString prefix );
+    bool readLabelField( QDomElement &el, int attr, const QString& prefix );
 
     /** Get label point for simple feature in map units */
     void labelPoint( std::vector<labelpoint>&, QgsFeature &feature );
 
     /** Get label point for the given feature in wkb format. */
-    unsigned char* labelPoint( labelpoint& point, unsigned char* wkb, size_t wkblen );
+    const unsigned char* labelPoint( labelpoint& point, const unsigned char* wkb, size_t wkblen );
 
     /** Color to draw selected features */
     QColor mSelectionColor;

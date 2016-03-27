@@ -54,15 +54,15 @@ class CORE_EXPORT QgsRasterRendererRegistry
     static QgsRasterRendererRegistry* instance();
     ~QgsRasterRendererRegistry();
 
-    void insert( QgsRasterRendererRegistryEntry entry );
+    void insert( const QgsRasterRendererRegistryEntry& entry );
     void insertWidgetFunction( const QString& rendererName, QgsRasterRendererWidgetCreateFunc func );
     bool rendererData( const QString& rendererName, QgsRasterRendererRegistryEntry& data ) const;
     QStringList renderersList() const;
     QList< QgsRasterRendererRegistryEntry > entries() const;
 
-    /**Creates a default renderer for a raster drawing style (considering user options such as default contrast enhancement).
+    /** Creates a default renderer for a raster drawing style (considering user options such as default contrast enhancement).
         Caller takes ownership*/
-    QgsRasterRenderer* defaultRendererForDrawingStyle( const QgsRasterLayer::DrawingStyle&  theDrawingStyle, QgsRasterDataProvider* provider ) const;
+    QgsRasterRenderer* defaultRendererForDrawingStyle( const QgsRaster::DrawingStyle&  theDrawingStyle, QgsRasterDataProvider* provider ) const;
 
   protected:
     QgsRasterRendererRegistry();

@@ -15,6 +15,7 @@
 #include "qgspiediagram.h"
 #include "qgsdiagramrendererv2.h"
 #include "qgsrendercontext.h"
+#include "qgsexpression.h"
 
 #include <QPainter>
 
@@ -29,10 +30,31 @@ QgsPieDiagram::~QgsPieDiagram()
 {
 }
 
-QSizeF QgsPieDiagram::diagramSize( const QgsAttributes& attributes, const QgsRenderContext& c, const QgsDiagramSettings& s, const QgsDiagramInterpolationSettings& is )
+QgsPieDiagram* QgsPieDiagram::clone() const
+{
+  return new QgsPieDiagram( *this );
+}
+
+QSizeF QgsPieDiagram::diagramSize( const QgsFeature& feature, const QgsRenderContext& c, const QgsDiagramSettings& s, const QgsDiagramInterpolationSettings& is )
 {
   Q_UNUSED( c );
-  QVariant attrVal = attributes[is.classificationAttribute];
+
+  QVariant attrVal;
+  if ( is.classificationAttributeIsExpression )
+  {
+    QgsExpressionContext expressionContext = c.expressionContext();
+    if ( feature.fields() )
+      expressionContext.setFields( *feature.fields() );
+    expressionContext.setFeature( feature );
+
+    QgsExpression* expression = getExpression( is.classificationAttributeExpression, expressionContext );
+    attrVal = expression->evaluate( &expressionContext );
+  }
+  else
+  {
+    attrVal = feature.attributes().at( is.classificationAttribute );
+  }
+
   if ( !attrVal.isValid() )
   {
     return QSizeF(); //zero size if attribute is missing
@@ -67,7 +89,15 @@ QSizeF QgsPieDiagram::diagramSize( const QgsAttributes& attributes, const QgsRen
   // Scale, if extension is smaller than the specified minimum
   if ( size.width() <= s.minimumSize && size.height() <= s.minimumSize )
   {
+    bool p = false; // preserve height == width
+    if ( size.width() == size.height() )
+      p = true;
+
     size.scale( s.minimumSize, s.minimumSize, Qt::KeepAspectRatio );
+
+    // If height == width, recover here (overwrite floating point errors)
+    if ( p )
+      size.setWidth( size.height() );
   }
 
   return size;
@@ -82,7 +112,7 @@ QSizeF QgsPieDiagram::diagramSize( const QgsAttributes& attributes, const QgsRen
 
 int  QgsPieDiagram::sCount = 0;
 
-void QgsPieDiagram::renderDiagram( const QgsAttributes& att, QgsRenderContext& c, const QgsDiagramSettings& s, const QPointF& position )
+void QgsPieDiagram::renderDiagram( const QgsFeature& feature, QgsRenderContext& c, const QgsDiagramSettings& s, const QPointF& position )
 {
   QPainter* p = c.painter();
   if ( !p )
@@ -96,10 +126,16 @@ void QgsPieDiagram::renderDiagram( const QgsAttributes& att, QgsRenderContext& c
   double valSum = 0;
   int valCount = 0;
 
-  QList<int>::const_iterator catIt = s.categoryIndices.constBegin();
-  for ( ; catIt != s.categoryIndices.constEnd(); ++catIt )
+  QgsExpressionContext expressionContext = c.expressionContext();
+  expressionContext.setFeature( feature );
+  if ( feature.fields() )
+    expressionContext.setFields( *feature.fields() );
+
+  QList<QString>::const_iterator catIt = s.categoryAttributes.constBegin();
+  for ( ; catIt != s.categoryAttributes.constEnd(); ++catIt )
   {
-    currentVal = att[*catIt].toDouble();
+    QgsExpression* expression = getExpression( *catIt, expressionContext );
+    currentVal = expression->evaluate( &expressionContext ).toDouble();
     values.push_back( currentVal );
     valSum += currentVal;
     if ( currentVal ) valCount++;
@@ -128,19 +164,22 @@ void QgsPieDiagram::renderDiagram( const QgsAttributes& att, QgsRenderContext& c
     QList< QColor >::const_iterator colIt = s.categoryColors.constBegin();
     for ( ; valIt != values.constEnd(); ++valIt, ++colIt )
     {
-      currentAngle = *valIt / valSum * 360 * 16;
-      mCategoryBrush.setColor( *colIt );
-      p->setBrush( mCategoryBrush );
-      // if only 1 value is > 0, draw a circle
-      if ( valCount == 1 )
+      if ( *valIt )
       {
-        p->drawEllipse( baseX, baseY, w, h );
+        currentAngle = *valIt / valSum * 360 * 16;
+        mCategoryBrush.setColor( *colIt );
+        p->setBrush( mCategoryBrush );
+        // if only 1 value is > 0, draw a circle
+        if ( valCount == 1 )
+        {
+          p->drawEllipse( baseX, baseY, w, h );
+        }
+        else
+        {
+          p->drawPie( baseX, baseY, w, h, totalAngle + s.angleOffset, currentAngle );
+        }
+        totalAngle += currentAngle;
       }
-      else
-      {
-        p->drawPie( baseX, baseY, w, h, totalAngle + s.angleOffset, currentAngle );
-      }
-      totalAngle += currentAngle;
     }
   }
   else // valSum > 0

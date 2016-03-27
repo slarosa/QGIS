@@ -15,7 +15,9 @@
  *                                                                         *
  ***************************************************************************/
 
-#include <QtGui>
+#include <QDebug>
+#include <QTableWidgetItem>
+
 #include <qgsvectordataprovider.h>
 #include <qgsvectorlayer.h>
 #include <qgsmaplayer.h>
@@ -24,10 +26,11 @@
 #include <qgslogger.h>
 #include <qgisinterface.h>
 #include <qgsproject.h>
+#include "qgsapplication.h"
 #include "rulesDialog.h"
 #include "topolTest.h"
 
-rulesDialog::rulesDialog( QMap<QString, TopologyRule> testMap, QgisInterface *theQgisIface, QWidget *parent )
+rulesDialog::rulesDialog( const QMap<QString, TopologyRule>& testMap, QgisInterface *theQgisIface, QWidget *parent )
     : QDialog( parent ), Ui::rulesDialog()
 {
   setupUi( this );
@@ -41,6 +44,9 @@ rulesDialog::rulesDialog( QMap<QString, TopologyRule> testMap, QgisInterface *th
   mTestConfMap = testMap;
   mRulesTable->setSelectionBehavior( QAbstractItemView::SelectRows );
   mRuleBox->addItems( mTestConfMap.keys() );
+
+  mAddTestButton->setIcon( QIcon( QgsApplication::iconPath( "symbologyAdd.svg" ) ) );
+  mDeleteTestButton->setIcon( QIcon( QgsApplication::iconPath( "symbologyRemove.svg" ) ) );
 
   connect( mAddTestButton, SIGNAL( clicked() ), this, SLOT( addRule() ) );
   connect( mAddTestButton, SIGNAL( clicked() ), mRulesTable, SLOT( resizeColumnsToContents() ) );
@@ -66,7 +72,7 @@ rulesDialog::~rulesDialog()
 void rulesDialog::setHorizontalHeaderItems()
 {
   QStringList labels;
-  labels << "Test" << "Layer #1" << "Layer #2" << "Tolerance" << "" << "";
+  labels << tr( "Test" ) << tr( "Layer #1" ) << tr( "Layer #2" ) << tr( "Tolerance" ) << "" << "";
   mRulesTable->setHorizontalHeaderLabels( labels );
 }
 
@@ -128,7 +134,7 @@ void rulesDialog::readTest( int index, QgsMapLayerRegistry* layerRegistry )
   if ( mTestConfMap[testName].useTolerance )
     newItem = new QTableWidgetItem( tolerance );
   else
-    newItem = new QTableWidgetItem( QString( "No tolerance" ) );
+    newItem = new QTableWidgetItem( tr( "No tolerance" ) );
 
   newItem->setFlags( newItem->flags() & ~Qt::ItemIsEditable );
   mRulesTable->setItem( row, 3, newItem );
@@ -159,7 +165,7 @@ void rulesDialog::showControls( const QString& testName )
   }
 
   mLayer2Box->clear();
-  mLayer2Box->addItem( "No layer" );
+  mLayer2Box->addItem( tr( "No layer" ) );
   TopologyRule topologyRule = mTestConfMap[testName];
   QgsMapLayerRegistry* layerRegistry = QgsMapLayerRegistry::instance();
   QList<QString> layerList = layerRegistry->mapLayers().keys();
@@ -182,9 +188,13 @@ void rulesDialog::showControls( const QString& testName )
         continue;
       }
 
-      if ( topologyRule.layer2AcceptsType( v1->geometryType() ) )
+
+      if ( v1->type() == QgsMapLayer::VectorLayer )
       {
-        mLayer2Box->addItem( v1->name() , v1->id() );
+        if ( topologyRule.layer2AcceptsType( v1->geometryType() ) )
+        {
+          mLayer2Box->addItem( v1->name(), v1->id() );
+        }
       }
     }
   }
@@ -212,11 +222,11 @@ void rulesDialog::addRule()
   //sanity checks
   QString test = mRuleBox->currentText();
   QString layer1 = mLayer1Box->currentText();
-  if ( layer1 == "No layer" )
+  if ( layer1 == tr( "No layer" ) )
     return;
 
   QString layer2 = mLayer2Box->currentText();
-  if ( layer2 == "No layer" && mTestConfMap[test].useSecondLayer )
+  if ( layer2 == tr( "No layer" ) && mTestConfMap[test].useSecondLayer )
     return;
 
   for ( int i = 0; i < mRulesTable->rowCount(); ++i )
@@ -241,14 +251,14 @@ void rulesDialog::addRule()
   if ( mTestConfMap[test].useSecondLayer )
     newItem = new QTableWidgetItem( layer2 );
   else
-    newItem = new QTableWidgetItem( "No layer" );
+    newItem = new QTableWidgetItem( tr( "No layer" ) );
 
   mRulesTable->setItem( row, 2, newItem );
 
   if ( mTestConfMap[test].useTolerance )
     newItem = new QTableWidgetItem( QString( "%1" ).arg( mToleranceBox->value() ) );
   else
-    newItem = new QTableWidgetItem( QString( "No tolerance" ) );
+    newItem = new QTableWidgetItem( tr( "No tolerance" ) );
 
   mRulesTable->setItem( row, 3, newItem );
 
@@ -258,7 +268,7 @@ void rulesDialog::addRule()
   if ( mTestConfMap[test].useSecondLayer )
     layer2ID = mLayer2Box->itemData( mLayer2Box->currentIndex() ).toString();
   else
-    layer2ID = "No layer";
+    layer2ID = tr( "No layer" );
 
   layer1ID =  mLayer1Box->itemData( mLayer1Box->currentIndex() ).toString();
 
@@ -301,7 +311,7 @@ void rulesDialog::updateRuleItems( const QString &layerName )
 
   mRuleBox->clear();
 
-  if ( layerName == "No layer" )
+  if ( layerName == tr( "No layer" ) )
   {
     return;
   }
@@ -335,10 +345,10 @@ void rulesDialog::initGui()
   QList<QString> layerList = layerRegistry->mapLayers().keys();
 
   mLayer1Box->clear();
-  mLayer1Box->addItem( "No layer" );
+  mLayer1Box->addItem( tr( "No layer" ) );
 
   mLayer2Box->clear();
-  mLayer2Box->addItem( "No layer" );
+  mLayer2Box->addItem( tr( "No layer" ) );
 
   mLayer1Box->blockSignals( true );
   for ( int i = 0; i < layerList.size(); ++i )
@@ -347,8 +357,10 @@ void rulesDialog::initGui()
     qDebug() << "layerid = " + layerList[i];
 
     // add layer name to the layer combo boxes
-
-    mLayer1Box->addItem( v1->name(), v1->id() );
+    if ( v1->type() == QgsMapLayer::VectorLayer )
+    {
+      mLayer1Box->addItem( v1->name(), v1->id() );
+    }
   }
   mLayer1Box->blockSignals( false );
 

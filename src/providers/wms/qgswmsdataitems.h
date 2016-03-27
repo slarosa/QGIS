@@ -19,25 +19,28 @@
 #include "qgsdatasourceuri.h"
 #include "qgswmsprovider.h"
 
+class QgsWmsCapabilitiesDownload;
+
 class QgsWMSConnectionItem : public QgsDataCollectionItem
 {
     Q_OBJECT
   public:
-    QgsWMSConnectionItem( QgsDataItem* parent, QString name, QString path );
+    QgsWMSConnectionItem( QgsDataItem* parent, QString name, QString path, QString uri );
     ~QgsWMSConnectionItem();
 
-    QVector<QgsDataItem*> createChildren();
-    virtual bool equal( const QgsDataItem *other );
+    QVector<QgsDataItem*> createChildren() override;
+    virtual bool equal( const QgsDataItem *other ) override;
 
-    virtual QList<QAction*> actions();
-
-    QgsWmsCapabilitiesProperty mCapabilitiesProperty;
-    QString mConnInfo;
-    QVector<QgsWmsLayerProperty> mLayerProperties;
+    virtual QList<QAction*> actions() override;
 
   public slots:
     void editConnection();
     void deleteConnection();
+    virtual void deleteLater() override;
+
+  private:
+    QString mUri;
+    QgsWmsCapabilitiesDownload *mCapabilitiesDownload;
 };
 
 // WMS Layers may be nested, so that they may be both QgsDataCollectionItem and QgsLayerItem
@@ -47,7 +50,9 @@ class QgsWMSLayerItem : public QgsLayerItem
     Q_OBJECT
   public:
     QgsWMSLayerItem( QgsDataItem* parent, QString name, QString path,
-                     QgsWmsCapabilitiesProperty capabilitiesProperty, QgsDataSourceURI dataSourceUri, QgsWmsLayerProperty layerProperties );
+                     const QgsWmsCapabilitiesProperty &capabilitiesProperty,
+                     QgsDataSourceURI dataSourceUri,
+                     const QgsWmsLayerProperty &layerProperty );
     ~QgsWMSLayerItem();
 
     QString createUri();
@@ -57,6 +62,30 @@ class QgsWMSLayerItem : public QgsLayerItem
     QgsWmsLayerProperty mLayerProperty;
 };
 
+class QgsWMTSLayerItem : public QgsLayerItem
+{
+    Q_OBJECT
+  public:
+    QgsWMTSLayerItem( QgsDataItem* parent,
+                      const QString &name,
+                      const QString &path,
+                      const QgsDataSourceURI &dataSourceUri,
+                      const QString &id,
+                      const QString &format,
+                      const QString &style,
+                      const QString &tileMatrixSet,
+                      const QString &crs,
+                      const QString &title );
+    ~QgsWMTSLayerItem();
+
+    QString createUri();
+    QString layerName() const override { return mTitle; }
+
+  private:
+    QgsDataSourceURI mDataSourceUri;
+    QString mId, mFormat, mStyle, mTileMatrixSet, mCrs, mTitle;
+};
+
 class QgsWMSRootItem : public QgsDataCollectionItem
 {
     Q_OBJECT
@@ -64,11 +93,11 @@ class QgsWMSRootItem : public QgsDataCollectionItem
     QgsWMSRootItem( QgsDataItem* parent, QString name, QString path );
     ~QgsWMSRootItem();
 
-    QVector<QgsDataItem*> createChildren();
+    QVector<QgsDataItem*> createChildren() override;
 
-    virtual QList<QAction*> actions();
+    virtual QList<QAction*> actions() override;
 
-    virtual QWidget * paramWidget();
+    virtual QWidget * paramWidget() override;
 
   public slots:
     void connectionsChanged();

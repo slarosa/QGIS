@@ -35,19 +35,21 @@ class GUI_EXPORT QgsMapToolTouch : public QgsMapTool
 
     ~QgsMapToolTouch();
 
-    void activate();
-    void deactivate();
+    void activate() override;
+    void deactivate() override;
 
     //! Overridden mouse move event
-    virtual void canvasMoveEvent( QMouseEvent * e );
+    virtual void canvasMoveEvent( QgsMapMouseEvent* e ) override;
 
     //! Overridden mouse release event
-    virtual void canvasReleaseEvent( QMouseEvent * e );
+    virtual void canvasReleaseEvent( QgsMapMouseEvent* e ) override;
 
     //! Overridden Mouse double click event.
-    virtual void canvasDoubleClickEvent( QMouseEvent * e );
+    virtual void canvasDoubleClickEvent( QgsMapMouseEvent* e ) override;
 
-    virtual bool isTransient() { return true; }
+    virtual bool isTransient() override { return true; }
+
+    bool gestureEvent( QGestureEvent *event ) override;
 
   private:
 
@@ -55,7 +57,6 @@ class GUI_EXPORT QgsMapToolTouch : public QgsMapTool
     bool mDragging;
     //! Flag to indicate a pinch gesture is taking place
     bool mPinching;
-    bool gestureEvent( QGestureEvent *event );
     void pinchTriggered( QPinchGesture *gesture );
 };
 

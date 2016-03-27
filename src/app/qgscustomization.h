@@ -30,7 +30,7 @@ class QString;
 class QWidget;
 class QTreeWidgetItem;
 
-class QgsCustomizationDialog : public QMainWindow, private Ui::QgsCustomizationDialogBase
+class APP_EXPORT QgsCustomizationDialog : public QMainWindow, private Ui::QgsCustomizationDialogBase
 {
     Q_OBJECT
   public:
@@ -38,19 +38,19 @@ class QgsCustomizationDialog : public QMainWindow, private Ui::QgsCustomizationD
     ~QgsCustomizationDialog();
 
     // get item by path
-    QTreeWidgetItem *item( QString thePath, QTreeWidgetItem *theItem = 0 );
+    QTreeWidgetItem *item( const QString& thePath, QTreeWidgetItem *theItem = 0 );
 
     //
 
     // return current item state for given path
-    bool itemChecked( QString thePath );
+    bool itemChecked( const QString& thePath );
     // set item state for given path
-    void setItemChecked( QString thePath, bool on );
+    void setItemChecked( const QString& thePath, bool on );
 
     // recursively save tree item to settings
-    void itemToSettings( QString thePath, QTreeWidgetItem *theItem, QSettings *theSettings );
+    void itemToSettings( const QString& thePath, QTreeWidgetItem *theItem, QSettings *theSettings );
     // recursively save settings to tree items
-    void settingsToItem( QString thePath, QTreeWidgetItem *theItem, QSettings *theSettings );
+    void settingsToItem( const QString& thePath, QTreeWidgetItem *theItem, QSettings *theSettings );
 
     // save current tree to settings
     void treeToSettings( QSettings *theSettings );
@@ -62,10 +62,10 @@ class QgsCustomizationDialog : public QMainWindow, private Ui::QgsCustomizationD
     bool switchWidget( QWidget * widget, QMouseEvent *event );
 
     // Get path of the widget
-    QString widgetPath( QWidget * theWidget, QString thePath = QString() );
+    QString widgetPath( QWidget * theWidget, const QString& thePath = QString() );
 
     void setCatch( bool on );
-    bool catchOn( );
+    bool catchOn();
 
   private slots:
     //void on_btnQgisUser_clicked();
@@ -93,14 +93,14 @@ class QgsCustomizationDialog : public QMainWindow, private Ui::QgsCustomizationD
 
   private:
     void init();
-    QTreeWidgetItem * createTreeItemWidgets( );
-    QTreeWidgetItem * readWidgetsXmlNode( QDomNode theNode );
+    QTreeWidgetItem * createTreeItemWidgets();
+    QTreeWidgetItem * readWidgetsXmlNode( const QDomNode& theNode );
 
     QString mLastDirSettingsName;
     QSettings* mSettings;
 };
 
-class QgsCustomization : public QObject
+class APP_EXPORT QgsCustomization : public QObject
 {
     Q_OBJECT
 
@@ -117,7 +117,7 @@ class QgsCustomization : public QObject
 
     void openDialog( QWidget *parent );
     static void customizeWidget( QWidget * widget, QEvent * event, QSettings* settings );
-    static void customizeWidget( QString path, QWidget * widget, QSettings* settings );
+    static void customizeWidget( const QString& path, QWidget * widget, QSettings* settings );
     static void removeFromLayout( QLayout *theLayout, QWidget * widget );
 
     void updateMainWindow( QMenu * theToolBarMenu );
@@ -143,7 +143,7 @@ class QgsCustomization : public QObject
     void preNotify( QObject * receiver, QEvent * event, bool * done );
 
   protected:
-    QgsCustomization( );
+    QgsCustomization();
     ~QgsCustomization();
     QgsCustomizationDialog *pDialog;
 
@@ -152,10 +152,10 @@ class QgsCustomization : public QObject
     QString mStatusPath;
 
     void updateMenu( QMenu* menu, QSettings* settings );
-    void createTreeItemMenus( );
-    void createTreeItemToolbars( );
-    void createTreeItemDocks( );
-    void createTreeItemStatus( );
+    void createTreeItemMenus();
+    void createTreeItemToolbars();
+    void createTreeItemDocks();
+    void createTreeItemStatus();
     void addTreeItemMenu( QTreeWidgetItem* parentItem, QMenu* menu );
     void addTreeItemActions( QTreeWidgetItem* parentItem, const QList<QAction*>& actions );
     QList<QTreeWidgetItem*> mMainWindowItems;

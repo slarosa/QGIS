@@ -1,18 +1,16 @@
-IF (WIN32)
-  IF (MSVC)
-    ADD_DEFINITIONS("-DPYTHON_EXPORT=__declspec(dllexport)")
-  ELSE (MSVC)
-    ADD_DEFINITIONS("\"-DPYTHON_EXPORT=__declspec(dllexport)\"")
-  ENDIF (MSVC)
-ELSE (WIN32)
-  # other compilers don't use that MSVC construct
-  ADD_DEFINITIONS(-DPYTHON_EXPORT=)
-ENDIF (WIN32)
+IF (NOT MSVC)
+  ADD_DEFINITIONS("-UPYTHON_EXPORT")
+  IF ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -fvisibility-inlines-hidden")
+  ENDIF()
+ENDIF (NOT MSVC)
+ADD_DEFINITIONS("\"-DPYTHON_EXPORT=${DLLEXPORT}\"")
 
 SET(QGISPYTHON_SRCS qgispython.cpp qgspythonutilsimpl.cpp)
 
 INCLUDE_DIRECTORIES(
   ../core
+  ../core/geometry
   ../core/raster
   ../gui
   ${PYTHON_INCLUDE_PATH}

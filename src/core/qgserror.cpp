@@ -57,7 +57,6 @@ QString QgsError::message( QgsErrorMessage::Format theFormat ) const
   //       and there are no local not commited changes
   QString hash = QString( QGis::QGIS_DEV_VERSION );
   QString remote = QString( QGS_GIT_REMOTE_URL );
-  QgsDebugMsg( "remote = " + remote );
   if ( !hash.isEmpty() && !remote.isEmpty() && remote.contains( "github.com" ) )
   {
     QString path = remote.remove( QRegExp( ".*github.com[:/]" ) ).remove( ".git" );
@@ -65,7 +64,7 @@ QString QgsError::message( QgsErrorMessage::Format theFormat ) const
   }
 #endif
 
-  foreach ( QgsErrorMessage m, mMessageList )
+  Q_FOREACH ( const QgsErrorMessage& m, mMessageList )
   {
 #ifdef QGISDEBUG
     QString file;
@@ -79,9 +78,29 @@ QString QgsError::message( QgsErrorMessage::Format theFormat ) const
 
     if ( theFormat == QgsErrorMessage::Text )
     {
-      str += m.tag() + " " + m.message();
+      if ( !str.isEmpty() )
+      {
+        str += '\n'; // new message
+      }
+      if ( !m.tag().isEmpty() )
+      {
+        str += m.tag() + ' ';
+      }
+      str += m.message();
 #ifdef QGISDEBUG
-      str += QString( "\nat %1 : %2 : %3" ).arg( file ).arg( m.line() ).arg( m.function() );
+      QString where;
+      if ( !file.isEmpty() )
+      {
+        where += QString( "file: %1 row: %2" ).arg( file ).arg( m.line() );
+      }
+      if ( !m.function().isEmpty() )
+      {
+        where += QString( "function %1:" ).arg( m.function() );
+      }
+      if ( !where.isEmpty() )
+      {
+        str += QString( " (%1)" ).arg( where );
+      }
 #endif
     }
     else // QgsErrorMessage::Html
@@ -91,8 +110,8 @@ QString QgsError::message( QgsErrorMessage::Format theFormat ) const
       QString location = QString( "%1 : %2 : %3" ).arg( file ).arg( m.line() ).arg( m.function() );
       if ( !srcUrl.isEmpty() )
       {
-        QString url = QString( "%1/%2#L%3" ).arg( srcUrl ).arg( file ).arg( m.line() );
-        str += QString( "<br>(<a href='%1'>%2</a>)" ).arg( url ).arg( location );
+        QString url = QString( "%1/%2#L%3" ).arg( srcUrl, file ).arg( m.line() );
+        str += QString( "<br>(<a href='%1'>%2</a>)" ).arg( url, location );
       }
       else
       {
@@ -104,7 +123,7 @@ QString QgsError::message( QgsErrorMessage::Format theFormat ) const
   return str;
 }
 
-QString QgsError::summary( ) const
+QString QgsError::summary() const
 {
   // The first message in chain is usually the real error given by backend/server
   return mMessageList.first().message();

@@ -3,7 +3,7 @@
 """
 /***************************************************************************
 Name                 : DB Manager
-Description          : Database manager plugin for QuantumGIS
+Description          : Database manager plugin for QGIS
 Date                 : May 23, 2011
 copyright            : (C) 2011 by Giuseppe Sucameli
 email                : brush.tyler@gmail.com
@@ -20,6 +20,8 @@ email                : brush.tyler@gmail.com
  ***************************************************************************/
 """
 
+
 def classFactory(iface):
-	from .db_manager_plugin import DBManagerPlugin
-	return DBManagerPlugin(iface)
+    from .db_manager_plugin import DBManagerPlugin
+
+    return DBManagerPlugin(iface)

@@ -26,11 +26,12 @@
 #include <qgslogger.h>
 
 #include <QMouseEvent>
-#include <QMessageBox>
 
-QgsMapToolShowHideLabels::QgsMapToolShowHideLabels( QgsMapCanvas* canvas ): QgsMapToolLabel( canvas )
+QgsMapToolShowHideLabels::QgsMapToolShowHideLabels( QgsMapCanvas* canvas )
+    : QgsMapToolLabel( canvas )
+    , mDragging( false )
 {
-  mRender = 0;
+  mToolName = tr( "Show/hide labels" );
   mRubberBand = 0;
 }
 
@@ -39,7 +40,7 @@ QgsMapToolShowHideLabels::~QgsMapToolShowHideLabels()
   delete mRubberBand;
 }
 
-void QgsMapToolShowHideLabels::canvasPressEvent( QMouseEvent * e )
+void QgsMapToolShowHideLabels::canvasPressEvent( QgsMapMouseEvent* e )
 {
   Q_UNUSED( e );
   mSelectRect.setRect( 0, 0, 0, 0 );
@@ -48,7 +49,7 @@ void QgsMapToolShowHideLabels::canvasPressEvent( QMouseEvent * e )
   mRubberBand = new QgsRubberBand( mCanvas, QGis::Polygon );
 }
 
-void QgsMapToolShowHideLabels::canvasMoveEvent( QMouseEvent * e )
+void QgsMapToolShowHideLabels::canvasMoveEvent( QgsMapMouseEvent* e )
 {
   if ( e->buttons() != Qt::LeftButton )
     return;
@@ -62,7 +63,7 @@ void QgsMapToolShowHideLabels::canvasMoveEvent( QMouseEvent * e )
   QgsMapToolSelectUtils::setRubberBand( mCanvas, mSelectRect, mRubberBand );
 }
 
-void QgsMapToolShowHideLabels::canvasReleaseEvent( QMouseEvent * e )
+void QgsMapToolShowHideLabels::canvasReleaseEvent( QgsMapMouseEvent* e )
 {
   //if the user simply clicked without dragging a rect
   //we will fabricate a small 1x1 pix rect and then continue
@@ -103,20 +104,6 @@ void QgsMapToolShowHideLabels::canvasReleaseEvent( QMouseEvent * e )
 
 void QgsMapToolShowHideLabels::showHideLabels( QMouseEvent * e )
 {
-
-  if ( !mCanvas || mCanvas->isDrawing() )
-  {
-    QgsDebugMsg( "Canvas not ready" );
-    return;
-  }
-
-  mRender = mCanvas->mapRenderer();
-  if ( !mRender )
-  {
-    QgsDebugMsg( "Failed to acquire map renderer" );
-    return;
-  }
-
   QgsMapLayer* layer = mCanvas->currentLayer();
 
   QgsVectorLayer* vlayer = dynamic_cast<QgsVectorLayer*>( layer );
@@ -131,7 +118,7 @@ void QgsMapToolShowHideLabels::showHideLabels( QMouseEvent * e )
     return;
   }
 
-  bool doHide = e->modifiers() & Qt::ShiftModifier ? true : false;
+  bool doHide = e->modifiers() & Qt::ShiftModifier;
 
   QgsFeatureIds selectedFeatIds;
 
@@ -165,7 +152,7 @@ void QgsMapToolShowHideLabels::showHideLabels( QMouseEvent * e )
   QString editTxt = doHide ? tr( "Hid labels" ) : tr( "Showed labels" );
 
   vlayer->beginEditCommand( editTxt );
-  foreach ( const QgsFeatureId &fid, selectedFeatIds )
+  Q_FOREACH ( const QgsFeatureId &fid, selectedFeatIds )
   {
     if ( showHideLabel( vlayer, fid, doHide ) )
     {
@@ -173,10 +160,10 @@ void QgsMapToolShowHideLabels::showHideLabels( QMouseEvent * e )
       labelChanged = true;
     }
   }
-  vlayer->endEditCommand();
 
   if ( labelChanged )
   {
+    vlayer->endEditCommand();
     mCanvas->refresh();
   }
   else
@@ -198,11 +185,11 @@ bool QgsMapToolShowHideLabels::selectedFeatures( QgsVectorLayer* vlayer,
   // and then click somewhere off the globe, an exception will be thrown.
   QgsGeometry selectGeomTrans( *selectGeometry );
 
-  if ( mRender->hasCrsTransformEnabled() )
+  if ( mCanvas->hasCrsTransformEnabled() )
   {
     try
     {
-      QgsCoordinateTransform ct( mRender->destinationCrs(), vlayer->crs() );
+      QgsCoordinateTransform ct( mCanvas->mapSettings().destinationCrs(), vlayer->crs() );
       selectGeomTrans.transform( ct );
     }
     catch ( QgsCsException &cse )
@@ -210,8 +197,7 @@ bool QgsMapToolShowHideLabels::selectedFeatures( QgsVectorLayer* vlayer,
       Q_UNUSED( cse );
       // catch exception for 'invalid' point and leave existing selection unchanged
       QgsLogger::warning( "Caught CRS exception " + QString( __FILE__ ) + ": " + QString::number( __LINE__ ) );
-      QMessageBox::warning( mCanvas, QObject::tr( "CRS Exception" ),
-                            QObject::tr( "Selection extends beyond layer's coordinate system." ) );
+      emit messageEmitted( tr( "CRS Exception: selection extends beyond layer's coordinate system." ), QgsMessageBar::WARNING );
       return false;
     }
   }
@@ -242,8 +228,8 @@ bool QgsMapToolShowHideLabels::selectedLabelFeatures( QgsVectorLayer* vlayer,
 {
   // get list of all drawn labels from current layer that intersect rubberband
 
-  QgsPalLabeling* labelEngine = dynamic_cast<QgsPalLabeling*>( mRender->labelingEngine() );
-  if ( !labelEngine )
+  const QgsLabelingResults* labelingResults = mCanvas->labelingResults();
+  if ( !labelingResults )
   {
     QgsDebugMsg( "No labeling engine" );
     return false;
@@ -253,7 +239,7 @@ bool QgsMapToolShowHideLabels::selectedLabelFeatures( QgsVectorLayer* vlayer,
 
   QgsRectangle ext = mRubberBand->asGeometry()->boundingBox();
 
-  QList<QgsLabelPosition> labelPosList = labelEngine->labelsWithinRect( ext );
+  QList<QgsLabelPosition> labelPosList = labelingResults->labelsWithinRect( ext );
 
   QList<QgsLabelPosition>::const_iterator it;
   for ( it = labelPosList.constBegin() ; it != labelPosList.constEnd(); ++it )
@@ -275,7 +261,7 @@ bool QgsMapToolShowHideLabels::selectedLabelFeatures( QgsVectorLayer* vlayer,
 }
 
 bool QgsMapToolShowHideLabels::showHideLabel( QgsVectorLayer* vlayer,
-    int fid,
+    const QgsFeatureId &fid,
     bool hide )
 {
 
@@ -305,7 +291,7 @@ bool QgsMapToolShowHideLabels::showHideLabel( QgsVectorLayer* vlayer,
   }
 
   // different attribute value, edit table
-  if ( !vlayer->changeAttributeValue( fid, showCol, curVal, false ) )
+  if ( !vlayer->changeAttributeValue( fid, showCol, curVal ) )
   {
     QgsDebugMsg( "Failed write to attribute table" );
     return false;

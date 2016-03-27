@@ -7,12 +7,13 @@
 
 class QgsVectorLayer;
 class QgsFeatureModel;
+class QgsIFeatureSelectionManager;
 
-class QgsFeatureSelectionModel : public QItemSelectionModel
+class GUI_EXPORT QgsFeatureSelectionModel : public QItemSelectionModel
 {
     Q_OBJECT
   public:
-    explicit QgsFeatureSelectionModel( QAbstractItemModel* model, QgsFeatureModel* featureModel, QgsVectorLayer* layer, QObject* parent );
+    explicit QgsFeatureSelectionModel( QAbstractItemModel* model, QgsFeatureModel* featureModel, QgsIFeatureSelectionManager* featureSelectionHandler, QObject* parent );
 
     /**
      * Enables or disables synchronisation to the {@link QgsVectorLayer}
@@ -50,7 +51,7 @@ class QgsFeatureSelectionModel : public QItemSelectionModel
      *
      * @param indexes The model indexes which need to be repainted
      */
-    void requestRepaint( QModelIndexList indexes );
+    void requestRepaint( const QModelIndexList& indexes );
 
     /**
      * Request a repaint of the visible items of connected views.
@@ -64,14 +65,14 @@ class QgsFeatureSelectionModel : public QItemSelectionModel
      *
      * @see selectFeatures( const QItemSelection&, SelectionFlags )
      */
-    virtual void select( const QModelIndex &index, SelectionFlags command ) { Q_UNUSED( index ); Q_UNUSED( command ); }
+    virtual void select( const QModelIndex &index, SelectionFlags command ) override { Q_UNUSED( index ); Q_UNUSED( command ); }
 
     /**
      * Overwritten to do NOTHING (we handle selection ourselves)
      *
      * @see selectFeatures( const QItemSelection&, SelectionFlags )
      */
-    virtual void select( const QItemSelection &selection, SelectionFlags command ) { Q_UNUSED( selection ); Q_UNUSED( command ); }
+    virtual void select( const QItemSelection &selection, SelectionFlags command ) override { Q_UNUSED( selection ); Q_UNUSED( command ); }
 
     /**
      * Select features on this table. Is to be used in favor of the stock select methods.
@@ -79,20 +80,31 @@ class QgsFeatureSelectionModel : public QItemSelectionModel
      * @param selection  The QItemSelection which will be selected
      * @param command    The command to apply. Select, Deselect and ClearAndSelect are processed.
      */
-    virtual void selectFeatures( const QItemSelection &selection, SelectionFlags command );
+    virtual void selectFeatures( const QItemSelection &selection, const SelectionFlags& command );
+
+    virtual void setFeatureSelectionManager( QgsIFeatureSelectionManager* featureSelectionManager );
 
   private slots:
-    virtual void layerSelectionChanged( QgsFeatureIds selected, QgsFeatureIds deselected, bool clearAndSelect );
+    virtual void layerSelectionChanged( const QgsFeatureIds& selected, const QgsFeatureIds& deselected, bool clearAndSelect );
 
   private:
     QModelIndexList expandIndexToRow( const QModelIndex& index ) const;
 
   private:
     QgsFeatureModel* mFeatureModel;
-    QgsVectorLayer* mLayer;
+    QgsIFeatureSelectionManager* mFeatureSelectionManager;
     bool mSyncEnabled;
+
+    //! If sync is disabled
+    //! Holds a list of newly selected features which will be synced when re-enabled
     QgsFeatureIds mSelectedBuffer;
+
+    //! If sync is disabled
+    //! Holds a list of newly deselected features which will be synced when re-enabled
     QgsFeatureIds mDeselectedBuffer;
+
+    //! If sync is disabled
+    //! Is set to true, if a clear and select operation should be performed before syncing
     bool mClearAndSelectBuffer;
 };
 

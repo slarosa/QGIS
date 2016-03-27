@@ -73,47 +73,52 @@
 #include <QApplication>
 #include <QCursor>
 
-#ifdef WIN32
-#define QGISEXTERN extern "C" __declspec( dllexport )
-#else
-#define QGISEXTERN extern "C"
-#endif
-
 static const QString sName = QObject::tr( "eVis" );
 static const QString sDescription = QObject::tr( "An event visualization tool - view images associated with vector features" );
 static const QString sCategory = QObject::tr( "Database" );
 static const QString sPluginVersion = QObject::tr( "Version 1.1.0" );
 static const QgisPlugin::PLUGINTYPE sPluginType = QgisPlugin::UI;
+static const QString sIcon = ":/evis/eVisEventBrowser.png";
 
 
-eVis::eVis( QgisInterface * theQgisInterface ):
-    QgisPlugin( sName, sDescription, sCategory, sPluginVersion, sPluginType ),
-    mQGisIface( theQgisInterface )
+
+eVis::eVis( QgisInterface * theQgisInterface )
+    : QgisPlugin( sName, sDescription, sCategory, sPluginVersion, sPluginType )
+    , mQGisIface( theQgisInterface )
+    , mDatabaseConnectionActionPointer( 0 )
+    , mEventIdToolActionPointer( 0 )
+    , mEventBrowserActionPointer( 0 )
 {
   mIdTool = 0;
 }
 
-eVis::~eVis( )
+eVis::~eVis()
 {
 }
 
-void eVis::initGui( )
+void eVis::initGui()
 {
+  delete mDatabaseConnectionActionPointer;
+  delete mEventIdToolActionPointer;
+  delete mEventBrowserActionPointer;
 
   // Create the action for tool
   mDatabaseConnectionActionPointer = new QAction( QIcon( ":/evis/eVisDatabaseConnection.png" ), tr( "eVis Database Connection" ), this );
+  mDatabaseConnectionActionPointer->setObjectName( "mDatabaseConnectionActionPointer" );
   mEventIdToolActionPointer = new QAction( QIcon( ":/evis/eVisEventIdTool.png" ), tr( "eVis Event Id Tool" ), this );
+  mEventIdToolActionPointer->setObjectName( "mEventIdToolActionPointer" );
   mEventBrowserActionPointer = new QAction( QIcon( ":/evis/eVisEventBrowser.png" ), tr( "eVis Event Browser" ), this );
+  mEventBrowserActionPointer->setObjectName( "mEventBrowserActionPointer" );
 
   // Set the what's this text
   mDatabaseConnectionActionPointer->setWhatsThis( tr( "Create layer from a database query" ) );
   mEventIdToolActionPointer->setWhatsThis( tr( "Open an Event Browers and display the selected feature" ) );
   mEventBrowserActionPointer->setWhatsThis( tr( "Open an Event Browser to explore the current layer's features" ) );
 
-  // Connect the action to the runmQGisIface->mapCanvas( )
-  connect( mDatabaseConnectionActionPointer, SIGNAL( activated( ) ), this, SLOT( launchDatabaseConnection( ) ) );
-  connect( mEventIdToolActionPointer, SIGNAL( triggered( ) ), this, SLOT( launchEventIdTool( ) ) );
-  connect( mEventBrowserActionPointer, SIGNAL( activated( ) ), this, SLOT( launchEventBrowser( ) ) );
+  // Connect the action to the runmQGisIface->mapCanvas()
+  connect( mDatabaseConnectionActionPointer, SIGNAL( activated() ), this, SLOT( launchDatabaseConnection() ) );
+  connect( mEventIdToolActionPointer, SIGNAL( triggered() ), this, SLOT( launchEventIdTool() ) );
+  connect( mEventBrowserActionPointer, SIGNAL( activated() ), this, SLOT( launchEventBrowser() ) );
 
 
   // Add the icon to the toolbar
@@ -129,40 +134,40 @@ void eVis::initGui( )
 }
 
 //method defined in interface
-void eVis::help( )
+void eVis::help()
 {
   //implement me!
 }
 
-void eVis::launchDatabaseConnection( )
+void eVis::launchDatabaseConnection()
 {
-  eVisDatabaseConnectionGui *myPluginGui = new eVisDatabaseConnectionGui( &mTemporaryFileList, mQGisIface->mainWindow( ), QgisGui::ModalDialogFlags );
+  eVisDatabaseConnectionGui *myPluginGui = new eVisDatabaseConnectionGui( &mTemporaryFileList, mQGisIface->mainWindow(), QgisGui::ModalDialogFlags );
   myPluginGui->setAttribute( Qt::WA_DeleteOnClose );
 
   connect( myPluginGui, SIGNAL( drawVectorLayer( QString, QString, QString ) ), this, SLOT( drawVectorLayer( QString, QString, QString ) ) );
-  myPluginGui->show( );
+  myPluginGui->show();
 }
 
-void eVis::launchEventIdTool( )
+void eVis::launchEventIdTool()
 {
   if ( 0 == mIdTool )
   {
-    mIdTool = new eVisEventIdTool( mQGisIface->mapCanvas( ) );
+    mIdTool = new eVisEventIdTool( mQGisIface->mapCanvas() );
     mIdTool->setAction( mEventIdToolActionPointer );
   }
   else
   {
-    mQGisIface->mapCanvas( )->setMapTool( mIdTool );
+    mQGisIface->mapCanvas()->setMapTool( mIdTool );
   }
 }
 
-void eVis::launchEventBrowser( )
+void eVis::launchEventBrowser()
 {
-  eVisGenericEventBrowserGui *myPluginGui = new eVisGenericEventBrowserGui( mQGisIface->mainWindow( ), mQGisIface, QgisGui::ModalDialogFlags );
+  eVisGenericEventBrowserGui *myPluginGui = new eVisGenericEventBrowserGui( mQGisIface->mainWindow(), mQGisIface, QgisGui::ModalDialogFlags );
   myPluginGui->setAttribute( Qt::WA_DeleteOnClose );
 }
 
-void eVis::unload( )
+void eVis::unload()
 {
   // remove the GUI
   mQGisIface->removePluginDatabaseMenu( "&eVis", mDatabaseConnectionActionPointer );
@@ -177,9 +182,9 @@ void eVis::unload( )
   mQGisIface->removeDatabaseToolBarIcon( mEventBrowserActionPointer );
   delete mEventBrowserActionPointer;
 
-  while ( mTemporaryFileList.size( ) > 0 )
+  while ( !mTemporaryFileList.isEmpty() )
   {
-    delete( mTemporaryFileList.takeLast( ) );
+    delete( mTemporaryFileList.takeLast() );
   }
 
   if ( 0 != mIdTool )
@@ -188,7 +193,7 @@ void eVis::unload( )
   }
 }
 
-void eVis::drawVectorLayer( QString thePathNameQString, QString theBaseNameQString, QString theProviderQString )
+void eVis::drawVectorLayer( const QString& thePathNameQString, const QString& theBaseNameQString, const QString& theProviderQString )
 {
   mQGisIface->addVectorLayer( thePathNameQString, theBaseNameQString, theProviderQString );
 }
@@ -216,31 +221,37 @@ QGISEXTERN QgisPlugin * classFactory( QgisInterface * theQgisInterfacePointer )
 }
 // Return the name of the plugin - note that we do not user class members as
 // the class may not yet be insantiated when this method is called.
-QGISEXTERN QString name( )
+QGISEXTERN QString name()
 {
   return sName;
 }
 
 // Return the description
-QGISEXTERN QString description( )
+QGISEXTERN QString description()
 {
   return sDescription;
 }
 
 // Return the category
-QGISEXTERN QString category( )
+QGISEXTERN QString category()
 {
   return sCategory;
 }
 
 // Return the type ( either UI or MapLayer plugin )
-QGISEXTERN int type( )
+QGISEXTERN int type()
 {
   return sPluginType;
 }
 
+// Return the icon
+QGISEXTERN QString icon()
+{
+  return sIcon;
+}
+
 // Return the version number for the plugin
-QGISEXTERN QString version( )
+QGISEXTERN QString version()
 {
   return sPluginVersion;
 }

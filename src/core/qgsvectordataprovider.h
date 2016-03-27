@@ -34,6 +34,7 @@ typedef QSet<int> QgsAttributeIds;
 typedef QHash<int, QString> QgsAttrPalIndexNameHash;
 
 class QgsFeatureIterator;
+class QgsTransaction;
 
 #include "qgsfeaturerequest.h"
 
@@ -49,6 +50,8 @@ class CORE_EXPORT QgsVectorDataProvider : public QgsDataProvider
 {
     Q_OBJECT
 
+    friend class QgsTransaction;
+
   public:
 
     // If you add to this, please also add to capabilitiesString()
@@ -57,25 +60,25 @@ class CORE_EXPORT QgsVectorDataProvider : public QgsDataProvider
      */
     enum Capability
     {
-      /** provider has no capabilities */
+      /** Provider has no capabilities */
       NoCapabilities =                     0,
-      /** allows adding features */
+      /** Allows adding features */
       AddFeatures =                        1,
-      /** allows deletion of features */
+      /** Allows deletion of features */
       DeleteFeatures =               1 <<  1,
-      /** allows modification of attribute values */
+      /** Allows modification of attribute values */
       ChangeAttributeValues =        1 <<  2,
-      /** allows addition of new attributes (fields) */
+      /** Allows addition of new attributes (fields) */
       AddAttributes =                1 <<  3,
-      /** allows deletion of attributes (fields) */
+      /** Allows deletion of attributes (fields) */
       DeleteAttributes =             1 <<  4,
       /** DEPRECATED - do not use */
       SaveAsShapefile =              1 <<  5,
-      /** allows creation of spatial index */
+      /** Allows creation of spatial index */
       CreateSpatialIndex =           1 <<  6,
-      /** fast access to features using their ID */
+      /** Fast access to features using their ID */
       SelectAtId =                   1 <<  7,
-      /** allows modifications of geometries */
+      /** Allows modifications of geometries */
       ChangeGeometries =             1 <<  8,
       /** DEPRECATED - do not use */
       SelectGeometryAtId =           1 <<  9,
@@ -84,11 +87,19 @@ class CORE_EXPORT QgsVectorDataProvider : public QgsDataProvider
       /** DEPRECATED - do not use */
       SequentialSelectGeometryAtId = 1 << 11,
       CreateAttributeIndex =         1 << 12,
-      /** allows user to select encoding */
+      /** Allows user to select encoding */
       SelectEncoding =               1 << 13,
+      /** Supports simplification of geometries on provider side according to a distance tolerance */
+      SimplifyGeometries =           1 << 14,
+      /** Supports topological simplification of geometries on provider side according to a distance tolerance */
+      SimplifyGeometriesWithTopologicalValidation = 1 << 15,
+      /** Supports transactions*/
+      TransactionSupport = 1 << 16,
+      /** Supports circular geometry types (circularstring, compoundcurve, curvepolygon)*/
+      CircularGeometries = 1 << 17
     };
 
-    /** bitmask of all provider's editing capabilities */
+    /** Bitmask of all provider's editing capabilities */
     const static int EditingCapabilities = AddFeatures | DeleteFeatures |
                                            ChangeAttributeValues | ChangeGeometries | AddAttributes | DeleteAttributes;
 
@@ -96,12 +107,30 @@ class CORE_EXPORT QgsVectorDataProvider : public QgsDataProvider
      * Constructor of the vector provider
      * @param uri  uniform resource locator (URI) for a dataset
      */
-    QgsVectorDataProvider( QString uri = QString() );
+    QgsVectorDataProvider( const QString& uri = QString() );
 
     /**
      * Destructor
      */
     virtual ~QgsVectorDataProvider();
+
+    /**
+     * Return feature source object that can be used for querying provider's data. The returned feature source
+     * is independent from provider - any changes to provider's state (e.g. change of subset string) will not be
+     * reflected in the feature source, therefore it can be safely used for processing in background without
+     * having to care about possible changes within provider that may happen concurrently. Also, even in the case
+     * of provider being deleted, any feature source obtained from the provider will be kept alive and working
+     * (they are independent and owned by the caller).
+     *
+     * Sometimes there are cases when some data needs to be shared between vector data provider and its feature source.
+     * In such cases, the implementation must ensure that the data is not susceptible to run condition. For example,
+     * if it is possible that both feature source and provider may need reading/writing to some shared data at the
+     * same time, some synchronization mechanisms must be used (e.g. mutexes) to prevent data corruption.
+     *
+     * @note added in 2.4
+     * @return new instance of QgsAbstractFeatureSource (caller is responsible for deleting it)
+     */
+    virtual QgsAbstractFeatureSource* featureSource() const { Q_ASSERT( 0 && "All providers must support featureSource()" ); return 0; }
 
     /**
      * Returns the permanent storage type for this layer as a friendly name.
@@ -128,7 +157,7 @@ class CORE_EXPORT QgsVectorDataProvider : public QgsDataProvider
     /**
      * Return a map of indexes with field names for this layer
      * @return map of fields
-     * @see QgsFieldMap
+     * @see QgsFields
      */
     virtual const QgsFields &fields() const = 0;
 
@@ -162,17 +191,18 @@ class CORE_EXPORT QgsVectorDataProvider : public QgsDataProvider
      * Return unique values of an attribute
      * @param index the index of the attribute
      * @param uniqueValues values reference to the list to fill
-     * @param limit maxmum number of the values to return (added in 1.4)
+     * @param limit maxmum number of the values to return
      *
      * Default implementation simply iterates the features
      */
     virtual void uniqueValues( int index, QList<QVariant> &uniqueValues, int limit = -1 );
 
-    /**Returns the possible enum values of an attribute. Returns an empty stringlist if a provider does not support enum types
-      or if the given attribute is not an enum type.
+    /**
+     * Returns the possible enum values of an attribute. Returns an empty stringlist if a provider does not support enum types
+     * or if the given attribute is not an enum type.
      * @param index the index of the attribute
      * @param enumList reference to the list to fill
-      @note: added in version 1.2*/
+     */
     virtual void enumValues( int index, QStringList& enumList ) { Q_UNUSED( index ); enumList.clear(); }
 
     /**
@@ -192,7 +222,6 @@ class CORE_EXPORT QgsVectorDataProvider : public QgsDataProvider
      * Adds new attributes
      * @param attributes list of new attributes
      * @return true in case of success and false in case of failure
-     * @note added in 1.2
      */
     virtual bool addAttributes( const QList<QgsField> &attributes );
 
@@ -230,7 +259,7 @@ class CORE_EXPORT QgsVectorDataProvider : public QgsDataProvider
      */
     virtual bool createSpatialIndex();
 
-    /**Create an attribute index on the datasource*/
+    /** Create an attribute index on the datasource*/
     virtual bool createAttributeIndex( int field );
 
     /** Returns a bitmask containing the supported capabilities
@@ -260,7 +289,9 @@ class CORE_EXPORT QgsVectorDataProvider : public QgsDataProvider
      */
     int fieldNameIndex( const QString& fieldName ) const;
 
-    /**Return a map where the key is the name of the field and the value is its index*/
+    /**
+     * Return a map where the key is the name of the field and the value is its index
+     */
     QMap<QString, int> fieldNameMap() const;
 
     /**
@@ -270,7 +301,6 @@ class CORE_EXPORT QgsVectorDataProvider : public QgsDataProvider
 
     /**
      * Return list of indexes of fields that make up the primary key
-     * @note added in 2.0
      */
     virtual QgsAttributeList pkAttributeIndexes() { return QgsAttributeList(); }
 
@@ -281,14 +311,13 @@ class CORE_EXPORT QgsVectorDataProvider : public QgsDataProvider
 
     /**
      * check if provider supports type of field
-     * @note added in 1.2
      */
     bool supportedType( const QgsField &field ) const;
 
     struct NativeType
     {
-      NativeType( QString typeDesc, QString typeName, QVariant::Type type, int minLen = 0, int maxLen = 0, int minPrec = 0, int maxPrec = 0 ) :
-          mTypeDesc( typeDesc ), mTypeName( typeName ), mType( type ), mMinLen( minLen ), mMaxLen( maxLen ), mMinPrec( minPrec ), mMaxPrec( maxPrec ) {};
+      NativeType( const QString& typeDesc, const QString& typeName, QVariant::Type type, int minLen = 0, int maxLen = 0, int minPrec = 0, int maxPrec = 0 ) :
+          mTypeDesc( typeDesc ), mTypeName( typeName ), mType( type ), mMinLen( minLen ), mMaxLen( maxLen ), mMinPrec( minPrec ), mMaxPrec( maxPrec ) {}
 
       QString mTypeDesc;
       QString mTypeName;
@@ -301,30 +330,30 @@ class CORE_EXPORT QgsVectorDataProvider : public QgsDataProvider
 
     /**
      * Returns the names of the supported types
-     * @note added in 1.2
      */
     const QList< NativeType > &nativeTypes() const;
 
-    /** Returns true if the provider is strict about the type of inserted features
-          (e.g. no multipolygon in a polygon layer)
-          @note: added in version 1.4*/
+    /**
+     * Returns true if the provider is strict about the type of inserted features
+     * (e.g. no multipolygon in a polygon layer)
+     */
     virtual bool doesStrictFeatureTypeCheck() const { return true;}
 
     /** Returns a list of available encodings */
     static const QStringList &availableEncodings();
 
-    /* provider has errors to report
-     * @note added in 1.7
+    /**
+     * Provider has errors to report
      */
     bool hasErrors();
 
-    /* clear recorded errors
-     * @note added in 1.7
+    /**
+     * Clear recorded errors
      */
     void clearErrors();
 
-    /* get recorded errors
-     * @note added in 1.7
+    /**
+     * Get recorded errors
      */
     QStringList errors();
 
@@ -335,9 +364,26 @@ class CORE_EXPORT QgsVectorDataProvider : public QgsDataProvider
      */
     virtual bool isSaveAndLoadStyleToDBSupported() { return false; }
 
-  protected:
-    QVariant convertValue( QVariant::Type type, QString value );
+    static QVariant convertValue( QVariant::Type type, const QString& value );
 
+    /**
+     * Returns the transaction this data provider is included in, if any.
+     */
+    virtual QgsTransaction* transaction() const { return 0; }
+
+    /**
+     * Forces a reload of the underlying datasource if the provider implements this
+     * method.
+     * In particular on the OGR provider, a pooled connection will be invalidated.
+     * This forces QGIS to reopen a file or connection.
+     * This can be required if the underlying file is replaced.
+     */
+    virtual void forceReload()
+    {
+      emit dataChanged();
+    }
+
+  protected:
     void clearMinMaxCache();
     void fillMinMaxCache();
 
@@ -347,31 +393,30 @@ class CORE_EXPORT QgsVectorDataProvider : public QgsDataProvider
     /** Encoding */
     QTextCodec* mEncoding;
 
-    /** should provider fetch also features that don't have geometry? */
-    bool mFetchFeaturesWithoutGeom;
-
-    /**True if geometry should be added to the features in nextFeature calls*/
-    bool mFetchGeom;
-
-    /**List of attribute indices to fetch with nextFeature calls*/
+    /** List of attribute indices to fetch with nextFeature calls*/
     QgsAttributeList mAttributesToFetch;
 
-    /**The names of the providers native types*/
+    /** The names of the providers native types*/
     QList< NativeType > mNativeTypes;
 
-    void pushError( QString msg );
+    void pushError( const QString& msg );
 
     /** Old-style mapping of index to name for QgsPalLabeling fix */
     QgsAttrPalIndexNameHash mAttrPalIndexName;
 
   private:
-    /** old notation **/
+    /** Old notation **/
     QMap<QString, QVariant::Type> mOldTypeList;
 
-    // list of errors
+    /** List of errors */
     QStringList mErrors;
 
     static QStringList smEncodings;
+
+    /**
+     * Includes this data provider in the specified transaction. Ownership of transaction is not transferred.
+     */
+    virtual void setTransaction( QgsTransaction* /*transaction*/ ) {}
 
 };
 

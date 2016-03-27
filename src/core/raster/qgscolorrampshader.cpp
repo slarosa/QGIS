@@ -25,7 +25,10 @@ originally part of the larger QgsRasterLayer class
 
 #include <cmath>
 
-QgsColorRampShader::QgsColorRampShader( double theMinimumValue, double theMaximumValue ) : QgsRasterShaderFunction( theMinimumValue, theMaximumValue )
+QgsColorRampShader::QgsColorRampShader( double theMinimumValue, double theMaximumValue )
+    : QgsRasterShaderFunction( theMinimumValue, theMaximumValue )
+    , mColorRampType( INTERPOLATED )
+    , mClip( false )
 {
   QgsDebugMsg( "called." );
   mMaximumColorCacheSize = 1024; //good starting value
@@ -93,7 +96,7 @@ bool QgsColorRampShader::discreteColor( double theValue, int* theReturnRedValue,
   return false; // value not found
 }
 
-bool QgsColorRampShader::exactColor( double theValue, int* theReturnRedValue, int* theReturnGreenValue, int* theReturnBlueValue , int *theReturnAlphaValue )
+bool QgsColorRampShader::exactColor( double theValue, int* theReturnRedValue, int* theReturnGreenValue, int* theReturnBlueValue, int *theReturnAlphaValue )
 {
   int myColorRampItemCount = mColorRampItemList.count();
   if ( myColorRampItemCount <= 0 )
@@ -144,7 +147,7 @@ bool QgsColorRampShader::exactColor( double theValue, int* theReturnRedValue, in
 }
 
 bool QgsColorRampShader::interpolatedColor( double theValue, int*
-    theReturnRedValue, int* theReturnGreenValue, int* theReturnBlueValue , int* theReturnAlphaValue )
+    theReturnRedValue, int* theReturnGreenValue, int* theReturnBlueValue, int* theReturnAlphaValue )
 {
   int myColorRampItemCount = mColorRampItemList.count();
   if ( myColorRampItemCount <= 0 )
@@ -173,7 +176,7 @@ bool QgsColorRampShader::interpolatedColor( double theValue, int*
       myOffsetInRange = theValue - myPreviousColorRampItem.value;
       double scale = myOffsetInRange / myCurrentRampRange;
 
-      *theReturnRedValue = ( int )(( double ) myPreviousColorRampItem.color.red() + (( double )( myColorRampItem.color.red() - myPreviousColorRampItem.color.red() ) * scale ) ) ;
+      *theReturnRedValue = ( int )(( double ) myPreviousColorRampItem.color.red() + (( double )( myColorRampItem.color.red() - myPreviousColorRampItem.color.red() ) * scale ) );
       *theReturnGreenValue = ( int )(( double ) myPreviousColorRampItem.color.green() + (( double )( myColorRampItem.color.green() - myPreviousColorRampItem.color.green() ) * scale ) );
       *theReturnBlueValue = ( int )(( double ) myPreviousColorRampItem.color.blue() + (( double )( myColorRampItem.color.blue() - myPreviousColorRampItem.color.blue() ) * scale ) );
       *theReturnAlphaValue = ( int )(( double ) myPreviousColorRampItem.color.alpha() + (( double )( myColorRampItem.color.alpha() - myPreviousColorRampItem.color.alpha() ) * scale ) );
@@ -231,7 +234,7 @@ void QgsColorRampShader::setColorRampType( QgsColorRampShader::ColorRamp_TYPE th
   mColorRampType = theColorRampType;
 }
 
-void QgsColorRampShader::setColorRampType( QString theType )
+void QgsColorRampShader::setColorRampType( const QString& theType )
 {
   //When the type of the ramp changes we need to clear out the cache
   mColorCache.clear();
@@ -249,7 +252,7 @@ void QgsColorRampShader::setColorRampType( QString theType )
   }
 }
 
-bool QgsColorRampShader::shade( double theValue, int* theReturnRedValue, int* theReturnGreenValue, int* theReturnBlueValue , int *theReturnAlphaValue )
+bool QgsColorRampShader::shade( double theValue, int* theReturnRedValue, int* theReturnGreenValue, int* theReturnBlueValue, int *theReturnAlphaValue )
 {
 
   //Get the shaded value from the cache if it exists already
@@ -288,8 +291,9 @@ bool QgsColorRampShader::shade( double theValue, int* theReturnRedValue, int* th
 }
 
 bool QgsColorRampShader::shade( double theRedValue, double theGreenValue,
-                                double theBlueValue, double theAlphaValue, int* theReturnRedValue, int* theReturnGreenValue, int*
-                                theReturnBlueValue , int* theReturnAlphaValue )
+                                double theBlueValue, double theAlphaValue,
+                                int* theReturnRedValue, int* theReturnGreenValue,
+                                int* theReturnBlueValue, int* theReturnAlphaValue )
 {
   Q_UNUSED( theRedValue );
   Q_UNUSED( theGreenValue );

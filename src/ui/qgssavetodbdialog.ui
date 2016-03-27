@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Add column</string>
+   <string>Save style</string>
   </property>
   <property name="modal">
    <bool>true</bool>
@@ -112,6 +112,9 @@
  <layoutdefault spacing="6" margin="11"/>
  <tabstops>
   <tabstop>mNameEdit</tabstop>
+  <tabstop>mDescriptionEdit</tabstop>
+  <tabstop>mFilePickButton</tabstop>
+  <tabstop>mUseAsDefault</tabstop>
   <tabstop>buttonBox</tabstop>
  </tabstops>
  <resources/>

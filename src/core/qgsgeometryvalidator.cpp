@@ -20,7 +20,7 @@ email                : jef at norbit dot de
 
 #include <QSettings>
 
-QgsGeometryValidator::QgsGeometryValidator( QgsGeometry *g, QList<QgsGeometry::Error> *errors )
+QgsGeometryValidator::QgsGeometryValidator( const QgsGeometry *g, QList<QgsGeometry::Error> *errors )
     : QThread()
     , mErrors( errors )
     , mStop( false )
@@ -62,7 +62,9 @@ void QgsGeometryValidator::checkRingIntersections(
         if ( d >= 0 && d <= v.length() )
         {
           d = -distLine2Point( ring1[j], w.perpVector(), s );
-          if ( d >= 0 && d <= w.length() )
+          if ( d > 0 && d < w.length() &&
+               ring0[i+1] != ring1[j+1] && ring0[i+1] != ring1[j] &&
+               ring0[i+0] != ring1[j+1] && ring0[i+0] != ring1[j] )
           {
             QString msg = QObject::tr( "segment %1 of ring %2 of polygon %3 intersects segment %4 of ring %5 of polygon %6 at %7" )
                           .arg( i0 ).arg( i ).arg( p0 )
@@ -150,7 +152,7 @@ void QgsGeometryValidator::validatePolyline( int i, QgsPolyline line, bool ring 
         continue;
 
       d = -distLine2Point( line[k], w.perpVector(), s );
-      if ( d < 0 || d > w.length() )
+      if ( d <= 0 || d >= w.length() )
         continue;
 
       QString msg = QObject::tr( "segments %1 and %2 of line %3 intersect at %4" ).arg( j ).arg( k ).arg( i ).arg( s.toString() );
@@ -200,7 +202,8 @@ void QgsGeometryValidator::run()
   if ( settings.value( "/qgis/digitizing/validate_geometries", 1 ).toInt() == 2 )
   {
     char *r = 0;
-    GEOSGeometry *g0 = mG.asGeos();
+    const GEOSGeometry *g0 = mG.asGeos();
+    GEOSContextHandle_t handle = QgsGeometry::getGEOSHandler();
     if ( !g0 )
     {
       emit errorFound( QgsGeometry::Error( QObject::tr( "GEOS error:could not produce geometry for GEOS (check log window)" ) ) );
@@ -208,23 +211,23 @@ void QgsGeometryValidator::run()
     else
     {
       GEOSGeometry *g1 = 0;
-      if ( GEOSisValidDetail( g0, GEOSVALID_ALLOW_SELFTOUCHING_RING_FORMING_HOLE, &r, &g1 ) != 1 )
+      if ( GEOSisValidDetail_r( handle, g0, GEOSVALID_ALLOW_SELFTOUCHING_RING_FORMING_HOLE, &r, &g1 ) != 1 )
       {
         if ( g1 )
         {
-          const GEOSCoordSequence *cs = GEOSGeom_getCoordSeq( g1 );
+          const GEOSCoordSequence *cs = GEOSGeom_getCoordSeq_r( handle, g1 );
 
           unsigned int n;
-          if ( GEOSCoordSeq_getSize( cs, &n ) && n == 1 )
+          if ( GEOSCoordSeq_getSize_r( handle, cs, &n ) && n == 1 )
           {
             double x, y;
-            GEOSCoordSeq_getX( cs, 0, &x );
-            GEOSCoordSeq_getY( cs, 0, &y );
+            GEOSCoordSeq_getX_r( handle, cs, 0, &x );
+            GEOSCoordSeq_getY_r( handle, cs, 0, &y );
             emit errorFound( QgsGeometry::Error( QObject::tr( "GEOS error:%1" ).arg( r ), QgsPoint( x, y ) ) );
             mErrorCount++;
           }
 
-          GEOSGeom_destroy( g1 );
+          GEOSGeom_destroy_r( handle, g1 );
         }
         else
         {
@@ -232,7 +235,7 @@ void QgsGeometryValidator::run()
           mErrorCount++;
         }
 
-        GEOSFree( r );
+        GEOSFree_r( handle, r );
       }
     }
 
@@ -282,8 +285,18 @@ void QgsGeometryValidator::run()
 
       for ( int i = 0; !mStop && i < mp.size(); i++ )
       {
+        if ( mp[i].isEmpty() )
+        {
+          emit errorFound( QgsGeometry::Error( QObject::tr( "polygon %1 has no rings" ).arg( i ) ) );
+          mErrorCount++;
+          continue;
+        }
+
         for ( int j = i + 1;  !mStop && j < mp.size(); j++ )
         {
+          if ( mp[j].isEmpty() )
+            continue;
+
           if ( ringInRing( mp[i][0], mp[j][0] ) )
           {
             emit errorFound( QgsGeometry::Error( QObject::tr( "polygon %1 inside polygon %2" ).arg( i ).arg( j ) ) );
@@ -315,27 +328,27 @@ void QgsGeometryValidator::run()
 
   if ( mStop )
   {
-    emit errorFound( QObject::tr( "Geometry validation was aborted." ) );
+    emit errorFound( QgsGeometry::Error( QObject::tr( "Geometry validation was aborted." ) ) );
   }
   else if ( mErrorCount > 0 )
   {
-    emit errorFound( QObject::tr( "Geometry has %1 errors." ).arg( mErrorCount ) );
+    emit errorFound( QgsGeometry::Error( QObject::tr( "Geometry has %1 errors." ).arg( mErrorCount ) ) );
   }
 #if 0
   else
   {
-    emit errorFound( QObject::tr( "Geometry is valid." ) );
+    emit errorFound( QgsGeometry::Error( QObject::tr( "Geometry is valid." ) ) );
   }
 #endif
 }
 
-void QgsGeometryValidator::addError( QgsGeometry::Error e )
+void QgsGeometryValidator::addError( const QgsGeometry::Error& e )
 {
   if ( mErrors )
     *mErrors << e;
 }
 
-void QgsGeometryValidator::validateGeometry( QgsGeometry *g, QList<QgsGeometry::Error> &errors )
+void QgsGeometryValidator::validateGeometry( const QgsGeometry *g, QList<QgsGeometry::Error> &errors )
 {
   QgsGeometryValidator *gv = new QgsGeometryValidator( g, &errors );
   connect( gv, SIGNAL( errorFound( QgsGeometry::Error ) ), gv, SLOT( addError( QgsGeometry::Error ) ) );
@@ -348,7 +361,7 @@ void QgsGeometryValidator::validateGeometry( QgsGeometry *g, QList<QgsGeometry::
 // return >0  => q lies left of the line
 //        <0  => q lies right of the line
 //
-double QgsGeometryValidator::distLine2Point( QgsPoint p, QgsVector v, QgsPoint q )
+double QgsGeometryValidator::distLine2Point( const QgsPoint& p, const QgsVector& v, const QgsPoint& q )
 {
   if ( v.length() == 0 )
   {
@@ -358,7 +371,7 @@ double QgsGeometryValidator::distLine2Point( QgsPoint p, QgsVector v, QgsPoint q
   return ( v.x()*( q.y() - p.y() ) - v.y()*( q.x() - p.x() ) ) / v.length();
 }
 
-bool QgsGeometryValidator::intersectLines( QgsPoint p, QgsVector v, QgsPoint q, QgsVector w, QgsPoint &s )
+bool QgsGeometryValidator::intersectLines( const QgsPoint& p, const QgsVector& v, const QgsPoint& q, const QgsVector& w, QgsPoint &s )
 {
   double d = v.y() * w.x() - v.x() * w.y();
 

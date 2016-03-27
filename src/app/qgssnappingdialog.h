@@ -19,15 +19,14 @@
 #define QGSSNAPPINGDIALOG_H
 
 #include "qgsmaplayer.h"
+#include <QDockWidget>
 #include "ui_qgssnappingdialogbase.h"
-
-class QDockWidget;
 
 class QgsMapCanvas;
 
-/**A dialog to enter advanced editing properties, e.g. topological editing, snapping settings
+/** A dialog to enter advanced editing properties, e.g. topological editing, snapping settings
 for the individual layers*/
-class QgsSnappingDialog: public QDialog, private Ui::QgsSnappingDialogBase
+class APP_EXPORT QgsSnappingDialog: public QDialog, private Ui::QgsSnappingDialogBase
 {
     Q_OBJECT
 
@@ -48,17 +47,23 @@ class QgsSnappingDialog: public QDialog, private Ui::QgsSnappingDialogBase
     //! add layer to tree
     void addLayer( QgsMapLayer* theMapLayer );
 
-    void addLayers( QList<QgsMapLayer * > layers );
+    void addLayers( const QList<QgsMapLayer*>& layers );
 
     //! layers removed
-    void layersWillBeRemoved( QStringList );
+    void layersWillBeRemoved( const QStringList& );
 
     void on_cbxEnableTopologicalEditingCheckBox_stateChanged( int );
 
     void on_cbxEnableIntersectionSnappingCheckBox_stateChanged( int );
 
+    void onSnappingModeIndexChanged( int );
+
+    void initNewProject();
+
+    void emitProjectSnapSettingsChanged();
+
   protected:
-    /**Constructor
+    /** Constructor
     @param canvas pointer to the map canvas (for detecting which vector layers are loaded
     */
     //QgsSnappingDialog( QgsMapCanvas* canvas );
@@ -67,29 +72,45 @@ class QgsSnappingDialog: public QDialog, private Ui::QgsSnappingDialogBase
      * Handle closing of the window
      * @param event unused
      */
-    void closeEvent( QCloseEvent* event );
+    void closeEvent( QCloseEvent* event ) override;
+
+  signals:
+    void snapSettingsChanged();
 
   private slots:
     void reload();
 
-
   private:
-    /**Default constructor forbidden*/
+    /** Default constructor forbidden*/
     QgsSnappingDialog();
 
-    /**Stores ids of layers where intersections of new polygons is considered. Is passed to / read from QgsAvoidIntersectionsDialog*/
+    /** Stores ids of layers where intersections of new polygons is considered. Is passed to / read from QgsAvoidIntersectionsDialog*/
     QSet<QString> mAvoidIntersectionsSettings;
 
-    /**Used to query the loaded layers*/
+    /** Used to query the loaded layers*/
     QgsMapCanvas* mMapCanvas;
 
     QDockWidget *mDock;
 
-    /**Set checkbox value based on project setting*/
+    /** Set checkbox value based on project setting*/
     void setTopologicalEditingState();
 
-    /**Set checkbox value based on project setting*/
+    /** Set checkbox value based on project setting*/
     void setIntersectionSnappingState();
+
+    void setSnappingMode();
+};
+
+
+class QgsSnappingDock : public QDockWidget
+{
+    Q_OBJECT
+
+  public:
+    QgsSnappingDock( const QString & title, QWidget * parent = 0, Qt::WindowFlags flags = 0 );
+
+    virtual void closeEvent( QCloseEvent *e ) override;
+
 };
 
 #endif

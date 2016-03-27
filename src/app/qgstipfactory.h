@@ -27,7 +27,7 @@
 * @see also QgsTipOfTheDay, QgsTip
 */
 
-class QgsTipFactory : public QObject
+class APP_EXPORT QgsTipFactory : public QObject
 {
     Q_OBJECT //used for tr() so we don't need to do QObject::tr()
   public:
@@ -60,8 +60,8 @@ class QgsTipFactory : public QObject
     int count();
 
   private:
-    void addGenericTip( QgsTip );
-    void addGuiTip( QgsTip );
+    void addGenericTip( const QgsTip& );
+    void addGuiTip( const QgsTip& );
     int randomNumber( int theMax );
     //@TODO move tipts into a sqlite db
     QList <QgsTip> mGenericTips;

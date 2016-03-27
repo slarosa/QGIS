@@ -21,12 +21,20 @@
 #include <QImage>
 #include <QPainter>
 
-QgsCompositionChecker::QgsCompositionChecker( const QString& testName, QgsComposition* composition, const QString& expectedImageFile ): mTestName( testName ),
-    mComposition( composition ), mExpectedImageFile( expectedImageFile )
+QgsCompositionChecker::QgsCompositionChecker( const QString& testName, QgsComposition* composition )
+    : QgsMultiRenderChecker()
+    , mTestName( testName )
+    , mComposition( composition )
+    , mSize( 1122, 794 )
+    , mDotsPerMeter( 96 / 25.4 * 1000 )
 {
+  // The composer has some slight render inconsistencies on the whole image sometimes
+  setColorTolerance( 5 );
 }
 
 QgsCompositionChecker::QgsCompositionChecker()
+    : mComposition( NULL )
+    , mDotsPerMeter( 96 / 25.4 * 1000 )
 {
 }
 
@@ -34,99 +42,50 @@ QgsCompositionChecker::~QgsCompositionChecker()
 {
 }
 
-bool QgsCompositionChecker::testComposition( int page )
+bool QgsCompositionChecker::testComposition( QString &theReport, int page, int pixelDiff )
 {
   if ( !mComposition )
   {
     return false;
   }
 
+  setControlName( "expected_" + mTestName );
+
 #if 0
   //fake mode to generate expected image
-  //assume 300 dpi and size of the control image 3507 * 2480
-  QImage outputImage( QSize( 3507, 2480 ), QImage::Format_ARGB32 );
+  //assume 96 dpi and size of the control image 1122 * 794
+  QImage newImage( QSize( 1122, 794 ), QImage::Format_RGB32 );
   mComposition->setPlotStyle( QgsComposition::Print );
-  outputImage.setDotsPerMeterX( 300 / 25.4 * 1000 );
-  outputImage.setDotsPerMeterY( 300 / 25.4 * 1000 );
-  outputImage.fill( 0 );
-  QPainter p( &outputImage );
+  newImage.setDotsPerMeterX( 96 / 25.4 * 1000 );
+  newImage.setDotsPerMeterY( 96 / 25.4 * 1000 );
+  drawBackground( &newImage );
+  QPainter expectedPainter( &newImage );
   //QRectF sourceArea( 0, 0, mComposition->paperWidth(), mComposition->paperHeight() );
   //QRectF targetArea( 0, 0, 3507, 2480 );
-  mComposition->renderPage( &p, page );
-  p.end();
-  outputImage.save( "/tmp/composerhtml_table_control.png", "PNG" );
-  return false;
+  mComposition->renderPage( &expectedPainter, page );
+  expectedPainter.end();
+  newImage.save( mExpectedImageFile, "PNG" );
+  return true;
 #endif //0
 
-  //load expected image
-  QImage expectedImage( mExpectedImageFile );
-
-  //get width/height, create image and render the composition to it
-  int width = expectedImage.width();
-  int height = expectedImage.height();
-  QImage outputImage( QSize( width, height ), QImage::Format_ARGB32 );
+  QImage outputImage( mSize, QImage::Format_RGB32 );
 
   mComposition->setPlotStyle( QgsComposition::Print );
-  outputImage.setDotsPerMeterX( expectedImage.dotsPerMeterX() );
-  outputImage.setDotsPerMeterY( expectedImage.dotsPerMeterX() );
-  outputImage.fill( 0 );
+  outputImage.setDotsPerMeterX( mDotsPerMeter );
+  outputImage.setDotsPerMeterY( mDotsPerMeter );
+  drawBackground( &outputImage );
   QPainter p( &outputImage );
   mComposition->renderPage( &p, page );
   p.end();
 
-  QString renderedFilePath = QDir::tempPath() + QDir::separator() + QFileInfo( mExpectedImageFile ).baseName() + "_rendered.png";
+  QString renderedFilePath = QDir::tempPath() + '/' + QFileInfo( mTestName ).baseName() + "_rendered.png";
   outputImage.save( renderedFilePath, "PNG" );
 
-  QString diffFilePath = QDir::tempPath() + QDir::separator() + QFileInfo( mExpectedImageFile ).baseName() + "_diff.png";
-  bool testResult = compareImages( expectedImage, outputImage, diffFilePath );
+  setRenderedImage( renderedFilePath );
 
-  QString myDashMessage = "<DartMeasurementFile name=\"Rendered Image " + mTestName + "\""
-                          " type=\"image/png\">" + renderedFilePath +
-                          "</DartMeasurementFile>"
-                          "<DartMeasurementFile name=\"Expected Image " + mTestName + "\" type=\"image/png\">" +
-                          mExpectedImageFile + "</DartMeasurementFile>"
-                          "<DartMeasurementFile name=\"Difference Image " + mTestName + "\" type=\"image/png\">" +
-                          diffFilePath + "</DartMeasurementFile>";
-  qDebug( ) << myDashMessage;
+  bool testResult = runTest( mTestName, pixelDiff );
+
+  theReport += report();
 
   return testResult;
-}
-
-bool QgsCompositionChecker::compareImages( const QImage& imgExpected, const QImage& imgRendered, const QString& differenceImagePath ) const
-{
-  if ( imgExpected.width() != imgRendered.width() || imgExpected.height() != imgRendered.height() )
-  {
-    return false;
-  }
-
-  int imageWidth = imgExpected.width();
-  int imageHeight = imgExpected.height();
-  int mismatchCount = 0;
-
-  QImage differenceImage( imageWidth, imageHeight, QImage::Format_ARGB32_Premultiplied );
-  differenceImage.fill( qRgb( 152, 219, 249 ) );
-
-  QRgb pixel1, pixel2;
-  for ( int i = 0; i < imageHeight; ++i )
-  {
-    for ( int j = 0; j < imageWidth; ++j )
-    {
-      pixel1 = imgExpected.pixel( j, i );
-      pixel2 = imgRendered.pixel( j, i );
-      if ( pixel1 != pixel2 )
-      {
-        ++mismatchCount;
-        differenceImage.setPixel( j, i, qRgb( 255, 0, 0 ) );
-      }
-    }
-  }
-
-  if ( !differenceImagePath.isEmpty() )
-  {
-    differenceImage.save( differenceImagePath, "PNG" );
-  }
-
-  //allow pixel deviation of 1 percent
-  int pixelCount = imageWidth * imageHeight;
-  return (( double )mismatchCount / ( double )pixelCount ) < 0.01;
 }

@@ -389,8 +389,7 @@ DBFOpen( const char * pszFilename, const char * pszAccess )
   /*  Read in Field Definitions                                           */
   /* -------------------------------------------------------------------- */
 
-  pabyBuf = ( unsigned char * ) SfRealloc( pabyBuf, nHeadLen );
-  psDBF->pszHeader = ( char * ) pabyBuf;
+  pabyBuf = psDBF->pszHeader = ( unsigned char * ) SfRealloc( pabyBuf, nHeadLen );
 
   fseek( psDBF->fp, 32, 0 );
   if ( fread( pabyBuf, nHeadLen - 32, 1, psDBF->fp ) != 1 )
@@ -506,7 +505,7 @@ DBFClose( DBFHandle psDBF )
 /************************************************************************/
 
 DBFHandle SHPAPI_CALL
-DBFCreate( const char * pszFilename )
+DBFCreate( const char *pszFilename )
 
 {
   DBFHandle psDBF;
@@ -537,14 +536,20 @@ DBFCreate( const char * pszFilename )
   /* -------------------------------------------------------------------- */
   fp = fopen( pszFullname, "wb" );
   if ( fp == NULL )
+  {
+    free( pszFullname );
     return( NULL );
+  }
 
   fputc( 0, fp );
   fclose( fp );
 
   fp = fopen( pszFullname, "rb+" );
   if ( fp == NULL )
+  {
+    free( pszFullname );
     return( NULL );
+  }
 
   free( pszFullname );
 
@@ -1398,7 +1403,8 @@ DBFCloneEmpty( DBFHandle psDBF, const char * pszFilename )
   DBFHandle newDBF;
 
   newDBF = DBFCreate( pszFilename );
-  if ( newDBF == NULL ) return ( NULL );
+  if ( newDBF == NULL )
+    return ( NULL );
 
   newDBF->pszHeader = ( char * ) malloc( 32 * psDBF->nFields );
   memcpy( newDBF->pszHeader, psDBF->pszHeader, 32 * psDBF->nFields );

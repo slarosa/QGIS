@@ -30,7 +30,6 @@
 #include "topol.h"
 #include "checkDock.h"
 
-static const char * const sIdent = "$Id: plugin.cpp 8053 2008-01-26 13:59:53Z timlinux $";
 static const QString sName = QObject::tr( "Topology Checker" );
 static const QString sDescription = QObject::tr( "A Plugin for finding topological errors in vector layers" );
 static const QString sCategory = QObject::tr( "Vector" );
@@ -49,9 +48,10 @@ static const QString sPluginIcon = ":/topology/topol.png";
  * an interface object that provides access to exposed functions in QGIS.
  * @param theQGisInterface - Pointer to the QGIS interface object
  */
-Topol::Topol( QgisInterface * theQgisInterface ):
-    QgisPlugin( sName, sDescription, sCategory, sPluginVersion, sPluginType ),
-    mQGisIface( theQgisInterface )
+Topol::Topol( QgisInterface * theQgisInterface )
+    : QgisPlugin( sName, sDescription, sCategory, sPluginVersion, sPluginType )
+    , mQGisIface( theQgisInterface )
+    , mQActionPointer( 0 )
 {
   mDock = 0;
 }
@@ -66,7 +66,10 @@ Topol::~Topol()
  */
 void Topol::initGui()
 {
+  delete mQActionPointer;
+
   mQActionPointer = new QAction( QIcon( ":/topology/topol.png" ), tr( "TopologyChecker" ), this );
+  mQActionPointer->setObjectName( "mQActionPointer" );
   //mQActionPointer = new QAction( QIcon(), tr( "Topology Checker" ), this );
   mQActionPointer->setCheckable( true );
 
@@ -115,7 +118,7 @@ void Topol::run()
 void Topol::unload()
 {
   // remove the GUI
-  mQGisIface->removePluginVectorMenu( "&Topology Checker", mQActionPointer );
+  mQGisIface->removePluginVectorMenu( tr( "&Topology Checker" ), mQActionPointer );
   mQGisIface->removeVectorToolBarIcon( mQActionPointer );
   delete mQActionPointer;
 }

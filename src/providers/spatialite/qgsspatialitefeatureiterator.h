@@ -23,45 +23,87 @@ extern "C"
 #include <sqlite3.h>
 }
 
+class QgsSqliteHandle;
 class QgsSpatiaLiteProvider;
 
-class QgsSpatiaLiteFeatureIterator : public QgsAbstractFeatureIterator
+class QgsSpatiaLiteFeatureSource : public QgsAbstractFeatureSource
 {
   public:
-    QgsSpatiaLiteFeatureIterator( QgsSpatiaLiteProvider* p, const QgsFeatureRequest& request );
+    explicit QgsSpatiaLiteFeatureSource( const QgsSpatiaLiteProvider* p );
+    ~QgsSpatiaLiteFeatureSource();
+
+    virtual QgsFeatureIterator getFeatures( const QgsFeatureRequest& request ) override;
+
+  protected:
+    QString mGeometryColumn;
+    QString mSubsetString;
+    QgsFields mFields;
+    QString mQuery;
+    bool isQuery;
+    bool mVShapeBased;
+    QString mIndexTable;
+    QString mIndexGeometry;
+    QString mPrimaryKey;
+    bool spatialIndexRTree;
+    bool spatialIndexMbrCache;
+    QString mSqlitePath;
+
+    friend class QgsSpatiaLiteFeatureIterator;
+    friend class QgsSpatiaLiteExpressionCompiler;
+};
+
+class QgsSpatiaLiteFeatureIterator : public QgsAbstractFeatureIteratorFromSource<QgsSpatiaLiteFeatureSource>
+{
+  public:
+    QgsSpatiaLiteFeatureIterator( QgsSpatiaLiteFeatureSource* source, bool ownSource, const QgsFeatureRequest& request );
 
     ~QgsSpatiaLiteFeatureIterator();
 
-    //! fetch next feature, return true on success
-    virtual bool nextFeature( QgsFeature& feature );
-
     //! reset the iterator to the starting position
-    virtual bool rewind();
+    virtual bool rewind() override;
 
     //! end of iterating: free the resources / lock
-    virtual bool close();
+    virtual bool close() override;
 
   protected:
-    QgsSpatiaLiteProvider* P;
+
+    //! fetch next feature, return true on success
+    virtual bool fetchFeature( QgsFeature& feature ) override;
+
+    //! fetch next feature filter expression
+    bool nextFeatureFilterExpression( QgsFeature& f ) override;
 
     QString whereClauseRect();
     QString whereClauseFid();
+    QString whereClauseFids();
     QString mbr( const QgsRectangle& rect );
-    bool prepareStatement( QString whereClause );
+    bool prepareStatement( const QString& whereClause, long limit = -1 );
     QString quotedPrimaryKey();
     bool getFeature( sqlite3_stmt *stmt, QgsFeature &feature );
     QString fieldName( const QgsField& fld );
-    QVariant getFeatureAttribute( sqlite3_stmt* stmt, int ic );
+    QVariant getFeatureAttribute( sqlite3_stmt* stmt, int ic, const QVariant::Type& type );
     void getFeatureGeometry( sqlite3_stmt* stmt, int ic, QgsFeature& feature );
+
+    //! wrapper of the SQLite database connection
+    QgsSqliteHandle* mHandle;
 
     /**
       * SQLite statement handle
      */
     sqlite3_stmt *sqliteStatement;
 
-    /** geometry column index used when fetching geometry */
+    /** Geometry column index used when fetching geometry */
     int mGeomColIdx;
 
+    //! Set to true, if geometry is in the requested columns
+    bool mFetchGeometry;
+
+    bool mHasPrimaryKey;
+    QgsFeatureId mRowNumber;
+
+  private:
+
+    bool mExpressionCompiled;
 };
 
 #endif // QGSSPATIALITEFEATUREITERATOR_H

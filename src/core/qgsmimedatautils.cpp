@@ -12,6 +12,8 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
+#include <QStringList>
+
 #include "qgsmimedatautils.h"
 
 #include "qgsdataitem.h"
@@ -20,7 +22,11 @@
 static const char* QGIS_URILIST_MIMETYPE = "application/x-vnd.qgis.qgis.uri";
 
 QgsMimeDataUtils::Uri::Uri( QgsLayerItem* layerItem )
-    : providerKey( layerItem->providerKey() ), name( layerItem->layerName() ), uri( layerItem->uri() )
+    : providerKey( layerItem->providerKey() )
+    , name( layerItem->layerName() )
+    , uri( layerItem->uri() )
+    , supportedCrs( layerItem->supportedCRS() )
+    , supportedFormats( layerItem->supportedFormats() )
 {
   switch ( layerItem->mapLayerType() )
   {
@@ -34,25 +40,40 @@ QgsMimeDataUtils::Uri::Uri( QgsLayerItem* layerItem )
       layerType = "plugin";
       break;
   }
-
 }
 
 QgsMimeDataUtils::Uri::Uri( QString& encData )
 {
-  QRegExp rx( "^([^:]+):([^:]+):([^:]+):(.+)" );
-  if ( rx.indexIn( encData ) != -1 )
+  QgsDebugMsg( "encData: " + encData );
+  QStringList decoded = decode( encData );
+  if ( decoded.size() < 4 )
+    return;
+
+  layerType = decoded[0];
+  providerKey = decoded[1];
+  name = decoded[2];
+  uri = decoded[3];
+
+  if ( layerType == "raster" && decoded.size() == 6 )
   {
-    layerType = rx.cap( 1 );
-    providerKey = rx.cap( 2 );
-    name = rx.cap( 3 );
-    uri = rx.cap( 4 );
-    QgsDebugMsg( "type: " + layerType + " key: " + providerKey + " name: " + name + " uri: " + uri );
+    supportedCrs = decode( decoded[4] );
+    supportedFormats = decode( decoded[5] );
   }
+  else
+  {
+    supportedCrs.clear();
+    supportedFormats.clear();
+  }
+
+  QgsDebugMsg( QString( "type:%1 key:%2 name:%3 uri:%4 supportedCRS:%5 supportedFormats:%6" )
+               .arg( layerType, providerKey, name, uri,
+                     supportedCrs.join( ", " ),
+                     supportedFormats.join( ", " ) ) );
 }
 
 QString QgsMimeDataUtils::Uri::data() const
 {
-  return layerType + ":" + providerKey + ":" + name + ":" + uri;
+  return encode( QStringList() << layerType << providerKey << name << uri << encode( supportedCrs ) << encode( supportedFormats ) );
 }
 
 // -----
@@ -62,13 +83,13 @@ bool QgsMimeDataUtils::isUriList( const QMimeData* data )
   return data->hasFormat( QGIS_URILIST_MIMETYPE );
 }
 
-QMimeData* QgsMimeDataUtils::encodeUriList( QgsMimeDataUtils::UriList layers )
+QMimeData* QgsMimeDataUtils::encodeUriList( const QgsMimeDataUtils::UriList& layers )
 {
   QMimeData *mimeData = new QMimeData();
   QByteArray encodedData;
 
   QDataStream stream( &encodedData, QIODevice::WriteOnly );
-  foreach ( const QgsMimeDataUtils::Uri& u, layers )
+  Q_FOREACH ( const Uri& u, layers )
   {
     stream << u.data();
   }
@@ -83,12 +104,56 @@ QgsMimeDataUtils::UriList QgsMimeDataUtils::decodeUriList( const QMimeData* data
   QByteArray encodedData = data->data( QGIS_URILIST_MIMETYPE );
   QDataStream stream( &encodedData, QIODevice::ReadOnly );
   QString xUri; // extended uri: layer_type:provider_key:uri
-  QgsMimeDataUtils::UriList list;
+  UriList list;
   while ( !stream.atEnd() )
   {
     stream >> xUri;
     QgsDebugMsg( xUri );
-    list.append( QgsMimeDataUtils::Uri( xUri ) );
+    list.append( Uri( xUri ) );
   }
   return list;
 }
+
+QString QgsMimeDataUtils::encode( const QStringList& items )
+{
+  QString encoded;
+  Q_FOREACH ( const QString& item, items )
+  {
+    QString str = item;
+    str.replace( '\\', "\\\\" );
+    str.replace( ':', "\\:" );
+    encoded += str + ':';
+  }
+  return encoded.left( encoded.length() - 1 );
+}
+
+QStringList QgsMimeDataUtils::decode( const QString& encoded )
+{
+  QStringList items;
+  QString item;
+  bool inEscape = false;
+  Q_FOREACH ( const QChar& c, encoded )
+  {
+    if ( c == '\\' && inEscape )
+    {
+      item += c;
+    }
+    else if ( c == '\\' )
+    {
+      inEscape = true;
+    }
+    else if ( c == ':' && !inEscape )
+    {
+      items.append( item );
+      item = "";
+    }
+    else
+    {
+      item += c;
+      inEscape = false;
+    }
+  }
+  items.append( item );
+  return items;
+}
+

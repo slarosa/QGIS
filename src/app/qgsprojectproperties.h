@@ -24,25 +24,27 @@
 #include "qgscontexthelp.h"
 
 class QgsMapCanvas;
+class QgsRelationManagerDialog;
 class QgsStyleV2;
+class QgsExpressionContext;
 
-/*!  Dialog to set project level properties
+/** Dialog to set project level properties
 
   @note actual state is stored in QgsProject singleton instance
 
  */
-class QgsProjectProperties : public QgsOptionsDialogBase, private Ui::QgsProjectPropertiesBase
+class APP_EXPORT QgsProjectProperties : public QgsOptionsDialogBase, private Ui::QgsProjectPropertiesBase
 {
     Q_OBJECT
 
   public:
     //! Constructor
-    QgsProjectProperties( QgsMapCanvas* mapCanvas, QWidget *parent = 0, Qt::WFlags fl = QgisGui::ModalDialogFlags );
+    QgsProjectProperties( QgsMapCanvas* mapCanvas, QWidget *parent = 0, Qt::WindowFlags fl = QgisGui::ModalDialogFlags );
 
     //! Destructor
     ~QgsProjectProperties();
 
-    /*! Gets the currently select map units
+    /** Gets the currently select map units
      */
     QGis::UnitType mapUnits() const;
 
@@ -57,10 +59,10 @@ class QgsProjectProperties : public QgsOptionsDialogBase, private Ui::QgsProject
     QString title() const;
     void title( QString const & title );
 
-    /*! Accessor for projection */
+    /** Accessor for projection */
     QString projectionWkt();
 
-    /*! Indicates that the projection switch is on */
+    /** Indicates that the projection switch is on */
     bool isProjected();
 
   public slots:
@@ -74,27 +76,22 @@ class QgsProjectProperties : public QgsOptionsDialogBase, private Ui::QgsProject
      */
     void showProjectionsTab();
 
-    /*! Let the user add a scale to the list of project scales
-     * used in scale combobox instead of global ones
-     * @note added in QGIS 2.0
-     */
+    /** Let the user add a scale to the list of project scales
+     * used in scale combobox instead of global ones */
     void on_pbnAddScale_clicked();
 
-    /*! Let the user remove a scale from the list of project scales
-     * used in scale combobox instead of global ones
-     * @note added in QGIS 2.0
-     */
+    /** Let the user remove a scale from the list of project scales
+     * used in scale combobox instead of global ones */
     void on_pbnRemoveScale_clicked();
 
-    /** Let the user load scales from file
-     * @note added in QGIS 2.0
-     */
+    /** Let the user load scales from file */
     void on_pbnImportScales_clicked();
 
-    /** Let the user load scales from file
-     * @note added in QGIS 2.0
-     */
+    /** Let the user load scales from file */
     void on_pbnExportScales_clicked();
+
+    /** A scale in the list of project scales changed */
+    void scaleItemChanged( QListWidgetItem* changedScaleItem );
 
     /*!
      * Slots for WMS project settings
@@ -113,6 +110,12 @@ class QgsProjectProperties : public QgsOptionsDialogBase, private Ui::QgsProject
      */
     void on_pbnWFSLayersSelectAll_clicked();
     void on_pbnWFSLayersUnselectAll_clicked();
+
+    /*!
+     * Slots to select/unselect all the WCS layers
+     */
+    void on_pbnWCSLayersSelectAll_clicked();
+    void on_pbnWCSLayersUnselectAll_clicked();
 
     /*!
      * Slots for Styles
@@ -135,10 +138,12 @@ class QgsProjectProperties : public QgsOptionsDialogBase, private Ui::QgsProject
     /*!
      * Slot to link WFS checkboxes
      */
-    void on_cbxWFSPublied_stateChanged( int aIdx );
-    void on_cbxWFSUpdate_stateChanged( int aIdx );
-    void on_cbxWFSInsert_stateChanged( int aIdx );
-    void on_cbxWFSDelete_stateChanged( int aIdx );
+    void cbxWFSPubliedStateChanged( int aIdx );
+
+    /*!
+     * Slot to link WCS checkboxes
+     */
+    void cbxWCSPubliedStateChanged( int aIdx );
 
     /*!
       * If user changes the CRS, set the corresponding map units
@@ -146,10 +151,15 @@ class QgsProjectProperties : public QgsOptionsDialogBase, private Ui::QgsProject
     void setMapUnitsToCurrentProjection();
 
     /* Update ComboBox accorindg to the selected new index
-     * Also sets the new selected Ellipsoid.
-     * @note added in 2.0
-     */
+     * Also sets the new selected Ellipsoid. */
     void updateEllipsoidUI( int newIndex );
+
+    //! sets the right ellipsoid for measuring (from settings)
+    void projectionSelectorInitialized();
+
+    void on_mButtonAddColor_clicked();
+    void on_mButtonImportColors_clicked();
+    void on_mButtonExportColors_clicked();
 
   signals:
     //! Signal used to inform listeners that the mouse display precision may have changed
@@ -162,6 +172,7 @@ class QgsProjectProperties : public QgsOptionsDialogBase, private Ui::QgsProject
     void refresh();
 
   private:
+    QgsRelationManagerDialog *mRelationManagerDlg;
     QgsMapCanvas* mMapCanvas;
     QgsStyleV2* mStyle;
 
@@ -199,6 +210,12 @@ class QgsProjectProperties : public QgsOptionsDialogBase, private Ui::QgsProject
 
     //! Populates list with ellipsoids from Sqlite3 db
     void populateEllipsoidList();
+
+    //! Create a new scale item and add it to the list of scales
+    QListWidgetItem* addScaleToScaleList( const QString &newScale );
+
+    //! Add a scale item to the list of scales
+    void addScaleToScaleList( QListWidgetItem* newItem );
 
     static const char * GEO_NONE_DESC;
 

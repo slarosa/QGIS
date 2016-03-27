@@ -42,6 +42,9 @@
        <height>280</height>
       </size>
      </property>
+     <property name="columnCount">
+      <number>3</number>
+     </property>
      <column>
       <property name="text">
        <string>Value</string>
@@ -52,10 +55,19 @@
        <string>Color</string>
       </property>
      </column>
+     <column>
+      <property name="text">
+       <string>Label</string>
+      </property>
+     </column>
     </widget>
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>mBandComboBox</tabstop>
+  <tabstop>mTreeWidget</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

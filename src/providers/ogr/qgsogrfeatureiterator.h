@@ -16,31 +16,59 @@
 #define QGSOGRFEATUREITERATOR_H
 
 #include "qgsfeatureiterator.h"
+#include "qgsogrconnpool.h"
 
 #include <ogr_api.h>
 
+class QgsOgrFeatureIterator;
 class QgsOgrProvider;
+class QgsOgrAbstractGeometrySimplifier;
 
-class QgsOgrFeatureIterator : public QgsAbstractFeatureIterator
+class QgsOgrFeatureSource : public QgsAbstractFeatureSource
 {
   public:
-    QgsOgrFeatureIterator( QgsOgrProvider* p, const QgsFeatureRequest& request );
+    explicit QgsOgrFeatureSource( const QgsOgrProvider* p );
+    ~QgsOgrFeatureSource();
+
+    virtual QgsFeatureIterator getFeatures( const QgsFeatureRequest& request ) override;
+
+  protected:
+    const QgsOgrProvider* mProvider;
+    QString mFilePath;
+    QString mLayerName;
+    int mLayerIndex;
+    QString mSubsetString;
+    QTextCodec* mEncoding;
+    QgsFields mFields;
+    OGRwkbGeometryType mOgrGeometryTypeFilter;
+    QString mDriverName;
+
+    friend class QgsOgrFeatureIterator;
+    friend class QgsOgrExpressionCompiler;
+};
+
+class QgsOgrFeatureIterator : public QgsAbstractFeatureIteratorFromSource<QgsOgrFeatureSource>
+{
+  public:
+    QgsOgrFeatureIterator( QgsOgrFeatureSource* source, bool ownSource, const QgsFeatureRequest& request );
 
     ~QgsOgrFeatureIterator();
 
-    //! fetch next feature, return true on success
-    virtual bool nextFeature( QgsFeature& feature );
-
     //! reset the iterator to the starting position
-    virtual bool rewind();
+    virtual bool rewind() override;
 
     //! end of iterating: free the resources / lock
-    virtual bool close();
+    virtual bool close() override;
 
   protected:
-    QgsOgrProvider* P;
+    //! fetch next feature, return true on success
+    virtual bool fetchFeature( QgsFeature& feature ) override;
 
-    void ensureRelevantFields();
+    //! Setup the simplification of geometries to fetch using the specified simplify method
+    virtual bool prepareSimplification( const QgsSimplifyMethod& simplifyMethod ) override;
+
+    //! fetch next feature filter expression
+    bool nextFeatureFilterExpression( QgsFeature& f ) override;
 
     bool readFeature( OGRFeatureH fet, QgsFeature& feature );
 
@@ -48,7 +76,23 @@ class QgsOgrFeatureIterator : public QgsAbstractFeatureIterator
     void getFeatureAttribute( OGRFeatureH ogrFet, QgsFeature & f, int attindex );
 
     bool mFeatureFetched;
-};
 
+    QgsOgrConn* mConn;
+    OGRLayerH ogrLayer;
+
+    bool mSubsetStringSet;
+
+    //! Set to true, if geometry is in the requested columns
+    bool mFetchGeometry;
+
+  private:
+    //! optional object to simplify OGR-geometries fecthed by this feature iterator
+    QgsOgrAbstractGeometrySimplifier* mGeometrySimplifier;
+
+    bool mExpressionCompiled;
+
+    //! returns whether the iterator supports simplify geometries on provider side
+    virtual bool providerCanSimplify( QgsSimplifyMethod::MethodType methodType ) const override;
+};
 
 #endif // QGSOGRFEATUREITERATOR_H

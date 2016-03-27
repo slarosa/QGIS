@@ -25,10 +25,16 @@
 #include "qgscoordinatetransform.h"
 #include "qgscoordinatereferencesystem.h"
 #include "qgsgeometry.h"
+#include "qgsgeometrycollectionv2.h"
 #include "qgsdistancearea.h"
 #include "qgsapplication.h"
 #include "qgslogger.h"
 #include "qgsmessagelog.h"
+#include "qgsmultisurfacev2.h"
+#include "qgswkbptr.h"
+#include "qgslinestringv2.h"
+#include "qgspolygonv2.h"
+#include "qgssurfacev2.h"
 
 // MSVC compiler doesn't have defined M_PI in math.h
 #ifndef M_PI
@@ -50,6 +56,7 @@ QgsDistanceArea::QgsDistanceArea()
 
 //! Copy constructor
 QgsDistanceArea::QgsDistanceArea( const QgsDistanceArea & origDA )
+    : mCoordTransform( 0 )
 {
   _copy( origDA );
 }
@@ -82,7 +89,7 @@ void QgsDistanceArea::_copy( const QgsDistanceArea & origDA )
   // Some calculations and trig. Should not be TOO time consuming.
   // Alternatively we could copy the temp vars?
   computeAreaInit();
-  mSourceRefSys = origDA.mSourceRefSys;
+  delete mCoordTransform;
   mCoordTransform = new QgsCoordinateTransform( origDA.mCoordTransform->sourceCrs(), origDA.mCoordTransform->destCRS() );
 }
 
@@ -98,7 +105,12 @@ void QgsDistanceArea::setSourceCrs( long srsid )
   mCoordTransform->setSourceCrs( srcCRS );
 }
 
-void QgsDistanceArea::setSourceAuthId( QString authId )
+void QgsDistanceArea::setSourceCrs( const QgsCoordinateReferenceSystem& srcCRS )
+{
+  mCoordTransform->setSourceCrs( srcCRS );
+}
+
+void QgsDistanceArea::setSourceAuthId( const QString& authId )
 {
   QgsCoordinateReferenceSystem srcCRS;
   srcCRS.createFromOgcWmsCrs( authId );
@@ -129,7 +141,7 @@ bool QgsDistanceArea::setEllipsoid( const QString& ellipsoid )
   // Distances in meters.  Flattening is calculated.
   if ( ellipsoid.startsWith( "PARAMETER" ) )
   {
-    QStringList paramList = ellipsoid.split( ":" );
+    QStringList paramList = ellipsoid.split( ':' );
     bool semiMajorOk, semiMinorOk;
     double semiMajor = paramList[1].toDouble( & semiMajorOk );
     double semiMinor = paramList[2].toDouble( & semiMinorOk );
@@ -155,7 +167,7 @@ bool QgsDistanceArea::setEllipsoid( const QString& ellipsoid )
     return false;
   }
   // Set up the query to retrieve the projection information needed to populate the ELLIPSOID list
-  QString mySql = "select radius, parameter2 from tbl_ellipsoid where acronym='" + ellipsoid + "'";
+  QString mySql = "select radius, parameter2 from tbl_ellipsoid where acronym='" + ellipsoid + '\'';
   myResult = sqlite3_prepare( myDatabase, mySql.toUtf8(), mySql.toUtf8().length(), &myPreparedStatement, &myTail );
   // XXX Need to free memory from the error msg if one is set
   if ( myResult == SQLITE_OK )
@@ -219,8 +231,8 @@ bool QgsDistanceArea::setEllipsoid( const QString& ellipsoid )
   if ( destCRS.srsid() == 0 )
   {
     QString myName = QString( " * %1 (%2)" )
-                     .arg( QObject::tr( "Generated CRS", "A CRS automatically generated from layer info get this prefix for description" ) )
-                     .arg( destCRS.toProj4() );
+                     .arg( QObject::tr( "Generated CRS", "A CRS automatically generated from layer info get this prefix for description" ),
+                           destCRS.toProj4() );
     destCRS.saveAsUserCRS( myName );
   }
   //
@@ -228,10 +240,11 @@ bool QgsDistanceArea::setEllipsoid( const QString& ellipsoid )
   // set transformation from project CRS to ellipsoid coordinates
   mCoordTransform->setDestCRS( destCRS );
 
+  mEllipsoid = ellipsoid;
+
   // precalculate some values for area calculations
   computeAreaInit();
 
-  mEllipsoid = ellipsoid;
   return true;
 }
 
@@ -250,160 +263,187 @@ bool  QgsDistanceArea::setEllipsoid( double semiMajor, double semiMinor )
   return true;
 }
 
-
-
-double QgsDistanceArea::measure( QgsGeometry* geometry )
+double QgsDistanceArea::measure( const QgsAbstractGeometryV2* geomV2, MeasureType type ) const
 {
-  if ( !geometry )
-    return 0.0;
-
-  unsigned char* wkb = geometry->asWkb();
-  if ( !wkb )
-    return 0.0;
-
-  unsigned char* ptr;
-  unsigned int wkbType;
-  double res, resTotal = 0;
-  int count, i;
-
-  memcpy( &wkbType, ( wkb + 1 ), sizeof( wkbType ) );
-
-  // measure distance or area based on what is the type of geometry
-  bool hasZptr = false;
-
-  switch ( wkbType )
+  if ( !geomV2 )
   {
-    case QGis::WKBLineString25D:
-      hasZptr = true;
-    case QGis::WKBLineString:
-      measureLine( wkb, &res, hasZptr );
-      QgsDebugMsg( "returning " + QString::number( res ) );
-      return res;
-
-    case QGis::WKBMultiLineString25D:
-      hasZptr = true;
-    case QGis::WKBMultiLineString:
-      count = *(( int* )( wkb + 5 ) );
-      ptr = wkb + 9;
-      for ( i = 0; i < count; i++ )
-      {
-        ptr = measureLine( ptr, &res, hasZptr );
-        resTotal += res;
-      }
-      QgsDebugMsg( "returning " + QString::number( resTotal ) );
-      return resTotal;
-
-    case QGis::WKBPolygon25D:
-      hasZptr = true;
-    case QGis::WKBPolygon:
-      measurePolygon( wkb, &res, 0, hasZptr );
-      QgsDebugMsg( "returning " + QString::number( res ) );
-      return res;
-
-    case QGis::WKBMultiPolygon25D:
-      hasZptr = true;
-    case QGis::WKBMultiPolygon:
-      count = *(( int* )( wkb + 5 ) );
-      ptr = wkb + 9;
-      for ( i = 0; i < count; i++ )
-      {
-        ptr = measurePolygon( ptr, &res, 0, hasZptr );
-        resTotal += res;
-      }
-      QgsDebugMsg( "returning " + QString::number( resTotal ) );
-      return resTotal;
-
-    default:
-      QgsDebugMsg( QString( "measure: unexpected geometry type: %1" ).arg( wkbType ) );
-      return 0;
+    return 0.0;
   }
-}
 
-double QgsDistanceArea::measurePerimeter( QgsGeometry* geometry )
-{
-  if ( !geometry )
-    return 0.0;
-
-  unsigned char* wkb = geometry->asWkb();
-  if ( !wkb )
-    return 0.0;
-
-  unsigned char* ptr;
-  unsigned int wkbType;
-  double res, resTotal = 0;
-  int count, i;
-
-  memcpy( &wkbType, ( wkb + 1 ), sizeof( wkbType ) );
-
-  // measure distance or area based on what is the type of geometry
-  bool hasZptr = false;
-
-  switch ( wkbType )
+  int geomDimension = geomV2->dimension();
+  if ( geomDimension <= 0 )
   {
-    case QGis::WKBLineString25D:
-    case QGis::WKBLineString:
-    case QGis::WKBMultiLineString25D:
-    case QGis::WKBMultiLineString:
-      return 0.0;
-
-    case QGis::WKBPolygon25D:
-      hasZptr = true;
-    case QGis::WKBPolygon:
-      measurePolygon( wkb, 0, &res, hasZptr );
-      QgsDebugMsg( "returning " + QString::number( res ) );
-      return res;
-
-    case QGis::WKBMultiPolygon25D:
-      hasZptr = true;
-    case QGis::WKBMultiPolygon:
-      count = *(( int* )( wkb + 5 ) );
-      ptr = wkb + 9;
-      for ( i = 0; i < count; i++ )
-      {
-        ptr = measurePolygon( ptr, 0, &res, hasZptr );
-        resTotal += res;
-      }
-      QgsDebugMsg( "returning " + QString::number( resTotal ) );
-      return resTotal;
-
-    default:
-      QgsDebugMsg( QString( "measure: unexpected geometry type: %1" ).arg( wkbType ) );
-      return 0;
+    return 0.0;
   }
-}
 
-
-unsigned char* QgsDistanceArea::measureLine( unsigned char* feature, double* area, bool hasZptr )
-{
-  unsigned char *ptr = feature + 5;
-  unsigned int nPoints = *(( int* )ptr );
-  ptr = feature + 9;
-
-  QList<QgsPoint> points;
-  double x, y;
-
-  QgsDebugMsg( "This feature WKB has " + QString::number( nPoints ) + " points" );
-  // Extract the points from the WKB format into the vector
-  for ( unsigned int i = 0; i < nPoints; ++i )
+  MeasureType measureType = type;
+  if ( measureType == Default )
   {
-    x = *(( double * ) ptr );
-    ptr += sizeof( double );
-    y = *(( double * ) ptr );
-    ptr += sizeof( double );
-    if ( hasZptr )
+    measureType = ( geomDimension == 1 ? Length : Area );
+  }
+
+  if ( !mEllipsoidalMode || mEllipsoid == GEO_NONE )
+  {
+    //no transform required
+    if ( measureType == Length )
     {
-      // totally ignore Z value
-      ptr += sizeof( double );
+      return geomV2->length();
+    }
+    else
+    {
+      return geomV2->area();
+    }
+  }
+  else
+  {
+    //multigeom is sum of measured parts
+    const QgsGeometryCollectionV2* collection = dynamic_cast<const QgsGeometryCollectionV2*>( geomV2 );
+    if ( collection )
+    {
+      double sum = 0;
+      for ( int i = 0; i < collection->numGeometries(); ++i )
+      {
+        sum += measure( collection->geometryN( i ), measureType );
+      }
+      return sum;
     }
 
-    points.append( QgsPoint( x, y ) );
-  }
+    if ( measureType == Length )
+    {
+      const QgsCurveV2* curve = dynamic_cast<const QgsCurveV2*>( geomV2 );
+      if ( !curve )
+      {
+        return 0.0;
+      }
 
-  *area = measureLine( points );
-  return ptr;
+      QgsLineStringV2* lineString = curve->curveToLine();
+      double length = measureLine( lineString );
+      delete lineString;
+      return length;
+    }
+    else
+    {
+      const QgsSurfaceV2* surface = dynamic_cast<const QgsSurfaceV2*>( geomV2 );
+      if ( !surface )
+        return 0.0;
+
+      QgsPolygonV2* polygon = surface->surfaceToPolygon();
+
+      double area = 0;
+      const QgsCurveV2* outerRing = polygon->exteriorRing();
+      area += measurePolygon( outerRing );
+
+      for ( int i = 0; i < polygon->numInteriorRings(); ++i )
+      {
+        const QgsCurveV2* innerRing = polygon->interiorRing( i );
+        area -= measurePolygon( innerRing );
+      }
+      delete polygon;
+      return area;
+    }
+  }
 }
 
-double QgsDistanceArea::measureLine( const QList<QgsPoint>& points )
+double QgsDistanceArea::measure( const QgsGeometry *geometry ) const
+{
+  if ( !geometry )
+    return 0.0;
+
+  const QgsAbstractGeometryV2* geomV2 = geometry->geometry();
+  return measure( geomV2 );
+}
+
+double QgsDistanceArea::measureArea( const QgsGeometry* geometry ) const
+{
+  if ( !geometry )
+    return 0.0;
+
+  const QgsAbstractGeometryV2* geomV2 = geometry->geometry();
+  return measure( geomV2, Area );
+}
+
+double QgsDistanceArea::measureLength( const QgsGeometry* geometry ) const
+{
+  if ( !geometry )
+    return 0.0;
+
+  const QgsAbstractGeometryV2* geomV2 = geometry->geometry();
+  return measure( geomV2, Length );
+}
+
+double QgsDistanceArea::measurePerimeter( const QgsGeometry* geometry ) const
+{
+  if ( !geometry )
+    return 0.0;
+
+  const QgsAbstractGeometryV2* geomV2 = geometry->geometry();
+  if ( !geomV2 || geomV2->dimension() < 2 )
+  {
+    return 0.0;
+  }
+
+  if ( !mEllipsoidalMode || mEllipsoid == GEO_NONE )
+  {
+    return geomV2->perimeter();
+  }
+
+  //create list with (single) surfaces
+  QList< const QgsSurfaceV2* > surfaces;
+  const QgsSurfaceV2* surf = dynamic_cast<const QgsSurfaceV2*>( geomV2 );
+  if ( surf )
+  {
+    surfaces.append( surf );
+  }
+  const QgsMultiSurfaceV2* multiSurf = dynamic_cast<const QgsMultiSurfaceV2*>( geomV2 );
+  if ( multiSurf )
+  {
+    surfaces.reserve(( surf ? 1 : 0 ) + multiSurf->numGeometries() );
+    for ( int i = 0; i  < multiSurf->numGeometries(); ++i )
+    {
+      surfaces.append( static_cast<const QgsSurfaceV2*>( multiSurf->geometryN( i ) ) );
+    }
+  }
+
+  double length = 0;
+  QList<const QgsSurfaceV2*>::const_iterator surfaceIt = surfaces.constBegin();
+  for ( ; surfaceIt != surfaces.constEnd(); ++surfaceIt )
+  {
+    if ( !*surfaceIt )
+    {
+      continue;
+    }
+
+    QgsPolygonV2* poly = ( *surfaceIt )->surfaceToPolygon();
+    const QgsCurveV2* outerRing = poly->exteriorRing();
+    if ( outerRing )
+    {
+      length += measure( outerRing );
+    }
+    int nInnerRings = poly->numInteriorRings();
+    for ( int i = 0; i < nInnerRings; ++i )
+    {
+      length += measure( poly->interiorRing( i ) );
+    }
+    delete poly;
+  }
+  return length;
+}
+
+double QgsDistanceArea::measureLine( const QgsCurveV2* curve ) const
+{
+  if ( !curve )
+  {
+    return 0.0;
+  }
+
+  QList<QgsPointV2> linePointsV2;
+  QList<QgsPoint> linePoints;
+  curve->points( linePointsV2 );
+  QgsGeometry::convertPointList( linePointsV2, linePoints );
+  return measureLine( linePoints );
+}
+
+double QgsDistanceArea::measureLine( const QList<QgsPoint> &points ) const
 {
   if ( points.size() < 2 )
     return 0;
@@ -445,29 +485,37 @@ double QgsDistanceArea::measureLine( const QList<QgsPoint>& points )
 
 }
 
-double QgsDistanceArea::measureLine( const QgsPoint& p1, const QgsPoint& p2 )
+double QgsDistanceArea::measureLine( const QgsPoint &p1, const QgsPoint &p2 ) const
+{
+  QGis::UnitType units;
+  return measureLine( p1, p2, units );
+}
+
+double QgsDistanceArea::measureLine( const QgsPoint& p1, const QgsPoint& p2, QGis::UnitType& units ) const
 {
   double result;
+  units = mCoordTransform->sourceCrs().mapUnits();
 
   try
   {
     QgsPoint pp1 = p1, pp2 = p2;
 
-    QgsDebugMsg( QString( "Measuring from %1 to %2" ).arg( p1.toString( 4 ) ).arg( p2.toString( 4 ) ) );
+    QgsDebugMsgLevel( QString( "Measuring from %1 to %2" ).arg( p1.toString( 4 ), p2.toString( 4 ) ), 3 );
     if ( mEllipsoidalMode && ( mEllipsoid != GEO_NONE ) )
     {
-      QgsDebugMsg( QString( "Ellipsoidal calculations is enabled, using ellipsoid %1" ).arg( mEllipsoid ) );
-      QgsDebugMsg( QString( "From proj4 : %1" ).arg( mCoordTransform->sourceCrs().toProj4() ) );
-      QgsDebugMsg( QString( "To   proj4 : %1" ).arg( mCoordTransform->destCRS().toProj4() ) );
+      units = QGis::Meters;
+      QgsDebugMsgLevel( QString( "Ellipsoidal calculations is enabled, using ellipsoid %1" ).arg( mEllipsoid ), 4 );
+      QgsDebugMsgLevel( QString( "From proj4 : %1" ).arg( mCoordTransform->sourceCrs().toProj4() ), 4 );
+      QgsDebugMsgLevel( QString( "To   proj4 : %1" ).arg( mCoordTransform->destCRS().toProj4() ), 4 );
       pp1 = mCoordTransform->transform( p1 );
       pp2 = mCoordTransform->transform( p2 );
-      QgsDebugMsg( QString( "New points are %1 and %2, calculating..." ).arg( pp1.toString( 4 ) ).arg( pp2.toString( 4 ) ) );
+      QgsDebugMsgLevel( QString( "New points are %1 and %2, calculating..." ).arg( pp1.toString( 4 ), pp2.toString( 4 ) ), 4 );
       result = computeDistanceBearing( pp1, pp2 );
     }
     else
     {
-      QgsDebugMsg( "Cartesian calculation on canvas coordinates" );
-      result = sqrt(( p2.x() - p1.x() ) * ( p2.x() - p1.x() ) + ( p2.y() - p1.y() ) * ( p2.y() - p1.y() ) );
+      QgsDebugMsgLevel( "Cartesian calculation on canvas coordinates", 4 );
+      result = computeDistanceFlat( p1, p2 );
     }
   }
   catch ( QgsCsException &cse )
@@ -476,22 +524,32 @@ double QgsDistanceArea::measureLine( const QgsPoint& p1, const QgsPoint& p2 )
     QgsMessageLog::logMessage( QObject::tr( "Caught a coordinate system exception while trying to transform a point. Unable to calculate line length." ) );
     result = 0.0;
   }
-  QgsDebugMsg( QString( "The result was %1" ).arg( result ) );
+  QgsDebugMsgLevel( QString( "The result was %1" ).arg( result ), 3 );
   return result;
 }
 
 
-unsigned char* QgsDistanceArea::measurePolygon( unsigned char* feature, double* area, double* perimeter, bool hasZptr )
+const unsigned char *QgsDistanceArea::measurePolygon( const unsigned char* feature, double* area, double* perimeter, bool hasZptr ) const
 {
+  if ( !feature )
+  {
+    QgsDebugMsg( "no feature to measure" );
+    return 0;
+  }
+
+  QgsConstWkbPtr wkbPtr( feature + 1 + sizeof( int ) );
+
   // get number of rings in the polygon
-  unsigned int numRings = *(( int* )( feature + 1 + sizeof( int ) ) );
+  int numRings;
+  wkbPtr >> numRings;
 
   if ( numRings == 0 )
+  {
+    QgsDebugMsg( "no rings to measure" );
     return 0;
+  }
 
   // Set pointer to the first ring
-  unsigned char* ptr = feature + 1 + 2 * sizeof( int );
-
   QList<QgsPoint> points;
   QgsPoint pnt;
   double x, y;
@@ -502,23 +560,20 @@ unsigned char* QgsDistanceArea::measurePolygon( unsigned char* feature, double* 
 
   try
   {
-    for ( unsigned int idx = 0; idx < numRings; idx++ )
+    for ( int idx = 0; idx < numRings; idx++ )
     {
-      int nPoints = *(( int* )ptr );
-      ptr += 4;
+      int nPoints;
+      wkbPtr >> nPoints;
 
       // Extract the points from the WKB and store in a pair of
       // vectors.
       for ( int jdx = 0; jdx < nPoints; jdx++ )
       {
-        x = *(( double * ) ptr );
-        ptr += sizeof( double );
-        y = *(( double * ) ptr );
-        ptr += sizeof( double );
+        wkbPtr >> x >> y;
         if ( hasZptr )
         {
           // totally ignore Z value
-          ptr += sizeof( double );
+          wkbPtr += sizeof( double );
         }
 
         pnt = QgsPoint( x, y );
@@ -551,7 +606,7 @@ unsigned char* QgsDistanceArea::measurePolygon( unsigned char* feature, double* 
           if ( idx == 0 )
           {
             // exterior ring
-            *perimeter += measureLine( points );
+            *perimeter += computeDistance( points );
           }
         }
       }
@@ -565,13 +620,26 @@ unsigned char* QgsDistanceArea::measurePolygon( unsigned char* feature, double* 
     QgsMessageLog::logMessage( QObject::tr( "Caught a coordinate system exception while trying to transform a point. Unable to calculate polygon area or perimeter." ) );
   }
 
-  return ptr;
+  return wkbPtr;
+}
+
+double QgsDistanceArea::measurePolygon( const QgsCurveV2* curve ) const
+{
+  if ( !curve )
+  {
+    return 0.0;
+  }
+
+  QList<QgsPointV2> linePointsV2;
+  curve->points( linePointsV2 );
+  QList<QgsPoint> linePoints;
+  QgsGeometry::convertPointList( linePointsV2, linePoints );
+  return measurePolygon( linePoints );
 }
 
 
-double QgsDistanceArea::measurePolygon( const QList<QgsPoint>& points )
+double QgsDistanceArea::measurePolygon( const QList<QgsPoint>& points ) const
 {
-
   try
   {
     if ( mEllipsoidalMode && ( mEllipsoid != GEO_NONE ) )
@@ -597,7 +665,7 @@ double QgsDistanceArea::measurePolygon( const QList<QgsPoint>& points )
 }
 
 
-double QgsDistanceArea::bearing( const QgsPoint& p1, const QgsPoint& p2 )
+double QgsDistanceArea::bearing( const QgsPoint& p1, const QgsPoint& p2 ) const
 {
   QgsPoint pp1 = p1, pp2 = p2;
   double bearing;
@@ -624,7 +692,7 @@ double QgsDistanceArea::bearing( const QgsPoint& p1, const QgsPoint& p2 )
 
 double QgsDistanceArea::computeDistanceBearing(
   const QgsPoint& p1, const QgsPoint& p2,
-  double* course1, double* course2 )
+  double* course1, double* course2 ) const
 {
   if ( p1.x() == p2.x() && p1.y() == p2.y() )
     return 0;
@@ -699,6 +767,48 @@ double QgsDistanceArea::computeDistanceBearing(
   return s;
 }
 
+double QgsDistanceArea::computeDistanceFlat( const QgsPoint& p1, const QgsPoint& p2 ) const
+{
+  return sqrt(( p2.x() - p1.x() ) * ( p2.x() - p1.x() ) + ( p2.y() - p1.y() ) * ( p2.y() - p1.y() ) );
+}
+
+double QgsDistanceArea::computeDistance( const QList<QgsPoint>& points ) const
+{
+  if ( points.size() < 2 )
+    return 0;
+
+  double total = 0;
+  QgsPoint p1, p2;
+
+  try
+  {
+    p1 = points[0];
+
+    for ( QList<QgsPoint>::const_iterator i = points.begin(); i != points.end(); ++i )
+    {
+      p2 = *i;
+      if ( mEllipsoidalMode && ( mEllipsoid != GEO_NONE ) )
+      {
+        total += computeDistanceBearing( p1, p2 );
+      }
+      else
+      {
+        total += computeDistanceFlat( p1, p2 );
+      }
+
+      p1 = p2;
+    }
+
+    return total;
+  }
+  catch ( QgsCsException &cse )
+  {
+    Q_UNUSED( cse );
+    QgsMessageLog::logMessage( QObject::tr( "Caught a coordinate system exception while trying to transform a point. Unable to calculate line length." ) );
+    return 0.0;
+  }
+}
+
 
 
 ///////////////////////////////////////////////////////////
@@ -706,7 +816,7 @@ double QgsDistanceArea::computeDistanceBearing(
 // don't know how does it work, but it's working .)
 // see G_begin_ellipsoid_polygon_area() in area_poly1.c
 
-double QgsDistanceArea::getQ( double x )
+double QgsDistanceArea::getQ( double x ) const
 {
   double sinx, sinx2;
 
@@ -717,7 +827,7 @@ double QgsDistanceArea::getQ( double x )
 }
 
 
-double QgsDistanceArea::getQbar( double x )
+double QgsDistanceArea::getQbar( double x ) const
 {
   double cosx, cosx2;
 
@@ -730,6 +840,12 @@ double QgsDistanceArea::getQbar( double x )
 
 void QgsDistanceArea::computeAreaInit()
 {
+  //don't try to perform calculations if no ellipsoid
+  if ( mEllipsoid == GEO_NONE )
+  {
+    return;
+  }
+
   double a2 = ( mSemiMajor * mSemiMajor );
   double e2 = 1 - ( a2 / ( mSemiMinor * mSemiMinor ) );
   double e4, e6;
@@ -757,7 +873,7 @@ void QgsDistanceArea::computeAreaInit()
 }
 
 
-double QgsDistanceArea::computePolygonArea( const QList<QgsPoint>& points )
+double QgsDistanceArea::computePolygonArea( const QList<QgsPoint>& points ) const
 {
   double x1, y1, x2, y2, dx, dy;
   double Qbar1, Qbar2;
@@ -814,7 +930,7 @@ double QgsDistanceArea::computePolygonArea( const QList<QgsPoint>& points )
   return area;
 }
 
-double QgsDistanceArea::computePolygonFlatArea( const QList<QgsPoint>& points )
+double QgsDistanceArea::computePolygonFlatArea( const QList<QgsPoint>& points ) const
 {
   // Normal plane area calculations.
   double area = 0.0;
@@ -931,6 +1047,16 @@ QString QgsDistanceArea::textUnit( double value, int decimals, QGis::UnitType u,
         }
       }
       break;
+    case QGis::NauticalMiles:
+      if ( isArea )
+      {
+        unitLabel = QObject::tr( " sq. NM" );
+      }
+      else
+      {
+        unitLabel = QObject::tr( " NM" );
+      }
+      break;
     case QGis::Degrees:
       if ( isArea )
       {
@@ -946,20 +1072,20 @@ QString QgsDistanceArea::textUnit( double value, int decimals, QGis::UnitType u,
       break;
     case QGis::UnknownUnit:
       unitLabel = QObject::tr( " unknown" );
+      //intentional fall-through
     default:
       QgsDebugMsg( QString( "Error: not picked up map units - actual value = %1" ).arg( u ) );
-  };
-
+  }
 
   return QLocale::system().toString( value, 'f', decimals ) + unitLabel;
 }
 
-void QgsDistanceArea::convertMeasurement( double &measure, QGis::UnitType &measureUnits, QGis::UnitType displayUnits, bool isArea )
+void QgsDistanceArea::convertMeasurement( double &measure, QGis::UnitType &measureUnits, QGis::UnitType displayUnits, bool isArea ) const
 {
-  // Helper for converting between meters and feet
+  // Helper for converting between meters and feet and degrees and NauticalMiles...
   // The parameters measure and measureUnits are in/out
 
-  if (( measureUnits == QGis::Degrees || measureUnits == QGis::Feet ) &&
+  if (( measureUnits == QGis::Degrees || measureUnits == QGis::Feet || measureUnits == QGis::NauticalMiles ) &&
       mEllipsoid != GEO_NONE &&
       mEllipsoidalMode )
   {
@@ -967,28 +1093,21 @@ void QgsDistanceArea::convertMeasurement( double &measure, QGis::UnitType &measu
     measureUnits = QGis::Meters;
     QgsDebugMsg( "We're measuring on an ellipsoid or using projections, the system is returning meters" );
   }
+  else if ( mEllipsoidalMode && mEllipsoid == GEO_NONE )
+  {
+    // Measuring in plane within the source CRS. Force its map units
+    measureUnits = mCoordTransform->sourceCrs().mapUnits();
+    QgsDebugMsg( "We're measuing on planimetric distance/area on given CRS, measured value is in CRS units" );
+  }
 
-  // Only convert between meters and feet
-  if ( measureUnits == QGis::Meters && displayUnits == QGis::Feet )
-  {
-    QgsDebugMsg( QString( "Converting %1 meters" ).arg( QString::number( measure ) ) );
-    measure /= 0.3048;
-    if ( isArea )
-    {
-      measure /= 0.3048;
-    }
-    QgsDebugMsg( QString( "to %1 feet" ).arg( QString::number( measure ) ) );
-    measureUnits = QGis::Feet;
-  }
-  if ( measureUnits == QGis::Feet && displayUnits == QGis::Meters )
-  {
-    QgsDebugMsg( QString( "Converting %1 feet" ).arg( QString::number( measure ) ) );
-    measure *= 0.3048;
-    if ( isArea )
-    {
-      measure *= 0.3048;
-    }
-    QgsDebugMsg( QString( "to %1 meters" ).arg( QString::number( measure ) ) );
-    measureUnits = QGis::Meters;
-  }
+  // Gets the conversion factor between the specified units
+  double factorUnits = QGis::fromUnitToUnitFactor( measureUnits, displayUnits );
+  if ( isArea )
+    factorUnits *= factorUnits;
+
+  QgsDebugMsg( QString( "Converting %1 %2" ).arg( QString::number( measure ), QGis::toLiteral( measureUnits ) ) );
+  measure *= factorUnits;
+  QgsDebugMsg( QString( "to %1 %2" ).arg( QString::number( measure ), QGis::toLiteral( displayUnits ) ) );
+  measureUnits = displayUnits;
 }
+

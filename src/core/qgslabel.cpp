@@ -39,15 +39,15 @@
 #include "qgslabel.h"
 
 // use M_PI define PI 3.141592654
-#ifdef WIN32
+#ifdef Q_OS_WIN
 #undef M_PI
 #define M_PI 4*atan(1.0)
 #endif
 
 QgsLabel::QgsLabel( const QgsFields & fields )
-    : mMinScale( 0 ),
-    mMaxScale( 100000000 ),
-    mScaleBasedVisibility( false )
+    : mMinScale( 0 )
+    , mMaxScale( 100000000 )
+    , mScaleBasedVisibility( false )
 {
   mFields = fields;
   mLabelFieldIdx.resize( LabelFieldCount );
@@ -65,12 +65,8 @@ QgsLabel::~QgsLabel()
 
 QString QgsLabel::fieldValue( int attr, QgsFeature &feature )
 {
-  if ( mLabelFieldIdx[attr] == -1 )
-  {
-    return QString();
-  }
-
-  return feature.attribute( attr ).toString();
+  int idx = mLabelFieldIdx[attr];
+  return idx < 0 ? QString() : feature.attribute( idx ).toString();
 }
 
 void QgsLabel::renderLabel( QgsRenderContext &renderContext,
@@ -232,7 +228,7 @@ void QgsLabel::renderLabel( QgsRenderContext &renderContext,
 
   if ( mLabelAttributes->multilineEnabled() )
   {
-    QStringList texts = text.split( "\n" );
+    QStringList texts = text.split( '\n' );
 
     width = 0;
     for ( int i = 0; i < texts.size(); i++ )
@@ -373,7 +369,7 @@ void QgsLabel::renderLabel( QgsRenderContext &renderContext,
 
 void QgsLabel::renderLabel( QgsRenderContext &renderContext,
                             QgsPoint point,
-                            QString text, QFont font, QPen pen,
+                            const QString& text, const QFont& font, const QPen& pen,
                             int dx, int dy,
                             double xoffset, double yoffset,
                             double ang,
@@ -518,8 +514,8 @@ QgsLabelAttributes *QgsLabel::labelAttributes( void )
 
 void QgsLabel::labelPoint( std::vector<labelpoint>& points, QgsFeature & feature )
 {
-  QgsGeometry *geometry = feature.geometry();
-  unsigned char *geom = geometry->asWkb();
+  const QgsGeometry *geometry = feature.constGeometry();
+  const unsigned char *geom = geometry->asWkb();
   size_t geomlen = geometry->wkbSize();
   QGis::WkbType wkbType = geometry->wkbType();
   labelpoint point;
@@ -551,7 +547,7 @@ void QgsLabel::labelPoint( std::vector<labelpoint>& points, QgsFeature & feature
       int nFeatures = *( unsigned int * )geom;
       geom += sizeof( int );
 
-      unsigned char *feature = geom;
+      const unsigned char *feature = geom;
       for ( int i = 0; i < nFeatures && feature; ++i )
       {
         feature = labelPoint( point, feature, geom + geomlen - feature );
@@ -564,7 +560,7 @@ void QgsLabel::labelPoint( std::vector<labelpoint>& points, QgsFeature & feature
   }
 }
 
-unsigned char* QgsLabel::labelPoint( labelpoint& point, unsigned char *geom, size_t geomlen )
+const unsigned char* QgsLabel::labelPoint( labelpoint& point, const unsigned char *geom, size_t geomlen )
 {
   // verify that local types match sizes as WKB spec
   Q_ASSERT( sizeof( int ) == 4 );
@@ -579,11 +575,11 @@ unsigned char* QgsLabel::labelPoint( labelpoint& point, unsigned char *geom, siz
 
   QGis::WkbType wkbType;
 #ifndef QT_NO_DEBUG
-  unsigned char *geomend = geom + geomlen;
+  const unsigned char *geomend = geom + geomlen;
+  Q_ASSERT( geom + 1 + sizeof( wkbType ) <= geomend );
 #else
   Q_UNUSED( geomlen );
 #endif
-  Q_ASSERT( geom + 1 + sizeof( wkbType ) <= geomend );
 
   geom++; // skip endianness
   memcpy( &wkbType, geom, sizeof( wkbType ) );
@@ -596,7 +592,9 @@ unsigned char* QgsLabel::labelPoint( labelpoint& point, unsigned char *geom, siz
     case QGis::WKBPoint25D:
     case QGis::WKBPoint:
     {
+#ifndef QT_NO_DEBUG
       Q_ASSERT( geom + 2*sizeof( double ) <= geomend );
+#endif
       double *pts = ( double * )geom;
       point.p.set( pts[0], pts[1] );
       point.angle = 0.0;
@@ -606,13 +604,18 @@ unsigned char* QgsLabel::labelPoint( labelpoint& point, unsigned char *geom, siz
 
     case QGis::WKBLineString25D:
       dims = 3;
+      //intentional fall-through
     case QGis::WKBLineString: // Line center
     {
+#ifndef QT_NO_DEBUG
       Q_ASSERT( geom + sizeof( int ) <= geomend );
+#endif
       int nPoints = *( unsigned int * )geom;
       geom += sizeof( int );
 
+#ifndef QT_NO_DEBUG
       Q_ASSERT( geom + nPoints*sizeof( double )*dims <= geomend );
+#endif
 
       // get line center
       double *pts = ( double * )geom;
@@ -652,19 +655,26 @@ unsigned char* QgsLabel::labelPoint( labelpoint& point, unsigned char *geom, siz
 
     case QGis::WKBPolygon25D:
       dims = 3;
+      //intentional fall-through
     case QGis::WKBPolygon: // centroid of outer ring
     {
+#ifndef QT_NO_DEBUG
       Q_ASSERT( geom + sizeof( int ) <= geomend );
+#endif
       int nRings = *( unsigned int * )geom;
       geom += sizeof( int );
 
       for ( int i = 0; i < nRings; ++i )
       {
+#ifndef QT_NO_DEBUG
         Q_ASSERT( geom + sizeof( int ) <= geomend );
+#endif
         int nPoints = *( unsigned int * )geom;
         geom += sizeof( int );
 
+#ifndef QT_NO_DEBUG
         Q_ASSERT( geom + nPoints*sizeof( double )*dims <= geomend );
+#endif
 
         if ( i == 0 )
         {
@@ -695,7 +705,7 @@ unsigned char* QgsLabel::labelPoint( labelpoint& point, unsigned char *geom, siz
   return geom;
 }
 
-bool QgsLabel::readLabelField( QDomElement &el, int attr, QString prefix = "field" )
+bool QgsLabel::readLabelField( QDomElement &el, int attr, const QString& prefix = "field" )
 {
   QString name = prefix + "name";
 
@@ -706,7 +716,7 @@ bool QgsLabel::readLabelField( QDomElement &el, int attr, QString prefix = "fiel
     int idx = 0;
     for ( ; idx < mFields.count(); ++idx )
     {
-      if ( mFields[idx].name() == name )
+      if ( mFields.at( idx ).name() == name )
       {
         break;
       }

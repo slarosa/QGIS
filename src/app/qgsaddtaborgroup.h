@@ -25,7 +25,7 @@
 class QTreeWidgetItem;
 class QgsVectorLayer;
 
-class QgsAddTabOrGroup : public QDialog, private Ui::QgsAddTabOrGroupBase
+class APP_EXPORT QgsAddTabOrGroup : public QDialog, private Ui::QgsAddTabOrGroupBase
 {
     Q_OBJECT
 
@@ -33,7 +33,7 @@ class QgsAddTabOrGroup : public QDialog, private Ui::QgsAddTabOrGroupBase
     typedef QPair<QString, QTreeWidgetItem*> TabPair;
 
   public:
-    QgsAddTabOrGroup( QgsVectorLayer *lyr, QList< TabPair > tabList, QWidget *parent = 0 );
+    QgsAddTabOrGroup( QgsVectorLayer *lyr, const QList<TabPair>& tabList, QWidget *parent = 0 );
     ~QgsAddTabOrGroup();
 
     QString name();

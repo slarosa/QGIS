@@ -26,11 +26,14 @@
 #include "qgstextannotationitem.h"
 #include "qgssvgannotationdialog.h"
 #include "qgssvgannotationitem.h"
+#include "qgsproject.h"
 #include <QDialog>
 #include <QMouseEvent>
 
-QgsMapToolAnnotation::QgsMapToolAnnotation( QgsMapCanvas* canvas ): QgsMapTool( canvas ),
-    mActiveItem( 0 ), mCurrentMoveAction( QgsAnnotationItem::NoAction ), mLastMousePosition( 0, 0 )
+QgsMapToolAnnotation::QgsMapToolAnnotation( QgsMapCanvas* canvas )
+    : QgsMapTool( canvas )
+    , mCurrentMoveAction( QgsAnnotationItem::NoAction )
+    , mLastMousePosition( 0, 0 )
 {
   mCursor = QCursor( Qt::ArrowCursor );
 }
@@ -79,7 +82,7 @@ QDialog* QgsMapToolAnnotation::createItemEditor( QgsAnnotationItem *item )
   return 0;
 }
 
-void QgsMapToolAnnotation::canvasReleaseEvent( QMouseEvent *e )
+void QgsMapToolAnnotation::canvasReleaseEvent( QgsMapMouseEvent* e )
 {
   Q_UNUSED( e );
 
@@ -87,7 +90,7 @@ void QgsMapToolAnnotation::canvasReleaseEvent( QMouseEvent *e )
   mCanvas->setCursor( mCursor );
 }
 
-void QgsMapToolAnnotation::canvasPressEvent( QMouseEvent * e )
+void QgsMapToolAnnotation::canvasPressEvent( QgsMapMouseEvent* e )
 {
   if ( !mCanvas )
   {
@@ -131,7 +134,7 @@ void QgsMapToolAnnotation::keyPressEvent( QKeyEvent* e )
   QgsAnnotationItem* sItem = selectedItem();
   if ( sItem )
   {
-    if ( e->key() == Qt::Key_Delete )
+    if ( e->key() == Qt::Key_Backspace || e->key() == Qt::Key_Delete )
     {
       if ( mCanvas && mCanvas->scene() )
       {
@@ -139,12 +142,16 @@ void QgsMapToolAnnotation::keyPressEvent( QKeyEvent* e )
         mCanvas->scene()->removeItem( sItem );
         delete sItem;
         mCanvas->setCursor( neutralCursor );
+        QgsProject::instance()->setDirty( true ); // TODO QGIS3: Rework the whole annotation code to be MVC compliant, see PR #2506
+
+        // Override default shortcut management in MapCanvas
+        e->ignore();
       }
     }
   }
 }
 
-void QgsMapToolAnnotation::canvasMoveEvent( QMouseEvent * e )
+void QgsMapToolAnnotation::canvasMoveEvent( QgsMapMouseEvent* e )
 {
   QgsAnnotationItem* sItem = selectedItem();
   if ( sItem && ( e->buttons() & Qt::LeftButton ) )
@@ -153,6 +160,7 @@ void QgsMapToolAnnotation::canvasMoveEvent( QMouseEvent * e )
     {
       sItem->setMapPosition( toMapCoordinates( e->pos() ) );
       sItem->update();
+      QgsProject::instance()->setDirty( true );
     }
     else if ( mCurrentMoveAction == QgsAnnotationItem::MoveFramePosition )
     {
@@ -166,6 +174,7 @@ void QgsMapToolAnnotation::canvasMoveEvent( QMouseEvent * e )
         sItem->setMapPosition( toMapCoordinates( newCanvasPos.toPoint() ) );
       }
       sItem->update();
+      QgsProject::instance()->setDirty( true );
     }
     else if ( mCurrentMoveAction != QgsAnnotationItem::NoAction )
     {
@@ -215,6 +224,7 @@ void QgsMapToolAnnotation::canvasMoveEvent( QMouseEvent * e )
       sItem->setOffsetFromReferencePoint( QPointF( xmin, ymin ) );
       sItem->setFrameSize( QSizeF( xmax - xmin, ymax - ymin ) );
       sItem->update();
+      QgsProject::instance()->setDirty( true );
     }
   }
   else if ( sItem )
@@ -228,7 +238,7 @@ void QgsMapToolAnnotation::canvasMoveEvent( QMouseEvent * e )
   mLastMousePosition = e->posF();
 }
 
-void QgsMapToolAnnotation::canvasDoubleClickEvent( QMouseEvent * e )
+void QgsMapToolAnnotation::canvasDoubleClickEvent( QgsMapMouseEvent* e )
 {
   QgsAnnotationItem* item = itemAtPos( e->posF() );
   if ( !item )
@@ -238,7 +248,8 @@ void QgsMapToolAnnotation::canvasDoubleClickEvent( QMouseEvent * e )
   QDialog* itemEditor = createItemEditor( item );
   if ( itemEditor )
   {
-    itemEditor->exec();
+    if ( itemEditor->exec() )
+      QgsProject::instance()->setDirty( true );
     delete itemEditor;
   }
 }

@@ -8,7 +8,8 @@ class QgsExpressionBuilderDialog : QDialog
 %End
 
   public:
-    QgsExpressionBuilderDialog( QgsVectorLayer* layer, QString startText = QString(), QWidget* parent = NULL );
+    QgsExpressionBuilderDialog( QgsVectorLayer* layer, const QString& startText = QString(), QWidget* parent /TransferThis/ = NULL, const QString& key = "generic",
+                                const QgsExpressionContext& context = QgsExpressionContext() );
 
     /** The builder widget that is used by the dialog */
     QgsExpressionBuilderWidget* expressionBuilder();
@@ -17,15 +18,32 @@ class QgsExpressionBuilderDialog : QDialog
 
     QString expressionText();
 
-    /** Sets geometry calculator used in distance/area calculations.
-      * @note added in version 2.0
-      */
+    /** Returns the expression context for the dialog. The context is used for the expression
+     * preview result and for populating the list of available functions and variables.
+     * @see setExpressionContext
+     * @note added in QGIS 2.12
+     */
+    QgsExpressionContext expressionContext() const;
+
+    /** Sets the expression context for the dialog. The context is used for the expression
+     * preview result and for populating the list of available functions and variables.
+     * @param context expression context
+     * @see expressionContext
+     * @note added in QGIS 2.12
+     */
+    void setExpressionContext( const QgsExpressionContext& context );
+
+    /** Sets geometry calculator used in distance/area calculations. */
     void setGeomCalculator( const QgsDistanceArea & da );
 
   protected:
     /**
-     * Handle closing of the window
-     * @param event unused
+     * Is called when the dialog get accepted or rejected
+     * Used to save geometry
+     *
+     * @param r result value (unused)
      */
-    void closeEvent( QCloseEvent * event );
+    virtual void done( int r );
+
+    virtual void accept();
 };

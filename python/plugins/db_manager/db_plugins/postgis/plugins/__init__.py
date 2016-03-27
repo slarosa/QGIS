@@ -3,7 +3,7 @@
 """
 /***************************************************************************
 Name                 : DB Manager
-Description          : Database manager plugin for QuantumGIS
+Description          : Database manager plugin for QGIS
 Date                 : May 23, 2011
 copyright            : (C) 2011 by Giuseppe Sucameli
 email                : brush.tyler@gmail.com
@@ -21,16 +21,17 @@ email                : brush.tyler@gmail.com
 """
 
 import os
+
 current_dir = os.path.dirname(__file__)
 
+
 def load(dbplugin, mainwindow):
-	for name in os.listdir(current_dir):
-		if not os.path.isdir( os.path.join( current_dir, name ) ):
-			continue
-		try:
-			exec( u"from .%s import load" % name  )
-		except ImportError, e:
-			continue
+    for name in os.listdir(current_dir):
+        if not os.path.isdir(os.path.join(current_dir, name)):
+            continue
+        try:
+            exec (u"from .%s import load" % name)
+        except ImportError as e:
+            continue
 
-		load(dbplugin, mainwindow)
-
+        load(dbplugin, mainwindow)

@@ -1,8 +1,10 @@
+IF (CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -fvisibility-inlines-hidden")
+ENDIF()
 # override default path where built files are put to allow running qgis without installing
 SET (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${QGIS_OUTPUT_DIRECTORY}/${QGIS_PLUGIN_SUBDIR})
 SET (CMAKE_LIBRARY_OUTPUT_DIRECTORY ${QGIS_OUTPUT_DIRECTORY}/${QGIS_PLUGIN_SUBDIR})
 
-ADD_SUBDIRECTORY(diagram_overlay)
 ADD_SUBDIRECTORY(interpolation)
 ADD_SUBDIRECTORY(oracle_raster)
 ADD_SUBDIRECTORY(raster_terrain_analysis)
@@ -10,17 +12,15 @@ ADD_SUBDIRECTORY(coordinate_capture)
 ADD_SUBDIRECTORY(dxf2shp_converter)
 ADD_SUBDIRECTORY(evis)
 ADD_SUBDIRECTORY(spatialquery)
-ADD_SUBDIRECTORY(sqlanywhere)
 ADD_SUBDIRECTORY(roadgraph)
 ADD_SUBDIRECTORY(zonal_statistics)
 ADD_SUBDIRECTORY(georeferencer)
 ADD_SUBDIRECTORY(gps_importer)
 ADD_SUBDIRECTORY(topology)
 ADD_SUBDIRECTORY(offline_editing)
-
-IF (POSTGRES_FOUND)
-  ADD_SUBDIRECTORY(spit)
-ENDIF (POSTGRES_FOUND)
+ADD_SUBDIRECTORY(heatmap)
+ADD_SUBDIRECTORY(geometry_checker)
+ADD_SUBDIRECTORY(geometry_snapper)
 
 IF (GRASS_FOUND)
   ADD_SUBDIRECTORY(grass)
@@ -39,5 +39,3 @@ IF (QT_MOBILITY_SENSORS_FOUND)
 ENDIF (QT_MOBILITY_SENSORS_FOUND)
 
 # headers installed in qgis_core target
-
-SUBDIRS (heatmap)

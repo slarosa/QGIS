@@ -1,3 +1,82 @@
+// QMap<QgsPalLayerSettings::DataDefinedProperties, QgsDataDefined*> is implemented as a Python dictionary.
+%MappedType QMap<QgsPalLayerSettings::DataDefinedProperties, QgsDataDefined*> /DocType="dict-of-QgsPalLayerSettings.DataDefinedProperties-QgsDataDefined*"/
+{
+%TypeHeaderCode
+#include <qmap.h>
+#include <qgspallabeling.h>
+#include <qgsdatadefined.h>
+%End
+%ConvertFromTypeCode
+    // Create the dictionary.
+    PyObject *d = PyDict_New();
+    if (!d)
+        return NULL;
+    // Set the dictionary elements.
+    QMap<QgsPalLayerSettings::DataDefinedProperties, QgsDataDefined*>::const_iterator i = sipCpp->constBegin();
+    while (i != sipCpp->constEnd())
+    {
+      QgsDataDefined *t = i.value();
+      PyObject *kobj = sipConvertFromEnum(i.key(), sipType_QgsPalLayerSettings_DataDefinedProperties);
+      PyObject *tobj = sipConvertFromType(t, sipType_QgsDataDefined, sipTransferObj);
+      if (kobj == NULL || tobj == NULL || PyDict_SetItem(d, kobj, tobj) < 0)
+      {
+	Py_DECREF(d);
+	if (kobj)
+	{
+	  Py_DECREF(kobj);
+	}
+	if (tobj)
+	{
+	  Py_DECREF(tobj);
+	}
+	else
+	{
+	  delete t;
+	}
+	return NULL;
+      }
+      Py_DECREF(kobj);
+      Py_DECREF(tobj);
+      ++i;
+    }
+    return d;
+%End
+%ConvertToTypeCode
+    PyObject *kobj, *tobj;
+    SIP_SSIZE_T i = 0;
+    // Check the type if that is all that is required.
+    if (sipIsErr == NULL)
+    {
+        if (!PyDict_Check(sipPy))
+            return 0;
+        while (PyDict_Next(sipPy, &i, &kobj, &tobj))
+            if (!sipCanConvertToType(tobj, sipType_QgsDataDefined, SIP_NOT_NONE))
+                return 0;
+        return 1;
+    }
+    QMap<QgsPalLayerSettings::DataDefinedProperties, QgsDataDefined*> *qm = new QMap<QgsPalLayerSettings::DataDefinedProperties, QgsDataDefined*>;
+
+    while (PyDict_Next(sipPy, &i, &kobj, &tobj))
+    {
+        int state, k = SIPLong_AsLong(kobj);
+        QgsDataDefined *t = reinterpret_cast<QgsDataDefined *>(sipConvertToType(tobj, sipType_QgsDataDefined, sipTransferObj, SIP_NOT_NONE, &state, sipIsErr));
+
+        if (*sipIsErr)
+        {
+            sipReleaseType(t, sipType_QgsDataDefined, state);
+            delete qm;
+            return 0;
+        }
+        qm->insert(QgsPalLayerSettings::DataDefinedProperties(k), t);
+        sipReleaseType(t, sipType_QgsDataDefined, state);
+    }
+
+    *sipCppPtr = qm;
+
+    return sipGetState(sipTransferObj);
+%End
+};
+
 class QgsPalLayerSettings
 {
 %TypeHeaderCode
@@ -8,6 +87,9 @@ class QgsPalLayerSettings
     QgsPalLayerSettings();
     QgsPalLayerSettings( const QgsPalLayerSettings& s );
     ~QgsPalLayerSettings();
+
+    //! @note added in 2.4
+    static QgsPalLayerSettings fromLayer( QgsVectorLayer* layer );
 
     enum Placement
     {
@@ -21,10 +103,10 @@ class QgsPalLayerSettings
 
     enum LinePlacementFlags
     {
-      OnLine    = 1,
-      AboveLine = 2,
-      BelowLine = 4,
-      MapOrientation = 8
+      OnLine,
+      AboveLine,
+      BelowLine,
+      MapOrientation,
     };
 
     enum QuadrantPosition
@@ -42,28 +124,45 @@ class QgsPalLayerSettings
 
     enum UpsideDownLabels
     {
-      Upright, // upside-down labels (90 <= angle < 270) are shown upright
-      ShowDefined, // show upside down when rotation is layer- or data-defined
-      ShowAll // show upside down for all labels, including dynamic ones
+      Upright, /*!< upside-down labels (90 <= angle < 270) are shown upright */
+      ShowDefined, /*!< show upside down when rotation is layer- or data-defined */
+      ShowAll /*!< show upside down for all labels, including dynamic ones */
     };
 
     enum DirectionSymbols
     {
-      SymbolLeftRight, // place direction symbols on left/right of label
-      SymbolAbove, // place direction symbols on above label
-      SymbolBelow // place direction symbols on below label
+      SymbolLeftRight, /*!< place direction symbols on left/right of label */
+      SymbolAbove, /*!< place direction symbols on above label */
+      SymbolBelow /*!< place direction symbols on below label */
     };
 
     enum MultiLineAlign
     {
-      MultiLeft = 0,
+      MultiLeft,
       MultiCenter,
-      MultiRight
+      MultiRight,
+      MultiFollowPlacement /*!< Alignment follows placement of label, eg labels to the left of a feature
+                               will be drawn with right alignment*/
+    };
+
+    /** Valid obstacle types, which affect how features within the layer will act as obstacles
+     * for labels.
+     */
+    enum ObstacleType
+    {
+      PolygonInterior, /*!< avoid placing labels over interior of polygon (prefer placing labels totally
+       outside or just slightly inside polygon) */
+      PolygonBoundary, /*!< avoid placing labels over boundary of polygon (prefer placing outside or
+       completely inside polygon) */
+      PolygonWhole /*!< avoid placing labels over ANY part of polygon. Where PolygonInterior will prefer
+       to place labels with the smallest area of intersection between the label and the polygon,
+       PolygonWhole will penalise any label which intersects with the polygon by an equal amount, so that
+       placing labels over any part of the polygon is avoided.*/
     };
 
     enum ShapeType
     {
-      ShapeRectangle = 0,
+      ShapeRectangle,
       ShapeSquare,
       ShapeEllipse,
       ShapeCircle,
@@ -72,14 +171,14 @@ class QgsPalLayerSettings
 
     enum SizeType
     {
-      SizeBuffer = 0,
+      SizeBuffer,
       SizeFixed,
       SizePercent
     };
 
     enum RotationType
     {
-      RotationSync = 0,
+      RotationSync,
       RotationOffset,
       RotationFixed
     };
@@ -87,7 +186,7 @@ class QgsPalLayerSettings
     /** Units used for option sizes, before being converted to rendered sizes */
     enum SizeUnit
     {
-      Points = 0,
+      Points,
       MM,
       MapUnits,
       Percent
@@ -95,7 +194,7 @@ class QgsPalLayerSettings
 
     enum ShadowType
     {
-      ShadowLowest = 0,
+      ShadowLowest,
       ShadowText,
       ShadowBuffer,
       ShadowShape
@@ -105,109 +204,123 @@ class QgsPalLayerSettings
     enum DataDefinedProperties
     {
       // text style
-      Size = 0,
-      Bold = 1,
-      Italic = 2,
-      Underline = 3,
-      Color = 4,
-      Strikeout = 5,
-      Family = 6,
-      FontStyle = 21,
-      FontSizeUnit = 22,
-      FontTransp = 18,
-      FontCase = 27,
-      FontLetterSpacing = 28,
-      FontWordSpacing = 29,
-      FontBlendMode = 30,
+      Size,
+      Bold,
+      Italic,
+      Underline,
+      Color,
+      Strikeout,
+      Family,
+      FontStyle,
+      FontSizeUnit,
+      FontTransp,
+      FontCase,
+      FontLetterSpacing,
+      FontWordSpacing,
+      FontBlendMode,
 
       // text formatting
-      MultiLineWrapChar = 31,
-      MultiLineHeight = 32,
-      MultiLineAlignment = 33,
-      DirSymbDraw = 34,
-      DirSymbLeft = 35,
-      DirSymbRight = 36,
-      DirSymbPlacement = 37,
-      DirSymbReverse = 38,
-      NumFormat = 39,
-      NumDecimals = 40,
-      NumPlusSign = 41,
+      MultiLineWrapChar,
+      MultiLineHeight,
+      MultiLineAlignment,
+      DirSymbDraw,
+      DirSymbLeft,
+      DirSymbRight,
+      DirSymbPlacement,
+      DirSymbReverse,
+      NumFormat,
+      NumDecimals,
+      NumPlusSign,
 
       // text buffer
-      BufferDraw = 42,
-      BufferSize = 7,
-      BufferUnit = 43,
-      BufferColor = 8,
-      BufferTransp = 19,
-      BufferJoinStyle = 44,
-      BufferBlendMode = 45,
+      BufferDraw,
+      BufferSize,
+      BufferUnit,
+      BufferColor,
+      BufferTransp,
+      BufferJoinStyle,
+      BufferBlendMode,
 
       // background
-      ShapeDraw = 46,
-      ShapeKind = 47,
-      ShapeSVGFile = 48,
-      ShapeSizeType = 49,
-      ShapeSizeX = 50,
-      ShapeSizeY = 85,
-      ShapeSizeUnits = 51,
-      ShapeRotationType = 52,
-      ShapeRotation = 53,
-      ShapeOffset = 54,
-      ShapeOffsetUnits = 55,
-      ShapeRadii = 56,
-      ShapeRadiiUnits = 57,
-      ShapeTransparency = 63,
-      ShapeBlendMode = 64,
-      ShapeFillColor = 58,
-      ShapeBorderColor = 59,
-      ShapeBorderWidth = 60,
-      ShapeBorderWidthUnits = 61,
-      ShapeJoinStyle = 62,
+      ShapeDraw,
+      ShapeKind,
+      ShapeSVGFile,
+      ShapeSizeType,
+      ShapeSizeX,
+      ShapeSizeY,
+      ShapeSizeUnits,
+      ShapeRotationType,
+      ShapeRotation,
+      ShapeOffset,
+      ShapeOffsetUnits,
+      ShapeRadii,
+      ShapeRadiiUnits,
+      ShapeTransparency,
+      ShapeBlendMode,
+      ShapeFillColor,
+      ShapeBorderColor,
+      ShapeBorderWidth,
+      ShapeBorderWidthUnits,
+      ShapeJoinStyle,
 
       // drop shadow
-      ShadowDraw = 65,
-      ShadowUnder = 66,
-      ShadowOffsetAngle = 67,
-      ShadowOffsetDist = 68,
-      ShadowOffsetUnits = 69,
-      ShadowRadius = 70,
-      ShadowRadiusUnits = 71,
-      ShadowTransparency = 72,
-      ShadowScale = 73,
-      ShadowColor = 74,
-      ShadowBlendMode = 75,
+      ShadowDraw,
+      ShadowUnder,
+      ShadowOffsetAngle,
+      ShadowOffsetDist,
+      ShadowOffsetUnits,
+      ShadowRadius,
+      ShadowRadiusUnits,
+      ShadowTransparency,
+      ShadowScale,
+      ShadowColor,
+      ShadowBlendMode,
 
       // placement
-      CentroidWhole = 76,
-      OffsetQuad = 77,
-      OffsetXY = 78,
-      OffsetUnits = 80,
-      LabelDistance = 13,
-      DistanceUnits = 81,
-      OffsetRotation = 82,
-      CurvedCharAngleInOut = 83,
+      CentroidWhole,
+      OffsetQuad,
+      OffsetXY,
+      OffsetUnits,
+      LabelDistance,
+      DistanceUnits,
+      OffsetRotation,
+      CurvedCharAngleInOut,
       // (data defined only)
-      PositionX = 9, //x-coordinate data defined label position
-      PositionY = 10, //y-coordinate data defined label position
-      Hali = 11, //horizontal alignment for data defined label position (Left, Center, Right)
-      Vali = 12, //vertical alignment for data defined label position (Bottom, Base, Half, Cap, Top)
-      Rotation = 14, //data defined rotation
+      PositionX, //x-coordinate data defined label position
+      PositionY, //y-coordinate data defined label position
+      Hali, //horizontal alignment for data defined label position (Left, Center, Right)
+      Vali, //vertical alignment for data defined label position (Bottom, Base, Half, Cap, Top)
+      Rotation, //data defined rotation
+      RepeatDistance,
+      RepeatDistanceUnit,
+      Priority,
 
       // rendering
-      ScaleVisibility = 23,
-      MinScale = 16,
-      MaxScale = 17,
-      FontLimitPixel = 24,
-      FontMinPixel = 25,
-      FontMaxPixel = 26,
-      // (data defined only)
-      Show = 15,
-      AlwaysShow = 20
-    };
+      ScaleVisibility,
+      MinScale,
+      MaxScale,
+      FontLimitPixel,
+      FontMinPixel,
+      FontMaxPixel,
+      IsObstacle,
+      ObstacleFactor,
 
+      // (data defined only)
+      Show,
+      AlwaysShow
+    };
 
     // whether to label this layer
     bool enabled;
+
+    /** Whether to draw labels for this layer. For some layers it may be desirable
+     * to register their features as obstacles for other labels without requiring
+     * labels to be drawn for the layer itself. In this case drawLabels can be set
+     * to false and obstacle set to true, which will result in the layer acting
+     * as an obstacle but having no labels of its own.
+     * @note added in QGIS 2.12
+     */
+    bool drawLabels;
 
     //-- text style
 
@@ -224,6 +337,7 @@ class QgsPalLayerSettings
     QFont textFont;
     QString textNamedStyle;
     bool fontSizeInMapUnits; //true if font size is in map units (otherwise in points)
+    QgsMapUnitScale fontSizeMapUnitScale; // scale range for map units for font size
     QColor textColor;
     int textTransp;
     QPainter::CompositionMode blendMode;
@@ -253,6 +367,7 @@ class QgsPalLayerSettings
     bool bufferDraw;
     double bufferSize; // buffer size
     bool bufferSizeInMapUnits; //true if buffer is in map units (otherwise in mm)
+    QgsMapUnitScale bufferSizeMapUnitScale; // scale range for map units for buffer size
     QColor bufferColor;
     bool bufferNoFill; //set interior of buffer to 100% transparent
     int bufferTransp;
@@ -267,18 +382,22 @@ class QgsPalLayerSettings
     SizeType shapeSizeType;
     QPointF shapeSize;
     SizeUnit shapeSizeUnits;
+    QgsMapUnitScale shapeSizeMapUnitScale;
     RotationType shapeRotationType;
     double shapeRotation;
     QPointF shapeOffset;
     SizeUnit shapeOffsetUnits;
+    QgsMapUnitScale shapeOffsetMapUnitScale;
     QPointF shapeRadii;
     SizeUnit shapeRadiiUnits;
+    QgsMapUnitScale shapeRadiiMapUnitScale;
     int shapeTransparency;
     QPainter::CompositionMode shapeBlendMode;
     QColor shapeFillColor;
     QColor shapeBorderColor;
     double shapeBorderWidth;
     SizeUnit shapeBorderWidthUnits;
+    QgsMapUnitScale shapeBorderWidthMapUnitScale;
     Qt::PenJoinStyle shapeJoinStyle;
 
     //-- drop shadow
@@ -288,9 +407,11 @@ class QgsPalLayerSettings
     int shadowOffsetAngle;
     double shadowOffsetDist;
     SizeUnit shadowOffsetUnits;
+    QgsMapUnitScale shadowOffsetMapUnitScale;
     bool shadowOffsetGlobal;
     double shadowRadius;
     SizeUnit shadowRadiusUnits;
+    QgsMapUnitScale shadowRadiusMapUnitScale;
     bool shadowRadiusAlphaOnly;
     int shadowTransparency;
     int shadowScale;
@@ -303,8 +424,18 @@ class QgsPalLayerSettings
     unsigned int placementFlags;
 
     bool centroidWhole; // whether centroid calculated from whole or visible polygon
+    bool centroidInside; // whether centroid-point calculated must be inside polygon
+
+    /** True if only labels which completely fit within a polygon are allowed.
+     */
+    bool fitInPolygonOnly;
     double dist; // distance from the feature (in mm)
     bool distInMapUnits; //true if distance is in map units (otherwise in mm)
+    QgsMapUnitScale distMapUnitScale;
+
+    double repeatDistance;
+    SizeUnit repeatDistanceUnit;
+    QgsMapUnitScale repeatDistanceMapUnitScale;
 
     // offset labels of point/centroid features default to center
     // move label to quadrant: left/down, don't move, right/up (-1, 0, 1)
@@ -313,6 +444,7 @@ class QgsPalLayerSettings
     double xOffset; // offset from point in mm or map units
     double yOffset; // offset from point in mm or map units
     bool labelOffsetInMapUnits; //true if label offset is in map units (otherwise in mm)
+    QgsMapUnitScale labelOffsetMapUnitScale;
     double angleOffset; // rotation applied to offset labels
     bool preserveRotation; // preserve predefined rotation data during label pin/unpin operations
 
@@ -332,7 +464,7 @@ class QgsPalLayerSettings
     int fontMaxPixelSize; // maximum pixel size for showing rendered map unit labels (1 - 10000)
 
     bool displayAll;  // if true, all features will be labelled even though overlaps occur
-    unsigned int upsidedownLabels; // whether, or how, to show upsidedown labels
+    UpsideDownLabels upsidedownLabels; // whether, or how, to show upsidedown labels
 
     bool labelPerPart; // whether to label every feature's part or only the biggest one
     bool mergeLines;
@@ -341,33 +473,49 @@ class QgsPalLayerSettings
     int maxNumLabels; // maximum number of labels to be drawn
 
     double minFeatureSize; // minimum feature size to be labelled (in mm)
-    bool obstacle; // whether it's an obstacle
+    bool obstacle; // whether features for layer are obstacles to labels of other layers
+
+    /** Obstacle factor, where 1.0 = default, < 1.0 more likely to be covered by labels,
+     * > 1.0 less likely to be covered
+     */
+    double obstacleFactor;
+
+    /** Controls how features act as obstacles for labels
+     */
+    ObstacleType obstacleType;
 
     //-- scale factors
     double vectorScaleFactor; //scale factor painter units->pixels
     double rasterCompressFactor; //pixel resolution scale factor
 
     // called from register feature hook
-    void calculateLabelSize( const QFontMetricsF* fm, QString text, double& labelX, double& labelY, QgsFeature* f = 0 );
+    void calculateLabelSize( const QFontMetricsF* fm, QString text, double& labelX, double& labelY, QgsFeature* f = 0, QgsRenderContext* context = 0 );
 
-    // implementation of register feature hook
-    void registerFeature( QgsVectorLayer* layer, QgsFeature& f, const QgsRenderContext& context );
+    /** Register a feature for labelling.
+     * @param f feature to label
+     * @param context render context. The QgsExpressionContext contained within the render context
+     * must have already had the feature and fields sets prior to calling this method.
+     * @param dxfLayer dxfLayer name
+     * @param labelFeature if using QgsLabelingEngineV2, this will receive the label feature. Not available
+     * in Python bindings.
+     * @param obstacleGeometry optional obstacle geometry, if a different geometry to the feature's geometry
+     * should be used as an obstacle for labels (eg, if the feature has been rendered with an offset point
+     * symbol, the obstacle geometry should represent the bounds of the offset symbol). If not set,
+     * the feature's original geometry will be used as an obstacle for labels. Not available
+     * in Python bindings.
+     */
+    void registerFeature( QgsFeature& f, QgsRenderContext& context, const QString& dxfLayer );
 
     void readFromLayer( QgsVectorLayer* layer );
     void writeToLayer( QgsVectorLayer* layer );
 
     /** Get a data defined property pointer
-     * @note added in 1.9, helpful for Python access
+     * @note helpful for Python access
      */
-    QgsDataDefined* dataDefinedProperty( DataDefinedProperties p );
-
-    /** Get current data defined properties
-     * @note added in 1.9, helpful for Python access
-     */
-    QList<QgsPalLayerSettings::DataDefinedProperties> dataDefinedPropertyList();
+    QgsDataDefined* dataDefinedProperty( QgsPalLayerSettings::DataDefinedProperties p );
 
     /** Set a property as data defined
-     * @note added in 1.9, helpful for Python access
+     * @note helpful for Python access
      */
     void setDataDefinedProperty( QgsPalLayerSettings::DataDefinedProperties p,
                                  bool active, bool useExpr, const QString& expr, const QString& field );
@@ -375,27 +523,33 @@ class QgsPalLayerSettings
     /** Set a property to static instead data defined */
     void removeDataDefinedProperty( QgsPalLayerSettings::DataDefinedProperties p );
 
-    /** Convert old property value to new one as delimited values
-     * @note not available in python bindings; added in 1.9, as temporary solution until refactoring of project settings
+    /** Clear all data-defined properties
+     * @note added in QGIS 2.12
      */
-    //QString updateDataDefinedString( const QString& value );
+    void removeAllDataDefinedProperties();
+
+    /** Convert old property value to new one as delimited values
+     * @note not available in python bindings; as temporary solution until refactoring of project settings
+     */
+    QString updateDataDefinedString( const QString& value );
 
     /** Get property value as separate values split into Qmap
-     * @note not available in python bindings; added in 1.9
+     * @note not available in python bindings
      */
-    //QMap<QString, QString> dataDefinedMap( QgsPalLayerSettings::DataDefinedProperties p ) const;
+    QMap<QString, QString> dataDefinedMap( QgsPalLayerSettings::DataDefinedProperties p ) const;
 
     /** Get data defined property value from expression string or attribute field name
      * @returns value inside QVariant
-     * @note not available in python bindings; added in 1.9
+     * @note not available in python bindings
      */
-    QVariant dataDefinedValue( QgsPalLayerSettings::DataDefinedProperties p, QgsFeature& f, const QgsFields& fields ) const;
+    //QVariant dataDefinedValue( QgsPalLayerSettings::DataDefinedProperties p, QgsFeature& f, const QgsFields& fields,
+    //                           const QgsExpressionContext* context = 0 ) const;
 
     /** Get data defined property value from expression string or attribute field name
      * @returns true/false whether result is null or invalid
-     * @note not available in python bindings; added in 1.9
+     * @note not available in python bindings
      */
-    //bool dataDefinedEvaluate( QgsPalLayerSettings::DataDefinedProperties p, QVariant& exprVal ) const;
+    //bool dataDefinedEvaluate( QgsPalLayerSettings::DataDefinedProperties p, QVariant& exprVal, const QgsExpressionContext* context = 0 ) const;
 
     /** Whether data definition is active
      */
@@ -405,9 +559,9 @@ class QgsPalLayerSettings
      */
     bool dataDefinedUseExpression( QgsPalLayerSettings::DataDefinedProperties p ) const;
 
-    /**Stores field names for data defined layer properties*/
-    //! @note not available in python bindings
-    //QMap< QgsPalLayerSettings::DataDefinedProperties, QgsDataDefined* > dataDefinedProperties;
+    /** Map of current data defined properties
+     */
+    QMap< QgsPalLayerSettings::DataDefinedProperties, QgsDataDefined* > dataDefinedProperties;
 
 
     /** Calculates pixel size (considering output size should be in pixel or map units, scale factors and optionally oversampling)
@@ -415,25 +569,26 @@ class QgsPalLayerSettings
      * @param c rendercontext
      * @param unit SizeUnit enum value of size
      * @param rasterfactor whether to consider oversampling
+     * @param mapUnitScale a mapUnitScale clamper
      * @return font pixel size
      */
-    int sizeToPixel( double size, const QgsRenderContext& c , SizeUnit unit, bool rasterfactor = false ) const;
+    int sizeToPixel( double size, const QgsRenderContext& c, SizeUnit unit, bool rasterfactor = false, const QgsMapUnitScale& mapUnitScale = QgsMapUnitScale() ) const;
 
     /** Calculates size (considering output size should be in pixel or map units, scale factors and optionally oversampling)
      * @param size size to convert
      * @param c rendercontext
      * @param unit SizeUnit enum value of size
      * @param rasterfactor whether to consider oversampling
+     * @param mapUnitScale a mapUnitScale clamper
      * @return size that will render, as double
-     * @note added in 1.9, as a better precision replacement for sizeToPixel
      */
-    double scaleToPixelContext( double size, const QgsRenderContext& c, SizeUnit unit, bool rasterfactor = false ) const;
+    double scaleToPixelContext( double size, const QgsRenderContext& c, SizeUnit unit, bool rasterfactor = false, const QgsMapUnitScale& mapUnitScale = QgsMapUnitScale() ) const;
 
     /** Map of data defined enum to names and old-style indecies
      * The QPair contains a new string for layer property key, and a reference to old-style numeric key (< QGIS 2.0)
-     * @note not available in python bindings; added in 1.9
+     * @note not available in python bindings;
      */
-    //QMap<QgsPalLayerSettings::DataDefinedProperties, QPair<QString, int> > dataDefinedNames() const;
+    // QMap<QgsPalLayerSettings::DataDefinedProperties, QPair<QString, int> > dataDefinedNames() const;
 };
 
 class QgsLabelCandidate
@@ -443,7 +598,7 @@ class QgsLabelCandidate
 %End
 
   public:
-    QgsLabelCandidate( QRectF r, double c );
+    QgsLabelCandidate( const QRectF& r, double c );
 
     QRectF rect;
     double cost;
@@ -462,45 +617,72 @@ class QgsLabelComponent
   public:
     QgsLabelComponent();
 
-    const QString& text();
+    // methods
+
+    QString text() const;
     void setText( const QString& text );
 
-    const QgsPoint& origin();
-    void setOrigin( QgsPoint point );
+    const QgsPoint& origin() const;
+    void setOrigin( const QgsPoint& point );
 
     bool useOrigin() const;
-    void setUseOrigin( bool use );
+    void setUseOrigin( const bool use );
 
     double rotation() const;
-    void setRotation( double rotation );
+    void setRotation( const double rotation );
 
     double rotationOffset() const;
-    void setRotationOffset( double rotation );
+    void setRotationOffset( const double rotation );
 
     bool useRotation() const;
-    void setUseRotation( bool use );
+    void setUseRotation( const bool use );
 
-    const QgsPoint& center();
-    void setCenter( QgsPoint point );
+    const QgsPoint& center() const;
+    void setCenter( const QgsPoint& point );
 
     bool useCenter() const;
-    void setUseCenter( bool use );
+    void setUseCenter( const bool use );
 
-    const QgsPoint& size();
-    void setSize( QgsPoint point );
+    const QgsPoint& size() const;
+    void setSize( const QgsPoint& point );
 
-    const QgsPoint& offset();
-    void setOffset( QgsPoint point );
+    const QgsPoint& offset() const;
+    void setOffset( const QgsPoint& point );
 
-    const QPicture* picture();
+    const QPicture* picture() const;
     void setPicture( QPicture* picture );
 
     double pictureBuffer() const;
-    void setPictureBuffer( double buffer );
+    void setPictureBuffer( const double buffer );
 
     double dpiRatio() const;
-    void setDpiRatio( double ratio );
+    void setDpiRatio( const double ratio );
 };
+
+
+/**
+ * Class that stores computed placement from labeling engine.
+ * @note added in 2.4
+ */
+class QgsLabelingResults
+{
+%TypeHeaderCode
+#include <qgspallabeling.h>
+%End
+
+  public:
+    QgsLabelingResults();
+    ~QgsLabelingResults();
+
+    //! return infos about labels at a given (map) position
+    QList<QgsLabelPosition> labelsAtPosition( const QgsPoint& p ) const;
+    //! return infos about labels within a given (map) rectangle
+    QList<QgsLabelPosition> labelsWithinRect( const QgsRectangle& r ) const;
+
+  private:
+    QgsLabelingResults( const QgsLabelingResults& );
+};
+
 
 class QgsPalLabeling : QgsLabelingEngineInterface
 {
@@ -511,7 +693,7 @@ class QgsPalLabeling : QgsLabelingEngineInterface
   public:
     enum DrawLabelType
     {
-      LabelText = 0,
+      LabelText,
       LabelBuffer,
       LabelShape,
       LabelSVG,
@@ -533,7 +715,8 @@ class QgsPalLabeling : QgsLabelingEngineInterface
 
     bool isShowingCandidates() const;
     void setShowingCandidates( bool showing );
-    const QList<QgsLabelCandidate>& candidates();
+    //! @deprecated since 2.12
+    const QList<QgsLabelCandidate>& candidates() /Deprecated/;
 
     bool isShowingShadowRectangles() const;
     void setShowingShadowRectangles( bool showing );
@@ -541,59 +724,175 @@ class QgsPalLabeling : QgsLabelingEngineInterface
     bool isShowingAllLabels() const;
     void setShowingAllLabels( bool showing );
 
+    bool isShowingPartialsLabels() const;
+    void setShowingPartialsLabels( bool showing );
+
+    //! @note added in 2.4
+    bool isDrawingOutlineLabels() const;
+    void setDrawingOutlineLabels( bool outline );
+
+    /** Returns whether the engine will only draw the outline rectangles of labels,
+     * not the label contents themselves. Used for debugging and testing purposes.
+     * @see setDrawLabelRectOnly
+     * @note added in QGIS 2.12
+     */
+    bool drawLabelRectOnly() const;
+
+    /** Sets whether the engine should only draw the outline rectangles of labels,
+     * not the label contents themselves. Used for debugging and testing purposes.
+     * @param drawRect set to true to enable rect drawing only
+     * @see drawLabelRectOnly
+     * @note added in QGIS 2.12
+     */
+    void setDrawLabelRectOnly( bool drawRect );
+
     // implemented methods from labeling engine interface
 
     //! called when we're going to start with rendering
-    virtual void init( QgsMapRenderer* mr );
+    //! @deprecated since 2.4 - use override with QgsMapSettings
+    virtual void init( QgsMapRenderer* mr ) /Deprecated/;
+    //! called when we're going to start with rendering
+    virtual void init( const QgsMapSettings& mapSettings );
     //! called to find out whether the layer is used for labeling
     virtual bool willUseLayer( QgsVectorLayer* layer );
+
+    //! called to find out whether the layer is used for labeling
+    //! @note added in 2.4
+    static bool staticWillUseLayer( QgsVectorLayer* layer );
+    static bool staticWillUseLayer( const QString& layerID );
+
     //! clears all PAL layer settings for registered layers
-    //! @note: this method was added in version 1.9
     virtual void clearActiveLayers();
     //! clears data defined objects from PAL layer settings for a registered layer
-    //! @note: this method was added in version 1.9
-    virtual void clearActiveLayer( QgsVectorLayer* layer );
+    virtual void clearActiveLayer( const QString& layerID );
     //! hook called when drawing layer before issuing select()
-    virtual int prepareLayer( QgsVectorLayer* layer, QSet<int>& attrIndices, QgsRenderContext& ctx );
+    virtual int prepareLayer( QgsVectorLayer* layer, QStringList &attrNames, QgsRenderContext& ctx );
     //! adds a diagram layer to the labeling engine
-    virtual int addDiagramLayer( QgsVectorLayer* layer, QgsDiagramLayerSettings *s );
-    //! hook called when drawing for every feature in a layer
-    virtual void registerFeature( QgsVectorLayer* layer, QgsFeature& feat, const QgsRenderContext& context = QgsRenderContext() );
-    virtual void registerDiagramFeature( QgsVectorLayer* layer, QgsFeature& feat, const QgsRenderContext& context = QgsRenderContext() );
+    virtual int addDiagramLayer( QgsVectorLayer* layer, const QgsDiagramLayerSettings *s );
+
+    /** Register a feature for labelling.
+     * @param layerID string identifying layer associated with label
+     * @param feat feature to label
+     * @param context render context. The QgsExpressionContext contained within the render context
+     * must have already had the feature and fields sets prior to calling this method.
+     * @param dxfLayer dxfLayer name
+     */
+    virtual void registerFeature( const QString& layerID, QgsFeature& feat, QgsRenderContext& context, const QString& dxfLayer = QString::null );
+
+    virtual void registerDiagramFeature( const QString& layerID, QgsFeature& feat, QgsRenderContext& context );
     //! called when the map is drawn and labels should be placed
     virtual void drawLabeling( QgsRenderContext& context );
     //! called when we're done with rendering
     virtual void exit();
+
     //! return infos about labels at a given (map) position
-    virtual QList<QgsLabelPosition> labelsAtPosition( const QgsPoint& p );
+    //! @deprecated since 2.4 - use takeResults() and methods of QgsLabelingResults
+    virtual QList<QgsLabelPosition> labelsAtPosition( const QgsPoint& p ) /Deprecated/;
     //! return infos about labels within a given (map) rectangle
-    virtual QList<QgsLabelPosition> labelsWithinRect( const QgsRectangle& r );
+    //! @deprecated since 2.4 - use takeResults() and methods of QgsLabelingResults
+    virtual QList<QgsLabelPosition> labelsWithinRect( const QgsRectangle& r ) /Deprecated/;
+
+    //! Return pointer to recently computed results (in drawLabeling()) and pass the ownership of results to the caller
+    //! @note added in 2.4
+    QgsLabelingResults* takeResults() /TransferBack/;
 
     //! called when passing engine among map renderers
-    virtual QgsLabelingEngineInterface* clone() /Factory/;
+    virtual QgsPalLabeling* clone() /Factory/;
 
-/*
-    void drawLabelCandidateRect( pal::LabelPosition* lp, QPainter* painter, const QgsMapToPixel* xform );
+    //! @note not available in python bindings
+    // void drawLabelCandidateRect( pal::LabelPosition* lp, QPainter* painter, const QgsMapToPixel* xform );
     //!drawLabel
-    void drawLabel( pal::LabelPosition* label, QgsRenderContext& context, QgsPalLayerSettings& tmpLyr, DrawLabelType drawType );
-*/
+    //! @note not available in python bindings
+    // void drawLabel( pal::LabelPosition* label, QgsRenderContext& context, QgsPalLayerSettings& tmpLyr, DrawLabelType drawType );
+
     static void drawLabelBuffer( QgsRenderContext& context,
-                                 QgsLabelComponent component,
+                                 const QgsLabelComponent &component,
                                  const QgsPalLayerSettings& tmpLyr );
 
     static void drawLabelBackground( QgsRenderContext& context,
                                      QgsLabelComponent component,
                                      const QgsPalLayerSettings& tmpLyr );
 
-    static void drawLabelShadow( QgsRenderContext& context,
-                                 QgsLabelComponent component,
+    static void drawLabelShadow( QgsRenderContext &context,
+                                 const QgsLabelComponent &component,
                                  const QgsPalLayerSettings& tmpLyr );
 
     //! load/save engine settings to project file
-    //! @note added in QGIS 1.9
     void loadEngineSettings();
     void saveEngineSettings();
     void clearEngineSettings();
-    bool isStoredWithProject() const;
-    void setStoredWithProject( bool store );
+    //! @deprecated since 2.4 - settings are always stored in project
+    bool isStoredWithProject() const /Deprecated/;
+    //! @deprecated since 2.4 - settings are always stored in project
+    void setStoredWithProject( bool store ) /Deprecated/;
+
+    /** Prepares a geometry for registration with PAL. Handles reprojection, rotation, clipping, etc.
+     * @param geometry geometry to prepare
+     * @param context render context
+     * @param ct coordinate transform
+     * @param clipGeometry geometry to clip features to, if applicable
+     * @returns prepared geometry
+     * @note added in QGIS 2.9
+     */
+    static QgsGeometry* prepareGeometry( const QgsGeometry *geometry, QgsRenderContext &context, const QgsCoordinateTransform *ct, QgsGeometry *clipGeometry = 0 ) /Factory/;
+
+    /** Checks whether a geometry requires preparation before registration with PAL
+     * @param geometry geometry to prepare
+     * @param context render context
+     * @param ct coordinate transform
+     * @param clipGeometry geometry to clip features to, if applicable
+     * @returns true if geometry requires preparation
+     * @note added in QGIS 2.9
+     */
+    static bool geometryRequiresPreparation( const QgsGeometry *geometry, QgsRenderContext &context, const QgsCoordinateTransform *ct, QgsGeometry *clipGeometry = 0 );
+
+    /** Splits a text string to a list of separate lines, using a specified wrap character.
+     * The text string will be split on either newline characters or the wrap character.
+     * @param text text string to split
+     * @param wrapCharacter additional character to wrap on
+     * @returns list of text split to lines
+     * @note added in QGIS 2.9
+     */
+    static QStringList splitToLines( const QString& text, const QString& wrapCharacter );
+
+    /** Splits a text string to a list of graphemes, which are the smallest allowable character
+     * divisions in the string. This accounts for scripts were individual characters are not
+     * allowed to be split apart (eg Arabic and Indic based scripts)
+     * @param text string to split
+     * @returns list of graphemes
+     * @note added in QGIS 2.10
+     */
+    static QStringList splitToGraphemes( const QString& text );
+
+  protected:
+    // update temporary QgsPalLayerSettings with any data defined text style values
+    void dataDefinedTextStyle( QgsPalLayerSettings& tmpLyr,
+                               const QMap< QgsPalLayerSettings::DataDefinedProperties, QVariant >& ddValues );
+
+    // update temporary QgsPalLayerSettings with any data defined text formatting values
+    void dataDefinedTextFormatting( QgsPalLayerSettings& tmpLyr,
+                                    const QMap< QgsPalLayerSettings::DataDefinedProperties, QVariant >& ddValues );
+
+    // update temporary QgsPalLayerSettings with any data defined text buffer values
+    void dataDefinedTextBuffer( QgsPalLayerSettings& tmpLyr,
+                                const QMap< QgsPalLayerSettings::DataDefinedProperties, QVariant >& ddValues );
+
+    // update temporary QgsPalLayerSettings with any data defined shape background values
+    void dataDefinedShapeBackground( QgsPalLayerSettings& tmpLyr,
+                                     const QMap< QgsPalLayerSettings::DataDefinedProperties, QVariant >& ddValues );
+
+    // update temporary QgsPalLayerSettings with any data defined drop shadow values
+    void dataDefinedDropShadow( QgsPalLayerSettings& tmpLyr,
+                                const QMap< QgsPalLayerSettings::DataDefinedProperties, QVariant >& ddValues );
+
+    void deleteTemporaryData();
+
+    /** Checks whether a geometry exceeds the minimum required size for a geometry to be labeled.
+     * @param context render context
+     * @param geom geometry
+     * @param minSize minimum size for geometry
+     * @returns true if geometry exceeds minimum size
+     * @note added in QGIS 2.9
+     */
+    static bool checkMinimumSizeMM( const QgsRenderContext &context, const QgsGeometry *geom, double minSize );
 };

@@ -32,12 +32,12 @@ QgsSingleBandGrayRenderer::~QgsSingleBandGrayRenderer()
   delete mContrastEnhancement;
 }
 
-QgsRasterInterface * QgsSingleBandGrayRenderer::clone() const
+QgsSingleBandGrayRenderer* QgsSingleBandGrayRenderer::clone() const
 {
   QgsSingleBandGrayRenderer * renderer = new QgsSingleBandGrayRenderer( 0, mGrayBand );
   renderer->setOpacity( mOpacity );
   renderer->setAlphaBand( mAlphaBand );
-  renderer->setRasterTransparency( mRasterTransparency );
+  renderer->setRasterTransparency( mRasterTransparency ? new QgsRasterTransparency( *mRasterTransparency ) : 0 );
   renderer->setGradient( mGradient );
   if ( mContrastEnhancement )
   {
@@ -66,7 +66,7 @@ QgsRasterRenderer* QgsSingleBandGrayRenderer::create( const QDomElement& elem, Q
   if ( !contrastEnhancementElem.isNull() )
   {
     QgsContrastEnhancement* ce = new QgsContrastEnhancement(( QGis::DataType )(
-          input->dataType( grayBand ) ) ) ;
+          input->dataType( grayBand ) ) );
     ce->readXML( contrastEnhancementElem );
     r->setContrastEnhancement( ce );
   }
@@ -124,7 +124,7 @@ QgsRasterBlock* QgsSingleBandGrayRenderer::block( int bandNo, QgsRectangle  cons
   }
 
   QRgb myDefaultColor = NODATA_COLOR;
-  for ( size_t i = 0; i < ( size_t )width*height; i++ )
+  for ( qgssize i = 0; i < ( qgssize )width*height; i++ )
   {
     if ( inputBlock->isNoData( i ) )
     {
@@ -213,8 +213,10 @@ void QgsSingleBandGrayRenderer::legendSymbologyItems( QList< QPair< QString, QCo
 {
   if ( mContrastEnhancement && mContrastEnhancement->contrastEnhancementAlgorithm() != QgsContrastEnhancement::NoEnhancement )
   {
-    symbolItems.push_back( qMakePair( QString::number( mContrastEnhancement->minimumValue() ), QColor( 0, 0, 0 ) ) );
-    symbolItems.push_back( qMakePair( QString::number( mContrastEnhancement->maximumValue() ), QColor( 255, 255, 255 ) ) );
+    QColor minColor = ( mGradient == BlackToWhite ) ? Qt::black : Qt::white;
+    QColor maxColor = ( mGradient == BlackToWhite ) ? Qt::white : Qt::black;
+    symbolItems.push_back( qMakePair( QString::number( mContrastEnhancement->minimumValue() ), minColor ) );
+    symbolItems.push_back( qMakePair( QString::number( mContrastEnhancement->maximumValue() ), maxColor ) );
   }
 }
 

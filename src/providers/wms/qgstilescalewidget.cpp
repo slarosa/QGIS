@@ -52,13 +52,13 @@ void QgsTileScaleWidget::layerChanged( QgsMapLayer *layer )
   QVariant res = rl->dataProvider()->property( "resolutions" );
 
   mResolutions.clear();
-  foreach ( QVariant r, res.toList() )
+  Q_FOREACH ( const QVariant& r, res.toList() )
   {
     QgsDebugMsg( QString( "found resolution: %1" ).arg( r.toDouble() ) );
     mResolutions << r.toDouble();
   }
 
-  if ( mResolutions.size() == 0 )
+  if ( mResolutions.isEmpty() )
     return;
 
   mSlider->setRange( 0, mResolutions.size() - 1 );
@@ -77,7 +77,7 @@ void QgsTileScaleWidget::scaleChanged( double scale )
 {
   Q_UNUSED( scale );
 
-  if ( mResolutions.size() == 0 )
+  if ( mResolutions.isEmpty() )
     return;
 
   double mupp = mMapCanvas->mapUnitsPerPixel();
@@ -127,7 +127,7 @@ void QgsTileScaleWidget::showTileScale( QMainWindow *mainWindow )
   QgsTileScaleWidget *tws = new QgsTileScaleWidget( canvas );
   tws->setObjectName( "theTileScaleWidget" );
 
-  QObject *legend = mainWindow->findChild<QObject*>( "theMapLegend" );
+  QObject *legend = mainWindow->findChild<QObject*>( "theLayerTreeView" );
   if ( legend )
   {
     connect( legend, SIGNAL( currentLayerChanged( QgsMapLayer* ) ),
@@ -139,7 +139,7 @@ void QgsTileScaleWidget::showTileScale( QMainWindow *mainWindow )
   }
 
   //create the dock widget
-  dock = new QDockWidget( tr( "Tile scale" ), mainWindow );
+  dock = new QDockWidget( tr( "Tile Scale Panel" ), mainWindow );
   dock->setObjectName( "theTileScaleDock" );
   dock->setAllowedAreas( Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea );
   mainWindow->addDockWidget( Qt::RightDockWidgetArea, dock );

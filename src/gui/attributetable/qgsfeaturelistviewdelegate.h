@@ -11,7 +11,7 @@ class QgsFeatureListModel;
 class QgsFeatureSelectionModel;
 class QPosition;
 
-class QgsFeatureListViewDelegate : public QItemDelegate
+class GUI_EXPORT QgsFeatureListViewDelegate : public QItemDelegate
 {
     Q_OBJECT
 
@@ -32,19 +32,21 @@ class QgsFeatureListViewDelegate : public QItemDelegate
 
     void setFeatureSelectionModel( QgsFeatureSelectionModel* featureSelectionModel );
 
+    void setCurrentFeatureEdited( bool state );
+
   signals:
     void editButtonClicked( QModelIndex& index );
 
-  public slots:
-
   protected:
-    virtual QSize sizeHint( const QStyleOptionViewItem& option, const QModelIndex& index ) const;
-    virtual void paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const;
+    virtual QSize sizeHint( const QStyleOptionViewItem& option, const QModelIndex& index ) const override;
+    virtual void paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const override;
 
   private:
     QgsFeatureSelectionModel* mFeatureSelectionModel;
     QItemSelectionModel* mEditSelectionModel;
     QgsFeatureListModel* mListModel;
+    //! Set to true if the current edit selection has been edited
+    bool mCurrentFeatureEdited;
 };
 
 #endif // QGSATTRIBUTELISTVIEWDELEGATE_H

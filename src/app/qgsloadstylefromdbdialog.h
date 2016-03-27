@@ -14,17 +14,18 @@
 #include "qgisgui.h"
 #include "qgsfield.h"
 
-class QgsLoadStyleFromDBDialog : public QDialog, private Ui::QgsLoadStyleFromDBDialogLayout
+class APP_EXPORT QgsLoadStyleFromDBDialog : public QDialog, private Ui::QgsLoadStyleFromDBDialogLayout
 {
     QString mSelectedStyleId;
     int mSectionLimit;
-    QStringList mIds, mNames, mDescriptions;
     QString qmlStyle;
     Q_OBJECT
   public:
     explicit QgsLoadStyleFromDBDialog( QWidget *parent = 0 );
 
-    void initializeLists( QStringList ids, QStringList names, QStringList descriptions, int sectionLimit );
+    ~QgsLoadStyleFromDBDialog();
+
+    void initializeLists( const QStringList& ids, const QStringList& names, const QStringList& descriptions, int sectionLimit );
     QString getSelectedStyleId();
 
   public slots:

@@ -22,7 +22,7 @@
 NormVecDecorator::~NormVecDecorator()
 {
   //remove all the normals
-  if ( mNormVec->count() > 0 )
+  if ( !mNormVec->isEmpty() )
   {
     for ( int i = 0; i < mNormVec->count(); i++ )
     {
@@ -62,15 +62,15 @@ int NormVecDecorator::addPoint( Point3D* p )
       while ( it != list->end() )
       {
         int point;
-        point = ( *it );
+        point = *it;
         if ( point != -1 )
         {
           estimateFirstDerivative( point );
         }
-        it++;
-        it++;
-        it++;
-        it++;
+        ++it;
+        ++it;
+        ++it;
+        ++it;
       }
       delete list;
     }
@@ -161,7 +161,7 @@ bool NormVecDecorator::calcNormalForPoint( double x, double y, int point, Vector
       if ( numberofbreaks > 0 )
       {
 
-        if ( p1 != -1 && p2 != -1 && p2 != -1 )
+        if ( p1 != -1 && p2 != -1 && p3 != -1 )
         {
           if ( MathUtils::pointInsideTriangle( x, y, getPoint( p1 ), getPoint( p2 ), getPoint( p3 ) ) )
           {

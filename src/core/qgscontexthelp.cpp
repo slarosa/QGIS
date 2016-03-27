@@ -22,13 +22,14 @@
 #include <QTextStream>
 
 #include "qgscontexthelp.h"
+#include "qgsmessagelog.h"
 #include "qgsapplication.h"
 #include "qgslogger.h"
 
 
 QgsContextHelp *QgsContextHelp::gContextHelp = 0;  // Singleton instance
 
-void QgsContextHelp::run( QString context )
+void QgsContextHelp::run( const QString& context )
 {
   if ( !gContextHelp )
   {
@@ -56,7 +57,6 @@ QProcess *QgsContextHelp::start()
   QgsDebugMsg( QString( "Help path is %1" ).arg( helpPath ) );
 
   QProcess *process = new QProcess;
-  process->start( helpPath );
 
   // Delete this object if the process terminates
   connect( process, SIGNAL( finished( int, QProcess::ExitStatus ) ), SLOT( processExited() ) );
@@ -64,10 +64,26 @@ QProcess *QgsContextHelp::start()
   // Delete the process if the application quits
   connect( qApp, SIGNAL( aboutToQuit() ), process, SLOT( terminate() ) );
 
+  connect( process, SIGNAL( error( QProcess::ProcessError ) ), this, SLOT( error( QProcess::ProcessError ) ) );
+
+#ifdef Q_OS_WIN
+  if ( QgsApplication::isRunningFromBuildDir() )
+  {
+    process->setEnvironment( QStringList() << QString( "PATH=%1;%2" ).arg( getenv( "PATH" ) ).arg( QApplication::applicationDirPath() ) );
+  }
+#endif
+
+  process->start( helpPath, QStringList() );
+
   return process;
 }
 
-void QgsContextHelp::showContext( QString context )
+void QgsContextHelp::error( QProcess::ProcessError error )
+{
+  QgsMessageLog::logMessage( tr( "Error starting help viewer [%1]" ).arg( error ), tr( "Context help" ) );
+}
+
+void QgsContextHelp::showContext( const QString& context )
 {
   init();
 

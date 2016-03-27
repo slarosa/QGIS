@@ -27,7 +27,7 @@ class QgsVectorLayer;
 /**
   \brief Map tool for running feature actions on the current layer
 */
-class QgsMapToolFeatureAction : public QgsMapTool
+class APP_EXPORT QgsMapToolFeatureAction : public QgsMapTool
 {
     Q_OBJECT
 
@@ -37,17 +37,17 @@ class QgsMapToolFeatureAction : public QgsMapTool
     ~QgsMapToolFeatureAction();
 
     //! Overridden mouse move event
-    virtual void canvasMoveEvent( QMouseEvent * e );
+    virtual void canvasMoveEvent( QgsMapMouseEvent* e ) override;
 
     //! Overridden mouse press event
-    virtual void canvasPressEvent( QMouseEvent * e );
+    virtual void canvasPressEvent( QgsMapMouseEvent* e ) override;
 
     //! Overridden mouse release event
-    virtual void canvasReleaseEvent( QMouseEvent * e );
+    virtual void canvasReleaseEvent( QgsMapMouseEvent* e ) override;
 
-    virtual void activate();
+    virtual void activate() override;
 
-    virtual void deactivate();
+    virtual void deactivate() override;
 
   private:
     bool doAction( QgsVectorLayer *layer, int x, int y );

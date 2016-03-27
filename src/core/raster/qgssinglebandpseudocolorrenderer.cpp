@@ -38,7 +38,16 @@ QgsSingleBandPseudoColorRenderer::~QgsSingleBandPseudoColorRenderer()
   delete mShader;
 }
 
-QgsRasterInterface * QgsSingleBandPseudoColorRenderer::clone() const
+void QgsSingleBandPseudoColorRenderer::setBand( int bandNo )
+{
+  if ( bandNo > mInput->bandCount() || bandNo <= 0 )
+  {
+    return;
+  }
+  mBand = bandNo;
+}
+
+QgsSingleBandPseudoColorRenderer* QgsSingleBandPseudoColorRenderer::clone() const
 {
   QgsRasterShader *shader = 0;
 
@@ -63,7 +72,7 @@ QgsRasterInterface * QgsSingleBandPseudoColorRenderer::clone() const
 
   renderer->setOpacity( mOpacity );
   renderer->setAlphaBand( mAlphaBand );
-  renderer->setRasterTransparency( mRasterTransparency );
+  renderer->setRasterTransparency( mRasterTransparency ? new QgsRasterTransparency( *mRasterTransparency ) : 0 );
 
   return renderer;
 }
@@ -148,7 +157,7 @@ QgsRasterBlock* QgsSingleBandPseudoColorRenderer::block( int bandNo, QgsRectangl
 
   QRgb myDefaultColor = NODATA_COLOR;
 
-  for ( size_t i = 0; i < ( size_t )width*height; i++ )
+  for ( qgssize i = 0; i < ( qgssize )width*height; i++ )
   {
     if ( inputBlock->isNoData( i ) )
     {

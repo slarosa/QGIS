@@ -16,7 +16,7 @@
 
 class QgsDecorationNorthArrow;
 
-class QgsDecorationNorthArrowDialog : public QDialog, private Ui::QgsDecorationNorthArrowDialog
+class APP_EXPORT QgsDecorationNorthArrowDialog : public QDialog, private Ui::QgsDecorationNorthArrowDialog
 {
     Q_OBJECT
 
@@ -26,7 +26,7 @@ class QgsDecorationNorthArrowDialog : public QDialog, private Ui::QgsDecorationN
 
   private:
     void rotatePixmap( int theRotationInt );
-    void resizeEvent( QResizeEvent * ); //overloads qwidget
+    void resizeEvent( QResizeEvent * ) override; //overloads qwidget
 
   private slots:
     void on_buttonBox_accepted();

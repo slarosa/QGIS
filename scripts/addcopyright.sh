@@ -37,11 +37,11 @@ for i in $FILES; do
 
         case $i in
 	# Override author if initial commit was by someone else
-	python/plugins/sextante/*)
+	python/plugins/processing/*)
 		author=volayaf
 		;;
 
-	src/app/gps/qwtpolar-*|src/app/qtmain_android.cpp|src/core/spatialite/*|src/core/spatialindex/src/*|src/core/gps/qextserialport/*|src/astyle/*|python/pyspatialite/*|src/providers/sqlanywhere/sqlanyconnection/*)
+	src/app/gps/qwtpolar-*|src/app/qtmain_android.cpp|src/core/gps/qextserialport/*|src/astyle/*|python/pyspatialite/*)
 		# Skip third party files
                 echo $f skipped
                 continue

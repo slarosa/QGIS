@@ -99,10 +99,16 @@ QgsRasterBlock * QgsRasterDataProvider::block( int theBandNo, QgsRectangle  cons
   {
     // Read smaller extent or lower resolution
 
+    if ( !extent().contains( theExtent ) )
+    {
+      QRect subRect = QgsRasterBlock::subRect( theExtent, theWidth, theHeight, extent() );
+      block->setIsNoDataExcept( subRect );
+    }
+
     // Calculate row/col limits (before tmpExtent is aligned)
     int fromRow = qRound(( theExtent.yMaximum() - tmpExtent.yMaximum() ) / yRes );
     int toRow = qRound(( theExtent.yMaximum() - tmpExtent.yMinimum() ) / yRes ) - 1;
-    int fromCol = qRound(( tmpExtent.xMinimum() - theExtent.xMinimum() ) / xRes ) ;
+    int fromCol = qRound(( tmpExtent.xMinimum() - theExtent.xMinimum() ) / xRes );
     int toCol = qRound(( tmpExtent.xMaximum() - theExtent.xMinimum() ) / xRes ) - 1;
 
     QgsDebugMsg( QString( "fromRow = %1 toRow = %2 fromCol = %3 toCol = %4" ).arg( fromRow ).arg( toRow ).arg( fromCol ).arg( toCol ) );
@@ -138,8 +144,6 @@ QgsRasterBlock * QgsRasterDataProvider::block( int theBandNo, QgsRectangle  cons
 
     QgsDebugMsg( QString( "Reading smaller block tmpWidth = %1 theHeight = %2" ).arg( tmpWidth ).arg( tmpHeight ) );
     QgsDebugMsg( QString( "tmpExtent = %1" ).arg( tmpExtent.toString() ) );
-
-    block->setIsNoData();
 
     QgsRasterBlock *tmpBlock;
     if ( srcHasNoDataValue( theBandNo ) && useSrcNoDataValue( theBandNo ) )
@@ -178,8 +182,8 @@ QgsRasterBlock * QgsRasterDataProvider::block( int theBandNo, QgsRectangle  cons
           return block;
         }
 
-        size_t tmpIndex = tmpRow * tmpWidth + tmpCol;
-        size_t index = row * theWidth + col;
+        qgssize tmpIndex = ( qgssize )tmpRow * ( qgssize )tmpWidth + tmpCol;
+        qgssize index = row * ( qgssize )theWidth + col;
 
         char *tmpBits = tmpBlock->bits( tmpIndex );
         char *bits = block->bits( index );
@@ -204,6 +208,8 @@ QgsRasterBlock * QgsRasterDataProvider::block( int theBandNo, QgsRectangle  cons
     readBlock( theBandNo, theExtent, theWidth, theHeight, block->bits() );
   }
 
+  // apply scale and offset
+  block->applyScaleOffset( bandScale( theBandNo ), bandOffset( theBandNo ) );
   // apply user no data values
   block->applyNoDataValues( userNoDataValues( theBandNo ) );
   return block;
@@ -233,7 +239,7 @@ QStringList QgsRasterDataProvider::cStringList2Q_( char ** stringList )
   QStringList strings;
 
   // presume null terminated string list
-  for ( size_t i = 0; stringList[i]; ++i )
+  for ( qgssize i = 0; stringList[i]; ++i )
   {
     strings.append( stringList[i] );
   }
@@ -342,7 +348,7 @@ QString QgsRasterDataProvider::lastErrorFormat()
 }
 
 typedef QList<QPair<QString, QString> > *pyramidResamplingMethods_t();
-QList<QPair<QString, QString> > QgsRasterDataProvider::pyramidResamplingMethods( QString providerKey )
+QList<QPair<QString, QString> > QgsRasterDataProvider::pyramidResamplingMethods( const QString& providerKey )
 {
   pyramidResamplingMethods_t *pPyramidResamplingMethods = ( pyramidResamplingMethods_t * ) cast_to_fptr( QgsProviderRegistry::instance()->function( providerKey,  "pyramidResamplingMethods" ) );
   if ( pPyramidResamplingMethods )
@@ -384,7 +390,7 @@ bool QgsRasterDataProvider::hasPyramids()
   return false;
 }
 
-void QgsRasterDataProvider::setUserNoDataValue( int bandNo, QgsRasterRangeList noData )
+void QgsRasterDataProvider::setUserNoDataValue( int bandNo, const QgsRasterRangeList& noData )
 {
   if ( bandNo >= mUserNoDataValue.size() )
   {
@@ -428,7 +434,7 @@ QgsRasterDataProvider* QgsRasterDataProvider::create( const QString &providerKey
     QGis::DataType type,
     int width, int height, double* geoTransform,
     const QgsCoordinateReferenceSystem& crs,
-    QStringList createOptions )
+    const QStringList& createOptions )
 {
   createFunction_t *createFn = ( createFunction_t* ) cast_to_fptr( QgsProviderRegistry::instance()->function( providerKey, "create" ) );
   if ( !createFn )
@@ -465,7 +471,7 @@ QString QgsRasterDataProvider::identifyFormatLabel( QgsRaster::IdentifyFormat fo
     case QgsRaster::IdentifyFormatValue:
       return tr( "Value" );
     case QgsRaster::IdentifyFormatText:
-      return ( "Text" );
+      return tr( "Text" );
     case QgsRaster::IdentifyFormatHtml:
       return tr( "Html" );
     case QgsRaster::IdentifyFormatFeature:
@@ -475,7 +481,7 @@ QString QgsRasterDataProvider::identifyFormatLabel( QgsRaster::IdentifyFormat fo
   }
 }
 
-QgsRaster::IdentifyFormat QgsRasterDataProvider::identifyFormatFromName( QString formatName )
+QgsRaster::IdentifyFormat QgsRasterDataProvider::identifyFormatFromName( const QString& formatName )
 {
   if ( formatName == "Value" ) return QgsRaster::IdentifyFormatValue;
   if ( formatName == "Text" ) return QgsRaster::IdentifyFormatText;
@@ -505,6 +511,16 @@ bool QgsRasterDataProvider::userNoDataValuesContains( int bandNo, double value )
 {
   QgsRasterRangeList rangeList = mUserNoDataValue.value( bandNo - 1 );
   return QgsRasterRange::contains( value, rangeList );
+}
+
+void QgsRasterDataProvider::copyBaseSettings( const QgsRasterDataProvider& other )
+{
+  mDpi = other.mDpi;
+  mSrcNoDataValue = other.mSrcNoDataValue;
+  mSrcHasNoDataValue = other.mSrcHasNoDataValue;
+  mUseSrcNoDataValue = other.mUseSrcNoDataValue;
+  mUserNoDataValue = other.mUserNoDataValue;
+  mExtent = other.mExtent;
 }
 
 // ENDS

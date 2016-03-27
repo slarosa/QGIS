@@ -13,8 +13,10 @@
  *                                                                         *
  ***************************************************************************/
 #include "qgswfscapabilities.h"
+#include "qgsauthmanager.h"
 #include "qgsexpression.h"
 #include "qgslogger.h"
+#include "qgsmessagelog.h"
 #include "qgsnetworkaccessmanager.h"
 #include "qgsogcutils.h"
 #include <QDomDocument>
@@ -25,11 +27,9 @@
 
 static const QString WFS_NAMESPACE = "http://www.opengis.net/wfs";
 
-QgsWFSCapabilities::QgsWFSCapabilities( QString theUri ) :
-    //QObject( parent ),
-    //mConnName( connName ),
-    mCapabilitiesReply( 0 ),
-    mErrorCode( QgsWFSCapabilities::NoError )
+QgsWFSCapabilities::QgsWFSCapabilities( const QString& theUri )
+    : mCapabilitiesReply( 0 )
+    , mErrorCode( QgsWFSCapabilities::NoError )
 {
   mUri.setEncodedUri( theUri );
   QgsDebugMsg( "theUri = " + theUri );
@@ -38,7 +38,7 @@ QgsWFSCapabilities::QgsWFSCapabilities( QString theUri ) :
   QgsDebugMsg( "mBaseUrl = " + mBaseUrl );
 
   //find out the server URL
-  /*
+#if 0
   QSettings settings;
   QString key = "/Qgis/connections-wfs/" + mConnName + "/url";
   mUri = settings.value( key ).toString();
@@ -46,7 +46,7 @@ QgsWFSCapabilities::QgsWFSCapabilities( QString theUri ) :
 
   //make a GetCapabilities request
   //modify mUri to add '?' or '&' at the end if it is not already there
-  if ( !( mUri.contains( "?" ) ) )
+  if ( !( mUri.contains( '?' ) ) )
   {
     mUri.append( "?" );
   }
@@ -54,18 +54,18 @@ QgsWFSCapabilities::QgsWFSCapabilities( QString theUri ) :
   {
     mUri.append( "&" );
   }
-  */
+#endif
 }
 
 QString QgsWFSCapabilities::prepareUri( QString uri )
 {
-  if ( !uri.contains( "?" ) )
+  if ( !uri.contains( '?' ) )
   {
-    uri.append( "?" );
+    uri.append( '?' );
   }
   else if ( uri.right( 1 ) != "?" && uri.right( 1 ) != "&" )
   {
-    uri.append( "&" );
+    uri.append( '&' );
   }
 
   return uri;
@@ -81,7 +81,7 @@ QString QgsWFSCapabilities::uriDescribeFeatureType( const QString& typeName ) co
   return mBaseUrl + "SERVICE=WFS&REQUEST=DescribeFeatureType&VERSION=1.0.0&TYPENAME=" + typeName;
 }
 
-QString QgsWFSCapabilities::uriGetFeature( QString typeName, QString crsString, QString filter, QgsRectangle bBox ) const
+QString QgsWFSCapabilities::uriGetFeature( const QString& typeName, QString crsString, QString filter, const QgsRectangle& bBox ) const
 {
   //get CRS
   if ( !crsString.isEmpty() )
@@ -92,7 +92,7 @@ QString QgsWFSCapabilities::uriGetFeature( QString typeName, QString crsString, 
   QString filterString;
 
   //if the xml comes from the dialog, it needs to be a string to pass the validity test
-  if ( filter.startsWith( "'" ) && filter.endsWith( "'" ) && filter.size() > 1 )
+  if ( filter.startsWith( '\'' ) && filter.endsWith( '\'' ) && filter.size() > 1 )
   {
     filter.chop( 1 );
     filter.remove( 0, 1 );
@@ -106,7 +106,12 @@ QString QgsWFSCapabilities::uriGetFeature( QString typeName, QString crsString, 
     {
       //if not, if must be a QGIS expression
       QgsExpression filterExpression( filter );
-      QDomElement filterElem = QgsOgcUtils::expressionToOgcFilter( filterExpression, filterDoc );
+      QString errorMsg;
+      QDomElement filterElem = QgsOgcUtils::expressionToOgcFilter( filterExpression, filterDoc, &errorMsg );
+      if ( !errorMsg.isEmpty() )
+      {
+        QgsMessageLog::logMessage( "Expression to OGC Filter error: " + errorMsg, "WFS" );
+      }
       if ( !filterElem.isNull() )
       {
         filterDoc.appendChild( filterElem );
@@ -120,20 +125,45 @@ QString QgsWFSCapabilities::uriGetFeature( QString typeName, QString crsString, 
   if ( !bBox.isEmpty() )
   {
     bBoxString = QString( "&BBOX=%1,%2,%3,%4" )
-                 .arg( bBox.xMinimum(), 0, 'f' )
-                 .arg( bBox.yMinimum(), 0, 'f' )
-                 .arg( bBox.xMaximum(), 0, 'f' )
-                 .arg( bBox.yMaximum(), 0, 'f' );
+                 .arg( qgsDoubleToString( bBox.xMinimum() ),
+                       qgsDoubleToString( bBox.yMinimum() ),
+                       qgsDoubleToString( bBox.xMaximum() ),
+                       qgsDoubleToString( bBox.yMaximum() ) );
   }
 
   QString uri = mBaseUrl;
 
   //add a wfs layer to the map
   uri += "SERVICE=WFS&VERSION=1.0.0&REQUEST=GetFeature&TYPENAME=" + typeName + crsString + bBoxString + filterString;
+
+  //add authorization information
+  if ( mUri.hasParam( "username" ) && mUri.hasParam( "password" ) )
+  {
+    uri += "&username=" + mUri.param( "username" );
+    uri += "&password=" + mUri.param( "password" );
+  }
+  if ( mUri.hasParam( "authcfg" ) )
+  {
+    uri += "&authcfg=" + mUri.param( "authcfg" );
+  }
   QgsDebugMsg( uri );
   return uri;
 }
 
+bool QgsWFSCapabilities::setAuthorization( QNetworkRequest &request ) const
+{
+  QgsDebugMsg( "entered" );
+  if ( mUri.hasParam( "authcfg" ) && !mUri.param( "authcfg" ).isEmpty() )
+  {
+    return QgsAuthManager::instance()->updateNetworkRequest( request, mUri.param( "authcfg" ) );
+  }
+  else if ( mUri.hasParam( "username" ) && mUri.hasParam( "password" ) )
+  {
+    QgsDebugMsg( "setAuthorization " + mUri.param( "username" ) );
+    request.setRawHeader( "Authorization", "Basic " + QString( "%1:%2" ).arg( mUri.param( "username" ), mUri.param( "password" ) ).toAscii().toBase64() );
+  }
+  return true;
+}
 
 void QgsWFSCapabilities::requestCapabilities()
 {
@@ -141,6 +171,15 @@ void QgsWFSCapabilities::requestCapabilities()
   mErrorMessage.clear();
 
   QNetworkRequest request( uriGetCapabilities() );
+  if ( !setAuthorization( request ) )
+  {
+    mErrorCode = QgsWFSCapabilities::NetworkError;
+    mErrorMessage = tr( "Download of capabilities failed: network request update failed for authentication config" );
+    QgsMessageLog::logMessage( mErrorMessage, tr( "WFS" ) );
+    emit gotCapabilities();
+    return;
+  }
+
   request.setAttribute( QNetworkRequest::CacheSaveControlAttribute, true );
   mCapabilitiesReply = QgsNetworkAccessManager::instance()->get( request );
   connect( mCapabilitiesReply, SIGNAL( finished() ), this, SLOT( capabilitiesReplyFinished() ) );
@@ -148,32 +187,45 @@ void QgsWFSCapabilities::requestCapabilities()
 
 void QgsWFSCapabilities::capabilitiesReplyFinished()
 {
+  QNetworkReply *reply = mCapabilitiesReply;
+  reply->deleteLater();
+  mCapabilitiesReply = 0;
+
   // handle network errors
-  if ( mCapabilitiesReply->error() != QNetworkReply::NoError )
+  if ( reply->error() != QNetworkReply::NoError )
   {
     mErrorCode = QgsWFSCapabilities::NetworkError;
-    mErrorMessage = mCapabilitiesReply->errorString();
+    mErrorMessage = reply->errorString();
     emit gotCapabilities();
     return;
   }
 
   // handle HTTP redirects
-  QVariant redirect = mCapabilitiesReply->attribute( QNetworkRequest::RedirectionTargetAttribute );
+  QVariant redirect = reply->attribute( QNetworkRequest::RedirectionTargetAttribute );
   if ( !redirect.isNull() )
   {
     QgsDebugMsg( "redirecting to " + redirect.toUrl().toString() );
     QNetworkRequest request( redirect.toUrl() );
+    if ( !setAuthorization( request ) )
+    {
+      mCaps.clear();
+      mErrorCode = QgsWFSCapabilities::NetworkError;
+      mErrorMessage = tr( "Download of capabilities failed: network request update failed for authentication config" );
+      QgsMessageLog::logMessage( mErrorMessage, tr( "WFS" ) );
+      emit gotCapabilities();
+      return;
+    }
+
     request.setAttribute( QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferNetwork );
     request.setAttribute( QNetworkRequest::CacheSaveControlAttribute, true );
 
-    mCapabilitiesReply->deleteLater();
     mCapabilitiesReply = QgsNetworkAccessManager::instance()->get( request );
 
     connect( mCapabilitiesReply, SIGNAL( finished() ), this, SLOT( capabilitiesReplyFinished() ) );
     return;
   }
 
-  QByteArray buffer = mCapabilitiesReply->readAll();
+  QByteArray buffer = reply->readAll();
 
   QgsDebugMsg( "parsing capabilities: " + buffer );
 
@@ -216,7 +268,7 @@ void QgsWFSCapabilities::capabilitiesReplyFinished()
 
   // get the <FeatureType> elements
   QDomNodeList featureTypeList = capabilitiesDocument.elementsByTagNameNS( WFS_NAMESPACE, "FeatureType" );
-  for ( unsigned int i = 0; i < featureTypeList.length(); ++i )
+  for ( int i = 0; i < featureTypeList.size(); ++i )
   {
     FeatureType featureType;
     QDomElement featureTypeElem = featureTypeList.at( i ).toElement();
@@ -249,14 +301,14 @@ void QgsWFSCapabilities::capabilitiesReplyFinished()
 
     //OtherSRS
     QDomNodeList otherCRSList = featureTypeElem.elementsByTagNameNS( WFS_NAMESPACE, "OtherSRS" );
-    for ( unsigned int i = 0; i < otherCRSList.length(); ++i )
+    for ( int i = 0; i < otherCRSList.size(); ++i )
     {
       featureType.crslist.append( otherCRSList.at( i ).toElement().text() );
     }
 
     //Support <SRS> for compatibility with older versions
     QDomNodeList srsList = featureTypeElem.elementsByTagNameNS( WFS_NAMESPACE, "SRS" );
-    for ( unsigned int i = 0; i < srsList.length(); ++i )
+    for ( int i = 0; i < srsList.size(); ++i )
     {
       featureType.crslist.append( srsList.at( i ).toElement().text() );
     }
@@ -264,8 +316,6 @@ void QgsWFSCapabilities::capabilitiesReplyFinished()
     mCaps.featureTypes.append( featureType );
   }
 
-  mCapabilitiesReply->deleteLater();
-  mCapabilitiesReply = 0;
   emit gotCapabilities();
 }
 

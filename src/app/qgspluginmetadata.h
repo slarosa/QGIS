@@ -26,10 +26,10 @@ class QgisPlugin;
 * the instantiated object. This allows the plugin manager to tell the plugin to
 * unload itself.
 */
-class QgsPluginMetadata
+class APP_EXPORT QgsPluginMetadata
 {
   public:
-    QgsPluginMetadata( QString _libraryPath, QString _name, QgisPlugin *_plugin );
+    QgsPluginMetadata( const QString& _libraryPath, const QString& _name, QgisPlugin *_plugin );
     QString name();
     QString library();
     QgisPlugin *plugin();

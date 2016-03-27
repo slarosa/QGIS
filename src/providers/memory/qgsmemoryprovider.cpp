@@ -30,10 +30,9 @@
 static const QString TEXT_PROVIDER_KEY = "memory";
 static const QString TEXT_PROVIDER_DESCRIPTION = "Memory provider";
 
-QgsMemoryProvider::QgsMemoryProvider( QString uri )
+QgsMemoryProvider::QgsMemoryProvider( const QString& uri )
     : QgsVectorDataProvider( uri )
-    , mSpatialIndex( NULL )
-    , mActiveIterator( 0 )
+    , mSpatialIndex( 0 )
 {
   // Initialize the geometry with the uri to support old style uri's
   // (ie, just 'point', 'line', 'polygon')
@@ -74,15 +73,38 @@ QgsMemoryProvider::QgsMemoryProvider( QString uri )
 
   mNativeTypes
   << QgsVectorDataProvider::NativeType( tr( "Whole number (integer)" ), "integer", QVariant::Int, 0, 10 )
-  << QgsVectorDataProvider::NativeType( tr( "Decimal number (real)" ), "double", QVariant::Double, 0, 20, 0, 5 )
+  // Decimal number from OGR/Shapefile/dbf may come with length up to 32 and
+  // precision up to length-2 = 30 (default, if width is not specified in dbf is length = 24 precision = 15)
+  // We know that double (QVariant::Double) has only 15-16 significant numbers,
+  // but setting that correct limits would disable the use of memory provider with
+  // data from Shapefiles. In any case, the data are handled as doubles.
+  // So the limits set here are not correct but enable use of data from Shapefiles.
+  << QgsVectorDataProvider::NativeType( tr( "Decimal number (real)" ), "double", QVariant::Double, 0, 32, 0, 30 )
   << QgsVectorDataProvider::NativeType( tr( "Text (string)" ), "string", QVariant::String, 0, 255 )
+
+  // date type
+  << QgsVectorDataProvider::NativeType( tr( "Date" ), "date", QVariant::Date, -1, -1, -1, -1 )
+
+  // integer types
+  << QgsVectorDataProvider::NativeType( tr( "Whole number (smallint - 16bit)" ), "int2", QVariant::Int, -1, -1, 0, 0 )
+  << QgsVectorDataProvider::NativeType( tr( "Whole number (integer - 32bit)" ), "int4", QVariant::Int, -1, -1, 0, 0 )
+  << QgsVectorDataProvider::NativeType( tr( "Whole number (integer - 64bit)" ), "int8", QVariant::LongLong, -1, -1, 0, 0 )
+  << QgsVectorDataProvider::NativeType( tr( "Decimal number (numeric)" ), "numeric", QVariant::Double, 1, 20, 0, 20 )
+  << QgsVectorDataProvider::NativeType( tr( "Decimal number (decimal)" ), "decimal", QVariant::Double, 1, 20, 0, 20 )
+
+  // floating point
+  << QgsVectorDataProvider::NativeType( tr( "Decimal number (real)" ), "real", QVariant::Double, -1, -1, -1, -1 )
+  << QgsVectorDataProvider::NativeType( tr( "Decimal number (double)" ), "double precision", QVariant::Double, -1, -1, -1, -1 )
+
+  // string types
+  << QgsVectorDataProvider::NativeType( tr( "Text, unlimited length (text)" ), "text", QVariant::String, -1, -1, -1, -1 )
   ;
 
   if ( url.hasQueryItem( "field" ) )
   {
     QList<QgsField> attributes;
     QRegExp reFieldDef( "\\:"
-                        "(int|integer|real|double|string)" // type
+                        "(int|integer|real|double|string|date)" // type
                         "(?:\\((\\d+)"                // length
                         "(?:\\,(\\d+))?"                // precision
                         "\\))?"
@@ -114,6 +136,12 @@ QgsMemoryProvider::QgsMemoryProvider( QString uri )
           length = 20;
           precision = 5;
         }
+        else if ( typeName == "date" )
+        {
+          type = QVariant::Date;
+          typeName = "date";
+          length = 10;
+        }
 
         if ( reFieldDef.cap( 2 ) != "" )
         {
@@ -139,14 +167,18 @@ QgsMemoryProvider::QgsMemoryProvider( QString uri )
 
 QgsMemoryProvider::~QgsMemoryProvider()
 {
-  if ( mActiveIterator )
-    mActiveIterator->close();
-
   delete mSpatialIndex;
 }
 
-QString QgsMemoryProvider::dataSourceUri() const
+QgsAbstractFeatureSource* QgsMemoryProvider::featureSource() const
 {
+  return new QgsMemoryFeatureSource( this );
+}
+
+QString QgsMemoryProvider::dataSourceUri( bool expandAuthConfig ) const
+{
+  Q_UNUSED( expandAuthConfig )
+
   QUrl uri( "memory" );
   QString geometry;
   switch ( mWkbType )
@@ -222,7 +254,7 @@ QString QgsMemoryProvider::storageType() const
 
 QgsFeatureIterator QgsMemoryProvider::getFeatures( const QgsFeatureRequest& request )
 {
-  return QgsFeatureIterator( new QgsMemoryFeatureIterator( this, request ) );
+  return QgsFeatureIterator( new QgsMemoryFeatureIterator( new QgsMemoryFeatureSource( this ), true, request ) );
 }
 
 
@@ -306,24 +338,28 @@ bool QgsMemoryProvider::addAttributes( const QList<QgsField> &attributes )
 {
   for ( QList<QgsField>::const_iterator it = attributes.begin(); it != attributes.end(); ++it )
   {
+    // Why are attributes restricted to int,double and string only?
     switch ( it->type() )
     {
       case QVariant::Int:
       case QVariant::Double:
       case QVariant::String:
+      case QVariant::Date:
+      case QVariant::LongLong:
         break;
       default:
         QgsDebugMsg( "Field type not supported: " + it->typeName() );
         continue;
     }
-
     // add new field as a last one
     mFields.append( *it );
 
     for ( QgsFeatureMap::iterator fit = mFeatures.begin(); fit != mFeatures.end(); ++fit )
     {
       QgsFeature& f = fit.value();
-      f.attributes().append( QVariant() );
+      QgsAttributes attr = f.attributes();
+      attr.append( QVariant() );
+      f.setAttributes( attr );
     }
   }
   return true;
@@ -343,7 +379,9 @@ bool QgsMemoryProvider::deleteAttributes( const QgsAttributeIds& attributes )
     for ( QgsFeatureMap::iterator fit = mFeatures.begin(); fit != mFeatures.end(); ++fit )
     {
       QgsFeature& f = fit.value();
-      f.attributes().remove( idx );
+      QgsAttributes attr = f.attributes();
+      attr.remove( idx );
+      f.setAttributes( attr );
     }
   }
   return true;
@@ -388,6 +426,28 @@ bool QgsMemoryProvider::changeGeometryValues( QgsGeometryMap & geometry_map )
   return true;
 }
 
+QString QgsMemoryProvider::subsetString()
+{
+  return mSubsetString;
+}
+
+bool QgsMemoryProvider::setSubsetString( const QString& theSQL, bool updateFeatureCount )
+{
+  Q_UNUSED( updateFeatureCount );
+
+  if ( !theSQL.isEmpty() )
+  {
+    QgsExpression tempExpression( theSQL );
+    if ( tempExpression.hasParserError() )
+      return false;
+  }
+
+  mSubsetString = theSQL;
+
+  emit dataChanged();
+  return true;
+}
+
 bool QgsMemoryProvider::createSpatialIndex()
 {
   if ( !mSpatialIndex )
@@ -413,15 +473,18 @@ int QgsMemoryProvider::capabilities() const
 
 void QgsMemoryProvider::updateExtent()
 {
-  if ( mFeatures.count() == 0 )
+  if ( mFeatures.isEmpty() )
   {
     mExtent = QgsRectangle();
   }
   else
   {
-    mExtent = mFeatures.begin().value().geometry()->boundingBox();
-    for ( QgsFeatureMap::iterator it = mFeatures.begin(); it != mFeatures.end(); ++it )
-      mExtent.unionRect( it.value().geometry()->boundingBox() );
+    mExtent.setMinimal();
+    Q_FOREACH ( const QgsFeature& feat, mFeatures )
+    {
+      if ( feat.constGeometry() )
+        mExtent.unionRect( feat.constGeometry()->boundingBox() );
+    }
   }
 }
 

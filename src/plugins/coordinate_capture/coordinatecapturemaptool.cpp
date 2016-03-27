@@ -21,7 +21,7 @@
 #include "qgscoordinatereferencesystem.h"
 
 #include <QSettings>
-#include <QMessageBox>
+
 #include <QMouseEvent>
 #include <QCursor>
 #include <QPixmap>
@@ -44,25 +44,20 @@ CoordinateCaptureMapTool::~CoordinateCaptureMapTool()
     delete mpRubberBand;
 }
 
-void CoordinateCaptureMapTool::canvasMoveEvent( QMouseEvent * thepEvent )
+void CoordinateCaptureMapTool::canvasMoveEvent( QgsMapMouseEvent * thepEvent )
 {
   QgsPoint myOriginalPoint =
     mCanvas->getCoordinateTransform()->toMapCoordinates( thepEvent->x(), thepEvent->y() );
   emit mouseMoved( myOriginalPoint );
 }
 
-void CoordinateCaptureMapTool::canvasPressEvent( QMouseEvent * thepEvent )
+void CoordinateCaptureMapTool::canvasPressEvent( QgsMapMouseEvent * thepEvent )
 {
   Q_UNUSED( thepEvent );
 }
 
-void CoordinateCaptureMapTool::canvasReleaseEvent( QMouseEvent * thepEvent )
+void CoordinateCaptureMapTool::canvasReleaseEvent( QgsMapMouseEvent * thepEvent )
 {
-  if ( !mpMapCanvas || mpMapCanvas->isDrawing() )
-  {
-    return;
-  }
-
   QgsPoint myOriginalPoint =
     mCanvas->getCoordinateTransform()->toMapCoordinates( thepEvent->x(), thepEvent->y() );
   emit mouseClicked( myOriginalPoint );

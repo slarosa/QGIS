@@ -14,9 +14,9 @@
  ***************************************************************************/
 
 #include "qgsosmimport.h"
+#include "qgsslconnect.h"
 
-#include <spatialite.h>
-
+#include <QStringList>
 #include <QXmlStreamReader>
 
 
@@ -55,9 +55,6 @@ bool QgsOSMXmlImport::import()
       return false;
     }
   }
-
-  // load spatialite extension
-  spatialite_init( 0 );
 
   if ( !createDatabase() )
   {
@@ -134,14 +131,30 @@ bool QgsOSMXmlImport::createIndexes()
 
 bool QgsOSMXmlImport::createDatabase()
 {
-  if ( sqlite3_open_v2( mDbFileName.toUtf8().data(), &mDatabase, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0 ) != SQLITE_OK )
+  char **results;
+  int rows, columns;
+  if ( QgsSLConnect::sqlite3_open_v2( mDbFileName.toUtf8().data(), &mDatabase, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, 0 ) != SQLITE_OK )
     return false;
+
+  bool above41 = false;
+  int ret = sqlite3_get_table( mDatabase, "select spatialite_version()", &results, &rows, &columns, NULL );
+  if ( ret == SQLITE_OK && rows == 1 && columns == 1 )
+  {
+    QString version = QString::fromUtf8( results[1] );
+    QStringList parts = version.split( ' ', QString::SkipEmptyParts );
+    if ( parts.size() >= 1 )
+    {
+      QStringList verparts = parts[0].split( '.', QString::SkipEmptyParts );
+      above41 = verparts.size() >= 2 && ( verparts[0].toInt() > 4 || ( verparts[0].toInt() == 4 && verparts[1].toInt() >= 1 ) );
+    }
+  }
+  sqlite3_free_table( results );
 
   const char* sqlInitStatements[] =
   {
     "PRAGMA cache_size = 100000", // TODO!!!
     "PRAGMA synchronous = OFF", // TODO!!!
-    "SELECT InitSpatialMetadata()",
+    above41 ? "SELECT InitSpatialMetadata(1)" : "SELECT InitSpatialMetadata()",
     "CREATE TABLE nodes ( id INTEGER PRIMARY KEY, lat REAL, lon REAL )",
     "CREATE TABLE nodes_tags ( id INTEGER, k TEXT, v TEXT )",
     "CREATE TABLE ways ( id INTEGER PRIMARY KEY )",
@@ -156,7 +169,7 @@ bool QgsOSMXmlImport::createDatabase()
     if ( sqlite3_exec( mDatabase, sqlInitStatements[i], 0, 0, &errMsg ) != SQLITE_OK )
     {
       mError = QString( "Error executing SQL command:\n%1\nSQL:\n%2" )
-               .arg( QString::fromUtf8( errMsg ) ).arg( QString::fromUtf8( sqlInitStatements[i] ) );
+               .arg( QString::fromUtf8( errMsg ), QString::fromUtf8( sqlInitStatements[i] ) );
       sqlite3_free( errMsg );
       closeDatabase();
       return false;
@@ -188,7 +201,7 @@ bool QgsOSMXmlImport::createDatabase()
     {
       const char* errMsg = sqlite3_errmsg( mDatabase ); // does not require free
       mError = QString( "Error preparing SQL command:\n%1\nSQL:\n%2" )
-               .arg( QString::fromUtf8( errMsg ) ).arg( QString::fromUtf8( sqlInsertStatements[i] ) );
+               .arg( QString::fromUtf8( errMsg ), QString::fromUtf8( sqlInsertStatements[i] ) );
       closeDatabase();
       return false;
     }
@@ -221,7 +234,7 @@ bool QgsOSMXmlImport::closeDatabase()
 
   Q_ASSERT( mStmtInsertNode == 0 );
 
-  sqlite3_close( mDatabase );
+  QgsSLConnect::sqlite3_close( mDatabase );
   mDatabase = 0;
   return true;
 }

@@ -34,9 +34,10 @@ class QLabel;
 class QAction;
 class QTimer;
 
+class QgsMessageBarItem;
+
 /** \ingroup gui
  * A bar for displaying non-blocking messages to the user.
- * \note added in 1.9
  */
 class GUI_EXPORT QgsMessageBar: public QFrame
 {
@@ -47,88 +48,110 @@ class GUI_EXPORT QgsMessageBar: public QFrame
     {
       INFO = 0,
       WARNING = 1,
-      CRITICAL = 2
+      CRITICAL = 2,
+      SUCCESS = 3
     };
 
     QgsMessageBar( QWidget *parent = 0 );
     ~QgsMessageBar();
 
-    /*! display a widget on the bar after hiding the currently visible one
-     *  and putting it in a stack
-     * @param widget widget to add
-     * @param level is QgsMessageBar::INFO, WARNING or CRITICAL
+    /**
+     * Display a message item on the bar after hiding the currently visible one
+     * and putting it in a stack.
+     * The message bar will take ownership of the item.
+     *
+     * @param item Item to display
+     */
+    void pushItem( QgsMessageBarItem *item );
+
+    /** Display a widget as a message on the bar after hiding the currently visible one
+     *  and putting it in a stack.
+     * @param widget message widget to display
+     * @param level is QgsMessageBar::INFO, WARNING, CRITICAL or SUCCESS
      * @param duration timeout duration of message in seconds, 0 value indicates no timeout
      */
-    void pushWidget( QWidget *widget, MessageLevel level = INFO, int duration = 0 );
+    QgsMessageBarItem *pushWidget( QWidget *widget, MessageLevel level = INFO, int duration = 0 );
 
-    /*! remove the passed widget from the bar (if previously added),
+    /** Remove the passed widget from the bar (if previously added),
      *  then display the next one in the stack if any or hide the bar
-     *  @param widget widget to remove
+     *  @param item item to remove
      *  @return true if the widget was removed, false otherwise
      */
-    bool popWidget( QWidget *widget );
+    bool popWidget( QgsMessageBarItem *item );
 
     //! make out a widget containing a message to be displayed on the bar
-    static QWidget* createMessage( const QString &text, QWidget *parent = 0 ) { return createMessage( QString::null, text, QIcon(), parent ); }
-    //! make out a widget containing icon and message to be displayed on the bar
-    static QWidget* createMessage( const QString &text, const QIcon &icon, QWidget *parent = 0 ) { return createMessage( QString::null, text, icon, parent ); }
+    static QgsMessageBarItem* createMessage( const QString &text, QWidget *parent = 0 );
     //! make out a widget containing title and message to be displayed on the bar
-    static QWidget* createMessage( const QString &title, const QString &text, QWidget *parent = 0 ) { return createMessage( title, text, QIcon(), parent ); }
-    //! make out a widget containing icon, title and message to be displayed on the bar
-    static QWidget* createMessage( const QString &title, const QString &text, const QIcon &icon, QWidget *parent = 0 );
+    static QgsMessageBarItem* createMessage( const QString &title, const QString &text, QWidget *parent = 0 );
+    //! make out a widget containing title and message to be displayed on the bar
+    static QgsMessageBarItem* createMessage( QWidget *widget, QWidget *parent = 0 );
 
-    //! convenience method for pushing a non-widget-based message to the bar
-    void pushMessage( const QString &text, MessageLevel level = INFO, int duration = 0 ) { pushMessage( QString::null, text, level, duration ); }
-    //! convenience method for pushing a non-widget-based message with title to the bar
+    //! convenience method for pushing a message to the bar
+    void pushMessage( const QString &text, MessageLevel level = INFO, int duration = 0 ) { return pushMessage( QString::null, text, level, duration ); }
+    //! convenience method for pushing a message with title to the bar
     void pushMessage( const QString &title, const QString &text, MessageLevel level = INFO, int duration = 0 );
+
+    QgsMessageBarItem *currentItem() { return mCurrentItem; }
 
   signals:
     //! emitted when a message widget is added to the bar
-    void widgetAdded( QWidget *widget );
+    void widgetAdded( QgsMessageBarItem *item );
 
     //! emitted when a message widget was removed from the bar
-    void widgetRemoved( QWidget *widget );
+    void widgetRemoved( QgsMessageBarItem *item );
 
   public slots:
-    /*! remove the currently displayed widget from the bar and
-     *  display the next in the stack if any or hide the bar
+    /** Remove the currently displayed widget from the bar and
+     *  display the next in the stack if any or hide the bar.
      *  @return true if the widget was removed, false otherwise
      */
     bool popWidget();
 
-    /*! remove all items from the bar's widget list
+    /** Remove all items from the bar's widget list
      *  @return true if all items were removed, false otherwise
      */
     bool clearWidgets();
 
+    /**
+     * Pushes a success message with default timeout to the message bar
+     * @param title title string for message
+     * @param message The message to be displayed
+     * @note added in 2.8
+     */
+    void pushSuccess( const QString& title, const QString& message );
+
+    /**
+     * Pushes a information message with default timeout to the message bar
+     * @param title title string for message
+     * @param message The message to be displayed
+     * @note added in 2.8
+     */
+    void pushInfo( const QString& title, const QString& message );
+
+    /**
+     * Pushes a warning with default timeout to the message bar
+     * @param title title string for message
+     * @param message The message to be displayed
+     * @note added in 2.8
+     */
+    void pushWarning( const QString& title, const QString& message );
+
+    /**
+     * Pushes a critical warning with default timeout to the message bar
+     * @param title title string for message
+     * @param message The message to be displayed
+     * @note added in 2.8
+     */
+    void pushCritical( const QString& title, const QString& message );
+
   protected:
-    void mousePressEvent( QMouseEvent * e );
+    void mousePressEvent( QMouseEvent * e ) override;
 
   private:
-    class QgsMessageBarItem
-    {
-      public:
-        QgsMessageBarItem( QWidget *widget, const QString &styleSheet, int duration = 0 ):
-            mWidget( widget ), mStyleSheet( styleSheet ), mDuration( duration ) {}
-        ~QgsMessageBarItem() {}
-
-        QWidget* widget() const { return mWidget; }
-        QString styleSheet() const { return mStyleSheet; }
-        int duration() const { return mDuration; }
-
-      private:
-        QWidget *mWidget;
-        QString mStyleSheet;
-        int mDuration; // 0 value indicates no timeout duration
-    };
-
-    void pushWidget( QWidget *widget, const QString &styleSheet, int duration = 0 );
-
     void popItem( QgsMessageBarItem *item );
-    void pushItem( QgsMessageBarItem *item );
-
+    void showItem( QgsMessageBarItem *item );
     QgsMessageBarItem *mCurrentItem;
-    QList<QgsMessageBarItem *> mList;
+    QList<QgsMessageBarItem *> mItems;
     QMenu *mCloseMenu;
     QToolButton *mCloseBtn;
     QGridLayout *mLayout;

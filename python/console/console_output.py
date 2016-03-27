@@ -19,17 +19,16 @@ email                : lrssvtml (at) gmail (dot) com
 Some portions of code were taken from https://code.google.com/p/pydee/
 """
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from PyQt4.Qsci import (QsciScintilla,
-                        QsciScintillaBase,
-                        QsciLexerPython)
+from PyQt4.QtCore import Qt, QCoreApplication, QSettings, SIGNAL
+from PyQt4.QtGui import QColor, QGridLayout, QSpacerItem, QSizePolicy, QFont, QShortcut, QKeySequence, QMenu, QApplication
+from PyQt4.Qsci import QsciScintilla, QsciLexerPython
 from qgis.core import QgsApplication
 from qgis.gui import QgsMessageBar
 import sys
-import socket
+
 
 class writeOut:
+
     def __init__(self, shellOut, out=None, style=None):
         """
         This class allow to write stdout and stderr
@@ -41,10 +40,14 @@ class writeOut:
     def write(self, m):
         if self.style == "_traceback":
             # Show errors in red
+            stderrColor = QColor(self.sO.settings.value("pythonConsole/stderrFontColor", QColor(Qt.red)))
+            self.sO.SendScintilla(QsciScintilla.SCI_STYLESETFORE, 0o01, stderrColor)
+            self.sO.SendScintilla(QsciScintilla.SCI_STYLESETITALIC, 0o01, True)
+            self.sO.SendScintilla(QsciScintilla.SCI_STYLESETBOLD, 0o01, True)
             pos = self.sO.SendScintilla(QsciScintilla.SCI_GETCURRENTPOS)
             self.sO.SendScintilla(QsciScintilla.SCI_STARTSTYLING, pos, 31)
             self.sO.append(m)
-            self.sO.SendScintilla(QsciScintilla.SCI_SETSTYLING, len(m), 1)
+            self.sO.SendScintilla(QsciScintilla.SCI_SETSTYLING, len(m), 0o01)
         else:
             self.sO.append(m)
 
@@ -52,6 +55,9 @@ class writeOut:
             self.out.write(m)
 
         self.move_cursor_to_end()
+
+        if self.style != "_traceback":
+            QCoreApplication.processEvents()
 
     def move_cursor_to_end(self):
         """Move cursor to end of text"""
@@ -63,14 +69,16 @@ class writeOut:
     def get_end_pos(self):
         """Return (line, index) position of the last character"""
         line = self.sO.lines() - 1
-        return (line, self.sO.text(line).length())
+        return (line, len(self.sO.text(line)))
 
     def flush(self):
         pass
 
+
 class ShellOutputScintilla(QsciScintilla):
+
     def __init__(self, parent=None):
-        super(ShellOutputScintilla,self).__init__(parent)
+        super(ShellOutputScintilla, self).__init__(parent)
         self.parent = parent
         self.shell = self.parent.shell
 
@@ -94,7 +102,7 @@ class ShellOutputScintilla(QsciScintilla):
         sys.stderr = writeOut(self, sys.stderr, "_traceback")
 
         self.insertInitText()
-        self.setLexers()
+        self.refreshSettingsOutput()
         self.setReadOnly(True)
 
         # Set the default font
@@ -115,7 +123,7 @@ class ShellOutputScintilla(QsciScintilla):
         self.setMarginsForegroundColor(QColor("#3E3EE3"))
         self.setMarginsBackgroundColor(QColor("#f9f9f9"))
         self.setCaretLineVisible(True)
-        self.setCaretLineBackgroundColor(QColor("#fcf3ed"))
+        self.setCaretWidth(0)
 
         self.setMinimumHeight(120)
 
@@ -133,18 +141,30 @@ class ShellOutputScintilla(QsciScintilla):
 
     def insertInitText(self):
         txtInit = QCoreApplication.translate("PythonConsole",
-                                             "Python %1 on %2\n"
-                                             "## Type help(iface) for more info and list of methods.\n").arg(sys.version,  socket.gethostname())
-        initText = self.setText(txtInit)
+                                             "Python Console \n"
+                                             "Use iface to access QGIS API interface or Type help(iface) for more info")
 
-    def refreshLexerProperties(self):
+        ## some translation string for the console header ends without '\n'
+        ## and the first command in console will be appended at the header text.
+        ## The following code add a '\n' at the end of the string if not present.
+        if txtInit.endswith('\n'):
+            self.setText(txtInit)
+        else:
+            self.setText(txtInit + '\n')
+
+    def refreshSettingsOutput(self):
+        # Set Python lexer
         self.setLexers()
+        caretLineColor = self.settings.value("pythonConsole/caretLineColor", QColor("#fcf3ed"))
+        cursorColor = self.settings.value("pythonConsole/cursorColor", QColor(Qt.black))
+        self.setCaretLineBackgroundColor(caretLineColor)
+        self.setCaretForegroundColor(cursorColor)
 
     def setLexers(self):
         self.lexer = QsciLexerPython()
 
-        loadFont = self.settings.value("pythonConsole/fontfamilytext", "Monospace").toString()
-        fontSize = self.settings.value("pythonConsole/fontsize", 10).toInt()[0]
+        loadFont = self.settings.value("pythonConsole/fontfamilytext", "Monospace")
+        fontSize = self.settings.value("pythonConsole/fontsize", 10, type=int)
         font = QFont(loadFont)
         font.setFixedPitch(True)
         font.setPointSize(fontSize)
@@ -154,13 +174,26 @@ class ShellOutputScintilla(QsciScintilla):
         font.setBold(False)
 
         self.lexer.setDefaultFont(font)
-        self.lexer.setColor(Qt.red, 1)
-        self.lexer.setColor(Qt.darkGreen, 5)
-        self.lexer.setColor(Qt.darkBlue, 15)
+        self.lexer.setDefaultColor(QColor(self.settings.value("pythonConsole/defaultFontColor", QColor(Qt.black))))
+        self.lexer.setColor(QColor(self.settings.value("pythonConsole/commentFontColor", QColor(Qt.gray))), 1)
+        self.lexer.setColor(QColor(self.settings.value("pythonConsole/keywordFontColor", QColor(Qt.darkGreen))), 5)
+        self.lexer.setColor(QColor(self.settings.value("pythonConsole/classFontColor", QColor(Qt.blue))), 8)
+        self.lexer.setColor(QColor(self.settings.value("pythonConsole/methodFontColor", QColor(Qt.darkGray))), 9)
+        self.lexer.setColor(QColor(self.settings.value("pythonConsole/decorFontColor", QColor(Qt.darkBlue))), 15)
+        self.lexer.setColor(QColor(self.settings.value("pythonConsole/commentBlockFontColor", QColor(Qt.gray))), 12)
+        self.lexer.setColor(QColor(self.settings.value("pythonConsole/singleQuoteFontColor", QColor(Qt.blue))), 4)
+        self.lexer.setColor(QColor(self.settings.value("pythonConsole/doubleQuoteFontColor", QColor(Qt.blue))), 3)
+        self.lexer.setColor(QColor(self.settings.value("pythonConsole/tripleSingleQuoteFontColor", QColor(Qt.blue))), 6)
+        self.lexer.setColor(QColor(self.settings.value("pythonConsole/tripleDoubleQuoteFontColor", QColor(Qt.blue))), 7)
+        self.lexer.setColor(QColor(Qt.red), 14)
         self.lexer.setFont(font, 1)
         self.lexer.setFont(font, 2)
         self.lexer.setFont(font, 3)
         self.lexer.setFont(font, 4)
+
+        for style in range(0, 33):
+            paperColor = QColor(self.settings.value("pythonConsole/paperBackgroundColor", QColor(Qt.white)))
+            self.lexer.setPaper(paperColor, style)
 
         self.setLexer(self.lexer)
 
@@ -175,39 +208,33 @@ class ShellOutputScintilla(QsciScintilla):
         iconClear = QgsApplication.getThemeIcon("console/iconClearConsole.png")
         iconHideTool = QgsApplication.getThemeIcon("console/iconHideToolConsole.png")
         iconSettings = QgsApplication.getThemeIcon("console/iconSettingsConsole.png")
-        hideToolBar = menu.addAction(iconHideTool,
-                                     QCoreApplication.translate("PythonConsole",
-                                                                "Hide/Show Toolbar"),
-                                     self.hideToolBar)
+        menu.addAction(iconHideTool,
+                       QCoreApplication.translate("PythonConsole", "Hide/Show Toolbar"),
+                       self.hideToolBar)
         menu.addSeparator()
-        showEditorAction = menu.addAction(QCoreApplication.translate("PythonConsole",
-                                                                     "Show Editor"),
-                                          self.showEditor)
+        showEditorAction = menu.addAction(
+            QCoreApplication.translate("PythonConsole", "Show Editor"),
+            self.showEditor)
         menu.addSeparator()
         runAction = menu.addAction(iconRun,
-                                   QCoreApplication.translate("PythonConsole",
-                                                              "Enter Selected"),
+                                   QCoreApplication.translate("PythonConsole", "Enter Selected"),
                                    self.enteredSelected,
                                    QKeySequence(Qt.CTRL + Qt.Key_E))
         clearAction = menu.addAction(iconClear,
-                                     QCoreApplication.translate("PythonConsole",
-                                                                "Clear console"),
+                                     QCoreApplication.translate("PythonConsole", "Clear console"),
                                      self.clearConsole)
         menu.addSeparator()
-        copyAction = menu.addAction(QCoreApplication.translate("PythonConsole",
-                                                               "Copy"),
-                                    self.copy,
-                                    QKeySequence.Copy)
+        copyAction = menu.addAction(
+            QCoreApplication.translate("PythonConsole", "Copy"),
+            self.copy, QKeySequence.Copy)
         menu.addSeparator()
-        selectAllAction = menu.addAction(QCoreApplication.translate("PythonConsole",
-                                                                    "Select All"),
-                                         self.selectAll,
-                                         QKeySequence.SelectAll)
+        selectAllAction = menu.addAction(
+            QCoreApplication.translate("PythonConsole", "Select All"),
+            self.selectAll, QKeySequence.SelectAll)
         menu.addSeparator()
-        settingsDialog = menu.addAction(iconSettings,
-                                        QCoreApplication.translate("PythonConsole",
-                                                                   "Settings"),
-                                        self.parent.openSettings)
+        menu.addAction(iconSettings,
+                       QCoreApplication.translate("PythonConsole", "Settings"),
+                       self.parent.openSettings)
         runAction.setEnabled(False)
         clearAction.setEnabled(False)
         copyAction.setEnabled(False)
@@ -221,7 +248,7 @@ class ShellOutputScintilla(QsciScintilla):
             clearAction.setEnabled(True)
         if self.parent.tabEditorWidget.isVisible():
             showEditorAction.setEnabled(False)
-        action = menu.exec_(self.mapToGlobal(e.pos()))
+        menu.exec_(self.mapToGlobal(e.pos()))
 
     def hideToolBar(self):
         tB = self.parent.toolBar
@@ -252,7 +279,7 @@ class ShellOutputScintilla(QsciScintilla):
     def keyPressEvent(self, e):
         # empty text indicates possible shortcut key sequence so stay in output
         txt = e.text()
-        if txt.length() and txt >= " ":
+        if len(txt) and txt >= " ":
             self.shell.append(txt)
             self.shell.move_cursor_to_end()
             self.shell.setFocus()

@@ -11,11 +11,12 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Add Layer(s) from a Server</string>
+   <string>Add Layer(s) from a WM(T)S Server</string>
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>../../../../.designer/backup</normaloff>../../../../.designer/backup</iconset>
+    <normaloff/>
+   </iconset>
   </property>
   <property name="sizeGripEnabled">
    <bool>true</bool>
@@ -24,7 +25,7 @@
    <bool>true</bool>
   </property>
   <layout class="QGridLayout" name="gridLayout_2">
-   <item row="3" column="0">
+   <item row="2" column="0">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="standardButtons">
       <set>QDialogButtonBox::Close|QDialogButtonBox::Help</set>
@@ -207,19 +208,6 @@
           <string>Options</string>
          </property>
          <layout class="QGridLayout">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label">
-            <property name="text">
-             <string>Layer name</string>
-            </property>
-            <property name="buddy">
-             <cstring>leLayerName</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1" colspan="2">
-           <widget class="QLineEdit" name="leLayerName"/>
-          </item>
           <item row="3" column="0" colspan="2">
            <widget class="QLabel" name="labelCoordRefSys">
             <property name="text">
@@ -236,7 +224,7 @@
              <bool>false</bool>
             </property>
             <property name="text">
-             <string>Change ...</string>
+             <string>Change...</string>
             </property>
            </widget>
           </item>
@@ -270,6 +258,13 @@
            <widget class="QLineEdit" name="mFeatureCount">
             <property name="text">
              <string>10</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QCheckBox" name="mContextualLegendCheckbox">
+            <property name="text">
+             <string>Use contextual WMS Legend</string>
             </property>
            </widget>
           </item>
@@ -319,7 +314,7 @@
        <item row="1" column="0" colspan="3">
         <widget class="QTreeWidget" name="mLayerOrderTreeWidget">
          <property name="columnCount">
-          <number>2</number>
+          <number>3</number>
          </property>
          <column>
           <property name="text">
@@ -329,6 +324,11 @@
          <column>
           <property name="text">
            <string>Style</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Title</string>
           </property>
          </column>
         </widget>
@@ -369,12 +369,12 @@
          </column>
          <column>
           <property name="text">
-           <string>Style</string>
+           <string>Title</string>
           </property>
          </column>
          <column>
           <property name="text">
-           <string>Title</string>
+           <string>Style</string>
           </property>
          </column>
          <column>
@@ -451,6 +451,23 @@
      </widget>
     </widget>
    </item>
+   <item row="1" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Layer name</string>
+       </property>
+       <property name="buddy">
+        <cstring>leLayerName</cstring>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="leLayerName"/>
+     </item>
+    </layout>
+   </item>
   </layout>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
@@ -465,11 +482,11 @@
   <tabstop>btnSave</tabstop>
   <tabstop>btnAddDefault</tabstop>
   <tabstop>lstLayers</tabstop>
-  <tabstop>leLayerName</tabstop>
   <tabstop>mTileWidth</tabstop>
   <tabstop>mTileHeight</tabstop>
   <tabstop>mFeatureCount</tabstop>
   <tabstop>btnChangeSpatialRefSys</tabstop>
+  <tabstop>mContextualLegendCheckbox</tabstop>
   <tabstop>mLayerUpButton</tabstop>
   <tabstop>mLayerDownButton</tabstop>
   <tabstop>mLayerOrderTreeWidget</tabstop>
@@ -478,6 +495,7 @@
   <tabstop>btnSearch</tabstop>
   <tabstop>tableWidgetWMSList</tabstop>
   <tabstop>btnAddWMS</tabstop>
+  <tabstop>leLayerName</tabstop>
   <tabstop>buttonBox</tabstop>
  </tabstops>
  <resources/>

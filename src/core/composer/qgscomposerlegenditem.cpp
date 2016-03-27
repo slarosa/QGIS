@@ -64,7 +64,6 @@ void QgsComposerLegendItem::writeXMLChildren( QDomElement& elem, QDomDocument& d
 
 ////////////////QgsComposerSymbolV2Item
 
-#include "qgssymbolv2.h"
 
 QgsComposerSymbolV2Item::QgsComposerSymbolV2Item(): QgsComposerLegendItem( QgsComposerLegendStyle::Symbol ), mSymbolV2( 0 )
 {
@@ -286,7 +285,7 @@ void QgsComposerLayerItem::readXML( const QDomElement& itemElem, bool xServerAva
   }
 }
 
-void QgsComposerLayerItem::setDefaultStyle()
+void QgsComposerLayerItem::setDefaultStyle( double scaleDenominator, const QString& rule )
 {
   // set default style according to number of symbols
   QgsVectorLayer* vLayer = qobject_cast<QgsVectorLayer*>( QgsMapLayerRegistry::instance()->mapLayer( layerID() ) );
@@ -295,8 +294,8 @@ void QgsComposerLayerItem::setDefaultStyle()
     QgsFeatureRendererV2* renderer = vLayer->rendererV2();
     if ( renderer )
     {
-      QPair<QString, QgsSymbolV2*> symbolItem = renderer->legendSymbolItems().value( 0 );
-      if ( renderer->legendSymbolItems().size() > 1 || !symbolItem.first.isEmpty() )
+      QPair<QString, QgsSymbolV2*> symbolItem = renderer->legendSymbolItems( scaleDenominator, rule ).value( 0 );
+      if ( renderer->legendSymbolItems( scaleDenominator, rule ).size() > 1 || !symbolItem.first.isEmpty() )
       {
         setStyle( QgsComposerLegendStyle::Subgroup );
       }
@@ -402,7 +401,7 @@ QgsComposerStyleItem::QgsComposerStyleItem(): QStandardItem()
 
 QgsComposerStyleItem::QgsComposerStyleItem( QgsComposerLegendItem *item ): QStandardItem()
 {
-  setData( QgsComposerLegendStyle::styleLabel( item->style() ) , Qt::DisplayRole );
+  setData( QgsComposerLegendStyle::styleLabel( item->style() ), Qt::DisplayRole );
 }
 
 QgsComposerStyleItem::~QgsComposerStyleItem()

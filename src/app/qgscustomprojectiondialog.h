@@ -29,11 +29,11 @@ The custom projection widget is used to define the projection family, ellipsoid 
 
 @author Tim Sutton
 */
-class QgsCustomProjectionDialog : public QDialog, private Ui::QgsCustomProjectionDialogBase
+class APP_EXPORT QgsCustomProjectionDialog : public QDialog, private Ui::QgsCustomProjectionDialogBase
 {
     Q_OBJECT
   public:
-    QgsCustomProjectionDialog( QWidget *parent = 0, Qt::WFlags fl = 0 );
+    QgsCustomProjectionDialog( QWidget *parent = 0, Qt::WindowFlags fl = 0 );
     ~QgsCustomProjectionDialog();
 
   public slots:
@@ -51,9 +51,9 @@ class QgsCustomProjectionDialog : public QDialog, private Ui::QgsCustomProjectio
     //helper functions
     void populateList();
     QString quotedValue( QString value );
-    bool deleteCRS( QString id );
-    bool saveCRS( QgsCoordinateReferenceSystem myParameters, QString myName, QString myId, bool newEntry );
-    void insertProjection( QString myProjectionAcronym );
+    bool deleteCRS( const QString& id );
+    bool saveCRS( QgsCoordinateReferenceSystem myParameters, const QString& myName, QString myId, bool newEntry );
+    void insertProjection( const QString& myProjectionAcronym );
 
     //These two QMap store the values as they are on the database when loading
     QMap <QString, QString> existingCRSparameters;

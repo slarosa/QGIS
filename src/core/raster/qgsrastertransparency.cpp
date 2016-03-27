@@ -82,7 +82,7 @@ void QgsRasterTransparency::initializeTransparentPixelList( double theRedValue, 
 /**
   Mutator for transparentSingleValuePixelList, replaces the whole list
 */
-void QgsRasterTransparency::setTransparentSingleValuePixelList( QList<QgsRasterTransparency::TransparentSingleValuePixel> theNewList )
+void QgsRasterTransparency::setTransparentSingleValuePixelList( const QList<QgsRasterTransparency::TransparentSingleValuePixel>& theNewList )
 {
   mTransparentSingleValuePixelList = theNewList;
 }
@@ -90,7 +90,7 @@ void QgsRasterTransparency::setTransparentSingleValuePixelList( QList<QgsRasterT
 /**
   Mutator for transparentThreeValuePixelList, replaces the whole list
 */
-void QgsRasterTransparency::setTransparentThreeValuePixelList( QList<QgsRasterTransparency::TransparentThreeValuePixel> theNewList )
+void QgsRasterTransparency::setTransparentThreeValuePixelList( const QList<QgsRasterTransparency::TransparentThreeValuePixel>& theNewList )
 {
   mTransparentThreeValuePixelList = theNewList;
 }
@@ -104,7 +104,7 @@ void QgsRasterTransparency::setTransparentThreeValuePixelList( QList<QgsRasterTr
 int QgsRasterTransparency::alphaValue( double theValue, int theGlobalTransparency ) const
 {
   //if NaN return 0, transparent
-  if ( theValue != theValue )
+  if ( qIsNaN( theValue ) )
   {
     return 0;
   }
@@ -144,7 +144,7 @@ int QgsRasterTransparency::alphaValue( double theValue, int theGlobalTransparenc
 int QgsRasterTransparency::alphaValue( double theRedValue, double theGreenValue, double theBlueValue, int theGlobalTransparency ) const
 {
   //if NaN return 0, transparent
-  if ( theRedValue != theRedValue || theGreenValue != theGreenValue || theBlueValue != theBlueValue )
+  if ( qIsNaN( theRedValue ) || qIsNaN( theGreenValue ) || qIsNaN( theBlueValue ) )
   {
     return 0;
   }
@@ -177,7 +177,7 @@ int QgsRasterTransparency::alphaValue( double theRedValue, double theGreenValue,
   return theGlobalTransparency;
 }
 
-bool QgsRasterTransparency::isEmpty( ) const
+bool QgsRasterTransparency::isEmpty() const
 {
   return mTransparentSingleValuePixelList.isEmpty() && mTransparentThreeValuePixelList.isEmpty();
 }
@@ -185,7 +185,7 @@ bool QgsRasterTransparency::isEmpty( ) const
 void QgsRasterTransparency::writeXML( QDomDocument& doc, QDomElement& parentElem ) const
 {
   QDomElement rasterTransparencyElem = doc.createElement( "rasterTransparency" );
-  if ( mTransparentSingleValuePixelList.count() > 0 )
+  if ( !mTransparentSingleValuePixelList.isEmpty() )
   {
     QDomElement singleValuePixelListElement = doc.createElement( "singleValuePixelList" );
     QList<QgsRasterTransparency::TransparentSingleValuePixel>::const_iterator it = mTransparentSingleValuePixelList.constBegin();
@@ -200,7 +200,7 @@ void QgsRasterTransparency::writeXML( QDomDocument& doc, QDomElement& parentElem
     rasterTransparencyElem.appendChild( singleValuePixelListElement );
 
   }
-  if ( mTransparentThreeValuePixelList.count() > 0 )
+  if ( !mTransparentThreeValuePixelList.isEmpty() )
   {
     QDomElement threeValuePixelListElement = doc.createElement( "threeValuePixelList" );
     QList<QgsRasterTransparency::TransparentThreeValuePixel>::const_iterator it = mTransparentThreeValuePixelList.constBegin();

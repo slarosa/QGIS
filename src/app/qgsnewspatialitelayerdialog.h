@@ -29,12 +29,12 @@ extern "C"
 #include <spatialite.h>
 }
 
-class QgsNewSpatialiteLayerDialog: public QDialog, private Ui::QgsNewSpatialiteLayerDialogBase
+class APP_EXPORT QgsNewSpatialiteLayerDialog: public QDialog, private Ui::QgsNewSpatialiteLayerDialogBase
 {
     Q_OBJECT
 
   public:
-    QgsNewSpatialiteLayerDialog( QWidget *parent = 0, Qt::WFlags fl = QgisGui::ModalDialogFlags );
+    QgsNewSpatialiteLayerDialog( QWidget *parent = 0, Qt::WindowFlags fl = QgisGui::ModalDialogFlags );
     ~QgsNewSpatialiteLayerDialog();
 
   protected slots:
@@ -42,9 +42,9 @@ class QgsNewSpatialiteLayerDialog: public QDialog, private Ui::QgsNewSpatialiteL
     void on_mRemoveAttributeButton_clicked();
     void on_mTypeBox_currentIndexChanged( int index );
     void on_pbnFindSRID_clicked();
-    void on_leLayerName_textChanged( QString text );
+    void on_leLayerName_textChanged( const QString& text );
     void on_toolButtonNewDatabase_clicked();
-    void nameChanged( QString );
+    void nameChanged( const QString& );
     void selectionChanged();
 
     void on_buttonBox_helpRequested() { QgsContextHelp::run( metaObject()->className() ); }
@@ -52,7 +52,7 @@ class QgsNewSpatialiteLayerDialog: public QDialog, private Ui::QgsNewSpatialiteL
     void on_buttonBox_rejected();
 
   private:
-    /**Returns the selected geometry type*/
+    /** Returns the selected geometry type*/
     QString selectedType() const;
 
     /** Create a new database */
@@ -64,7 +64,7 @@ class QgsNewSpatialiteLayerDialog: public QDialog, private Ui::QgsNewSpatialiteL
     static QString quotedValue( QString value );
 
     QPushButton *mOkButton;
-    int mCrsId;
+    QString mCrsId;
 };
 
 #endif // QGSNEWVECTORLAYERDIALOG_H

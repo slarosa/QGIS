@@ -22,34 +22,66 @@
 
 #include <QSqlQuery>
 
+#include "qgsoracleprovider.h"
 
+class QgsOracleConn;
 class QgsOracleProvider;
 
-class QgsOracleFeatureIterator : public QgsAbstractFeatureIterator
+
+class QgsOracleFeatureSource : public QgsAbstractFeatureSource
 {
   public:
-    QgsOracleFeatureIterator( QgsOracleProvider *p, const QgsFeatureRequest &request );
+    explicit QgsOracleFeatureSource( const QgsOracleProvider* p );
+
+    virtual QgsFeatureIterator getFeatures( const QgsFeatureRequest& request );
+
+  protected:
+    QgsDataSourceURI mUri;
+    QgsFields mFields;
+
+    QString mGeometryColumn;          //! name of the geometry column
+    int mSrid;                        //! srid of column
+    bool mHasSpatialIndex;            //! has spatial index of geometry column
+    QGis::WkbType mDetectedGeomType;  //! geometry type detected in the database
+    QGis::WkbType mRequestedGeomType; //! geometry type requested in the uri
+    QString mSqlWhereClause;
+    QgsOraclePrimaryKeyType mPrimaryKeyType;
+    QList<int> mPrimaryKeyAttrs;
+    QString mQuery;
+
+    QSharedPointer<QgsOracleSharedData> mShared;
+
+    friend class QgsOracleFeatureIterator;
+    friend class QgsOracleExpressionCompiler;
+};
+
+
+class QgsOracleFeatureIterator : public QgsAbstractFeatureIteratorFromSource<QgsOracleFeatureSource>
+{
+  public:
+    QgsOracleFeatureIterator( QgsOracleFeatureSource* source, bool ownSource, const QgsFeatureRequest &request );
 
     ~QgsOracleFeatureIterator();
 
-    //! fetch next feature, return true on success
-    virtual bool nextFeature( QgsFeature& feature );
-
     //! reset the iterator to the starting position
-    virtual bool rewind();
+    virtual bool rewind() override;
 
     //! end of iterating: free the resources / lock
-    virtual bool close();
+    virtual bool close() override;
 
   protected:
-    QgsOracleProvider *P;
+    //! fetch next feature, return true on success
+    virtual bool fetchFeature( QgsFeature& feature ) override;
+
+    //! fetch next feature filter expression
+    bool nextFeatureFilterExpression( QgsFeature& f ) override;
 
     bool openQuery( QString whereClause );
 
-    bool getFeature( QgsFeature &feature );
-
+    QgsOracleConn *mConnection;
     QSqlQuery mQry;
     bool mRewind;
+    bool mExpressionCompiled;
     QgsAttributeList mAttributeList;
 };
 

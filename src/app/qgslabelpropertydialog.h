@@ -23,20 +23,27 @@
 #include "qgspallabeling.h"
 #include <QDialog>
 
-class QgsMapRenderer;
 
-/**A dialog to enter data defined label attributes*/
-class QgsLabelPropertyDialog: public QDialog, private Ui::QgsLabelPropertyDialogBase
+/** A dialog to enter data defined label attributes*/
+class APP_EXPORT QgsLabelPropertyDialog: public QDialog, private Ui::QgsLabelPropertyDialogBase
 {
     Q_OBJECT
   public:
-    QgsLabelPropertyDialog( const QString& layerId, int featureId, const QString& labelText, QgsMapRenderer* renderer, QWidget * parent = 0, Qt::WindowFlags f = 0 );
+    QgsLabelPropertyDialog( const QString& layerId, int featureId, const QFont& labelFont, const QString& labelText, QWidget * parent = 0, Qt::WindowFlags f = 0 );
     ~QgsLabelPropertyDialog();
 
-    /**Returns properties changed by the user*/
+    /** Returns properties changed by the user*/
     const QgsAttributeMap& changedProperties() const { return mChangedProperties; }
 
+  signals:
+
+    /** Emitted when dialog settings are applied
+     * @note added in QGIS 2.9
+     */
+    void applied();
+
   private slots:
+    void on_buttonBox_clicked( QAbstractButton * button );
     void on_mShowLabelChkbx_toggled( bool chkd );
     void on_mAlwaysShowChkbx_toggled( bool chkd );
     void on_mMinScaleSpinBox_valueChanged( int i );
@@ -44,41 +51,53 @@ class QgsLabelPropertyDialog: public QDialog, private Ui::QgsLabelPropertyDialog
     void on_mLabelDistanceSpinBox_valueChanged( double d );
     void on_mXCoordSpinBox_valueChanged( double d );
     void on_mYCoordSpinBox_valueChanged( double d );
+    void on_mFontFamilyCmbBx_currentFontChanged( const QFont& f );
+    void on_mFontStyleCmbBx_currentIndexChanged( const QString & text );
+    void on_mFontUnderlineBtn_toggled( bool ckd );
+    void on_mFontStrikethroughBtn_toggled( bool ckd );
+    void on_mFontBoldBtn_toggled( bool ckd );
+    void on_mFontItalicBtn_toggled( bool ckd );
     void on_mFontSizeSpinBox_valueChanged( double d );
     void on_mBufferSizeSpinBox_valueChanged( double d );
     void on_mRotationSpinBox_valueChanged( double d );
-    void on_mFontPushButton_clicked();
     void on_mFontColorButton_colorChanged( const QColor &color );
     void on_mBufferColorButton_colorChanged( const QColor &color );
-    void on_mHaliComboBox_currentIndexChanged( const QString& text );
-    void on_mValiComboBox_currentIndexChanged( const QString& text );
+    void on_mHaliComboBox_currentIndexChanged( const int index );
+    void on_mValiComboBox_currentIndexChanged( const int index );
     void on_mLabelTextLineEdit_textChanged( const QString& text );
 
   private:
-    /**Sets activation / values to the gui elements depending on the label settings and feature values*/
+    /** Sets activation / values to the gui elements depending on the label settings and feature values*/
     void init( const QString& layerId, int featureId, const QString& labelText );
     void disableGuiElements();
-    /**Block / unblock all input element signals*/
+    /** Block / unblock all input element signals*/
     void blockElementSignals( bool block );
+
+    void setDataDefinedValues( const QgsPalLayerSettings &layerSettings, QgsVectorLayer* vlayer );
+    void enableDataDefinedWidgets( QgsVectorLayer* vlayer );
+
+    /** Updates font when family or style is updated */
+    void updateFont( const QFont& font, bool block = true );
+
+    /** Updates combobox with named styles of font */
+    void populateFontStyleComboBox();
 
     void fillHaliComboBox();
     void fillValiComboBox();
 
-    /**Insert changed value into mChangedProperties*/
-    void insertChangedValue( QgsPalLayerSettings::DataDefinedProperties p, QVariant value );
-
-    QgsMapRenderer* mMapRenderer;
+    /** Insert changed value into mChangedProperties*/
+    void insertChangedValue( QgsPalLayerSettings::DataDefinedProperties p, const QVariant& value );
 
     QgsAttributeMap mChangedProperties;
     QMap< QgsPalLayerSettings::DataDefinedProperties, QgsDataDefined* > mDataDefinedProperties;
     QFont mLabelFont;
 
-    /**Label field for the current layer (or -1 if none)*/
+    QFontDatabase mFontDB;
+
+    /** Label field for the current layer (or -1 if none)*/
     int mCurLabelField;
 
-    /** Current feature
-     * @note added in 1.9
-     */
+    /** Current feature */
     QgsFeature mCurLabelFeat;
 };
 

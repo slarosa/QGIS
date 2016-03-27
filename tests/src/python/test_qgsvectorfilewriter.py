@@ -8,26 +8,21 @@ the Free Software Foundation; either version 2 of the License, or
 """
 __author__ = 'Tim Sutton'
 __date__ = '20/08/2012'
-__copyright__ = 'Copyright 2012, The Quantum GIS Project'
+__copyright__ = 'Copyright 2012, The QGIS Project'
 # This will get replaced with a git SHA1 when you do a git archive
 __revision__ = '$Format:%H$'
 
-import os
-
-from PyQt4.QtCore import QVariant, QDir, QString, QStringList
+import qgis
 
 from qgis.core import (QgsVectorLayer,
                        QgsFeature,
                        QgsGeometry,
-                       QgsPoint,
-                       QgsVectorFileWriter,
-                       QgsCoordinateReferenceSystem)
+                       QgsPoint
+                       )
 
-from utilities import (#unitTestDataPath,
-                       getQgisTestApp,
+from utilities import (getQgisTestApp,
                        TestCase,
                        unittest,
-                       #expectedFailure,
                        writeShape
                        )
 QGISAPP, CANVAS, IFACE, PARENT = getQgisTestApp()
@@ -41,7 +36,7 @@ class TestQgsVectorLayer(TestCase):
         """Check we can write a vector file."""
         self.mMemoryLayer = QgsVectorLayer(
             ('Point?crs=epsg:4326&field=name:string(20)&'
-            'field=age:integer&field=size:double&index=yes'),
+             'field=age:integer&field=size:double&index=yes'),
             'test',
             'memory')
 
@@ -50,12 +45,10 @@ class TestQgsVectorLayer(TestCase):
         assert myProvider is not None
 
         ft = QgsFeature()
-        ft.setGeometry(QgsGeometry.fromPoint(QgsPoint(10,10)))
-        ft.setAttributes([ QVariant('Johny'),
-                           QVariant(20),
-                           QVariant(0.3)])
+        ft.setGeometry(QgsGeometry.fromPoint(QgsPoint(10, 10)))
+        ft.setAttributes(['Johny', 20, 0.3])
         myResult, myFeatures = myProvider.addFeatures([ft])
-        assert myResult == True
+        assert myResult
         assert len(myFeatures) > 0
 
         writeShape(self.mMemoryLayer, 'writetest.shp')

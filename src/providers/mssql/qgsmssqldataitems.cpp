@@ -35,8 +35,20 @@
 // ---------------------------------------------------------------------------
 QgsMssqlConnectionItem::QgsMssqlConnectionItem( QgsDataItem* parent, QString name, QString path )
     : QgsDataCollectionItem( parent, name, path )
+    , mUseGeometryColumns( false )
+    , mUseEstimatedMetadata( false )
+    , mAllowGeometrylessTables( true )
 {
-  mIcon = QgsApplication::getThemeIcon( "mIconConnect.png" );
+  mCapabilities |= Fast;
+  mIconName = "mIconConnect.png";
+}
+
+QgsMssqlConnectionItem::~QgsMssqlConnectionItem()
+{
+}
+
+void QgsMssqlConnectionItem::readConnectionSettings()
+{
   QSettings settings;
   QString key = "/MSSQL/connections/" + mName;
   mService = settings.value( key + "/service" ).toString();
@@ -56,15 +68,11 @@ QgsMssqlConnectionItem::QgsMssqlConnectionItem( QgsDataItem* parent, QString nam
   mUseEstimatedMetadata = settings.value( key + "/estimatedMetadata", false ).toBool();
   mAllowGeometrylessTables = settings.value( key + "/allowGeometrylessTables", true ).toBool();
 
-  mConnInfo =  "dbname='" + mDatabase + "' host=" + mHost + " user='" + mUsername + "' password='" + mPassword + "'";
+  mConnInfo =  "dbname='" + mDatabase + "' host=" + mHost + " user='" + mUsername + "' password='" + mPassword + '\'';
   if ( !mService.isEmpty() )
-    mConnInfo += " service='" + mService + "'";
+    mConnInfo += " service='" + mService + '\'';
   if ( mUseEstimatedMetadata )
     mConnInfo += " estimatedmetadata=true";
-}
-
-QgsMssqlConnectionItem::~QgsMssqlConnectionItem()
-{
 }
 
 void QgsMssqlConnectionItem::refresh()
@@ -72,10 +80,10 @@ void QgsMssqlConnectionItem::refresh()
   QgsDebugMsg( "mPath = " + mPath );
 
   // read up the schemas and layers from database
-  QVector<QgsDataItem*> items = createChildren( );
+  QVector<QgsDataItem*> items = createChildren();
 
   // Add new items
-  foreach ( QgsDataItem *item, items )
+  Q_FOREACH ( QgsDataItem *item, items )
   {
     // Is it present in childs?
     int index = findItem( mChildren, item );
@@ -95,33 +103,17 @@ QVector<QgsDataItem*> QgsMssqlConnectionItem::createChildren()
 
   QVector<QgsDataItem*> children;
 
-  QSqlDatabase db = QgsMssqlProvider::GetDatabase( mService,
-                    mHost, mDatabase, mUsername, mPassword );
+  readConnectionSettings();
+
+  QSqlDatabase db = QgsMssqlProvider::GetDatabase( mService, mHost, mDatabase, mUsername, mPassword );
 
   if ( !QgsMssqlProvider::OpenDatabase( db ) )
   {
-    children.append( new QgsErrorItem( this, db.lastError( ).text( ), mPath + "/error" ) );
+    children.append( new QgsErrorItem( this, db.lastError().text(), mPath + "/error" ) );
     return children;
   }
 
-  QString connectionName;
-  if ( mService.isEmpty() )
-  {
-    if ( mHost.isEmpty() )
-    {
-      children.append( new QgsErrorItem( this, "QgsMssqlProvider host name not specified", mPath + "/error" ) );
-      return children;
-    }
-
-    if ( mDatabase.isEmpty() )
-    {
-      children.append( new QgsErrorItem( this, "QgsMssqlProvider database name not specified", mPath + "/error" ) );
-      return children;
-    }
-    connectionName = mHost + "." + mDatabase;
-  }
-  else
-    connectionName = mService;
+  QString connectionName = db.connectionName();
 
   QgsMssqlGeomColumnTypeThread *columnTypeThread = 0;
 
@@ -144,7 +136,7 @@ QVector<QgsDataItem*> QgsMssqlConnectionItem::createChildren()
   // issue the sql query
   QSqlQuery q = QSqlQuery( db );
   q.setForwardOnly( true );
-  q.exec( query );
+  ( void )q.exec( query );
 
   if ( q.isActive() )
   {
@@ -158,14 +150,15 @@ QVector<QgsDataItem*> QgsMssqlConnectionItem::createChildren()
       layer.srid = q.value( 3 ).toString();
       layer.type = q.value( 4 ).toString();
       layer.pkCols = QStringList(); //TODO
+      layer.isGeography = false;
 
       // skip layers which are added already
       bool skip = false;
-      foreach ( QgsDataItem *child, mChildren )
+      Q_FOREACH ( QgsDataItem *child, mChildren )
       {
         if ( child->name() == layer.schemaName )
         {
-          foreach ( QgsDataItem *child2, child->children() )
+          Q_FOREACH ( QgsDataItem *child2, child->children() )
           {
             if ( child2->name() == layer.tableName )
             {
@@ -184,7 +177,7 @@ QVector<QgsDataItem*> QgsMssqlConnectionItem::createChildren()
       QString srid = layer.srid;
 
       QgsMssqlSchemaItem* schemaItem = NULL;
-      foreach ( QgsDataItem *child, children )
+      Q_FOREACH ( QgsDataItem *child, children )
       {
         if ( child->name() == layer.schemaName )
         {
@@ -195,7 +188,7 @@ QVector<QgsDataItem*> QgsMssqlConnectionItem::createChildren()
 
       if ( !schemaItem )
       {
-        schemaItem = new QgsMssqlSchemaItem( this, layer.schemaName, mPath + "/" + layer.schemaName );
+        schemaItem = new QgsMssqlSchemaItem( this, layer.schemaName, mPath + '/' + layer.schemaName );
         children.append( schemaItem );
       }
 
@@ -225,9 +218,9 @@ QVector<QgsDataItem*> QgsMssqlConnectionItem::createChildren()
     }
 
     // Remove no more present items
-    foreach ( QgsDataItem *child, mChildren )
+    Q_FOREACH ( QgsDataItem *child, mChildren )
     {
-      foreach ( QgsDataItem *child2, child->children() )
+      Q_FOREACH ( QgsDataItem *child2, child->children() )
       {
         if ( findItem( newLayers, child2 ) < 0 )
           child->deleteChildItem( child2 );
@@ -246,7 +239,7 @@ void QgsMssqlConnectionItem::setLayerType( QgsMssqlLayerProperty layerProperty )
 {
   QgsMssqlSchemaItem *schemaItem = NULL;
 
-  foreach ( QgsDataItem *child, mChildren )
+  Q_FOREACH ( QgsDataItem *child, mChildren )
   {
     if ( child->name() == layerProperty.schemaName )
     {
@@ -255,20 +248,20 @@ void QgsMssqlConnectionItem::setLayerType( QgsMssqlLayerProperty layerProperty )
     }
   }
 
-  foreach ( QgsDataItem *layerItem, schemaItem->children() )
-  {
-    if ( layerItem->name() == layerProperty.tableName )
-      return; // already added
-  }
-
   if ( !schemaItem )
   {
     QgsDebugMsg( QString( "schema item for %1 not found." ).arg( layerProperty.schemaName ) );
     return;
   }
 
-  QStringList typeList = layerProperty.type.split( ",", QString::SkipEmptyParts );
-  QStringList sridList = layerProperty.srid.split( ",", QString::SkipEmptyParts );
+  Q_FOREACH ( QgsDataItem *layerItem, schemaItem->children() )
+  {
+    if ( layerItem->name() == layerProperty.tableName )
+      return; // already added
+  }
+
+  QStringList typeList = layerProperty.type.split( ',', QString::SkipEmptyParts );
+  QStringList sridList = layerProperty.srid.split( ',', QString::SkipEmptyParts );
   Q_ASSERT( typeList.size() == sridList.size() );
 
   for ( int i = 0 ; i < typeList.size(); i++ )
@@ -301,6 +294,12 @@ QList<QAction*> QgsMssqlConnectionItem::actions()
 {
   QList<QAction*> lst;
 
+  QAction* actionShowNoGeom = new QAction( tr( "Show non-spatial tables" ), this );
+  actionShowNoGeom->setCheckable( true );
+  actionShowNoGeom->setChecked( mAllowGeometrylessTables );
+  connect( actionShowNoGeom, SIGNAL( toggled( bool ) ), this, SLOT( setAllowGeometrylessTables( bool ) ) );
+  lst.append( actionShowNoGeom );
+
   QAction* actionEdit = new QAction( tr( "Edit..." ), this );
   connect( actionEdit, SIGNAL( triggered() ), this, SLOT( editConnection() ) );
   lst.append( actionEdit );
@@ -310,6 +309,15 @@ QList<QAction*> QgsMssqlConnectionItem::actions()
   lst.append( actionDelete );
 
   return lst;
+}
+
+void QgsMssqlConnectionItem::setAllowGeometrylessTables( bool allow )
+{
+  mAllowGeometrylessTables = allow;
+  QString key = "/MSSQL/connections/" + mName;
+  QSettings settings;
+  settings.setValue( key + "/allowGeometrylessTables", allow );
+  refresh();
 }
 
 void QgsMssqlConnectionItem::editConnection()
@@ -341,7 +349,7 @@ bool QgsMssqlConnectionItem::handleDrop( const QMimeData * data, Qt::DropAction 
   QStringList importResults;
   bool hasError = false;
   QgsMimeDataUtils::UriList lst = QgsMimeDataUtils::decodeUriList( data );
-  foreach ( const QgsMimeDataUtils::Uri& u, lst )
+  Q_FOREACH ( const QgsMimeDataUtils::Uri& u, lst )
   {
     if ( u.layerType != "vector" )
     {
@@ -364,7 +372,7 @@ bool QgsMssqlConnectionItem::handleDrop( const QMimeData * data, Qt::DropAction 
         importResults.append( tr( "%1: OK!" ).arg( u.name ) );
       else
       {
-        importResults.append( QString( "%1: %2" ).arg( u.name ).arg( importError ) );
+        importResults.append( QString( "%1: %2" ).arg( u.name, importError ) );
         hasError = true;
       }
     }
@@ -388,7 +396,7 @@ bool QgsMssqlConnectionItem::handleDrop( const QMimeData * data, Qt::DropAction 
     QMessageBox::information( 0, tr( "Import to MSSQL database" ), tr( "Import was successful." ) );
   }
 
-  if ( mPopulated )
+  if ( state() == Populated )
     refresh();
   else
     populate();
@@ -403,7 +411,7 @@ QgsMssqlLayerItem::QgsMssqlLayerItem( QgsDataItem* parent, QString name, QString
     , mLayerProperty( layerProperty )
 {
   mUri = createUri();
-  mPopulated = true;
+  setState( Populated );
 }
 
 QgsMssqlLayerItem::~QgsMssqlLayerItem()
@@ -417,7 +425,7 @@ QgsMssqlLayerItem* QgsMssqlLayerItem::createClone()
 
 QString QgsMssqlLayerItem::createUri()
 {
-  QString pkColName = mLayerProperty.pkCols.size() > 0 ? mLayerProperty.pkCols.at( 0 ) : QString::null;
+  QString pkColName = !mLayerProperty.pkCols.isEmpty() ? mLayerProperty.pkCols.at( 0 ) : QString::null;
   QgsMssqlConnectionItem *connItem = qobject_cast<QgsMssqlConnectionItem *>( parent() ? parent()->parent() : 0 );
 
   if ( !connItem )
@@ -438,7 +446,7 @@ QString QgsMssqlLayerItem::createUri()
 QgsMssqlSchemaItem::QgsMssqlSchemaItem( QgsDataItem* parent, QString name, QString path )
     : QgsDataCollectionItem( parent, name, path )
 {
-  mIcon = QgsApplication::getThemeIcon( "mIconDbSchema.png" );
+  mIconName = "mIconDbSchema.png";
 }
 
 QVector<QgsDataItem*> QgsMssqlSchemaItem::createChildren()
@@ -454,7 +462,7 @@ QgsMssqlSchemaItem::~QgsMssqlSchemaItem()
 void QgsMssqlSchemaItem::addLayers( QgsDataItem* newLayers )
 {
   // Add new items
-  foreach ( QgsDataItem *child, newLayers->children() )
+  Q_FOREACH ( QgsDataItem *child, newLayers->children() )
   {
     // Is it present in childs?
     if ( findItem( mChildren, child ) >= 0 )
@@ -469,7 +477,7 @@ void QgsMssqlSchemaItem::addLayers( QgsDataItem* newLayers )
 QgsMssqlLayerItem* QgsMssqlSchemaItem::addLayer( QgsMssqlLayerProperty layerProperty, bool refresh )
 {
   QGis::WkbType wkbType = QgsMssqlTableModel::wkbTypeFromMssql( layerProperty.type );
-  QString tip = tr( "%1 as %2 in %3" ).arg( layerProperty.geometryColName ).arg( QgsMssqlTableModel::displayStringForWkbType( wkbType ) ).arg( layerProperty.srid );
+  QString tip = tr( "%1 as %2 in %3" ).arg( layerProperty.geometryColName, QgsMssqlTableModel::displayStringForWkbType( wkbType ), layerProperty.srid );
 
   QgsLayerItem::LayerType layerType;
   switch ( wkbType )
@@ -504,7 +512,7 @@ QgsMssqlLayerItem* QgsMssqlSchemaItem::addLayer( QgsMssqlLayerProperty layerProp
       }
   }
 
-  QgsMssqlLayerItem *layerItem = new QgsMssqlLayerItem( this, layerProperty.tableName, mPath + "/" + layerProperty.tableName, layerType, layerProperty );
+  QgsMssqlLayerItem *layerItem = new QgsMssqlLayerItem( this, layerProperty.tableName, mPath + '/' + layerProperty.tableName, layerType, layerProperty );
   layerItem->setToolTip( tip );
   if ( refresh )
     addChildItem( layerItem, true );
@@ -518,7 +526,7 @@ QgsMssqlLayerItem* QgsMssqlSchemaItem::addLayer( QgsMssqlLayerProperty layerProp
 QgsMssqlRootItem::QgsMssqlRootItem( QgsDataItem* parent, QString name, QString path )
     : QgsDataCollectionItem( parent, name, path )
 {
-  mIcon = QgsApplication::getThemeIcon( "mIconMssql.png" );
+  mIconName = "mIconMssql.svg";
   populate();
 }
 
@@ -531,9 +539,9 @@ QVector<QgsDataItem*> QgsMssqlRootItem::createChildren()
   QVector<QgsDataItem*> connections;
   QSettings settings;
   settings.beginGroup( "/MSSQL/connections" );
-  foreach ( QString connName, settings.childGroups() )
+  Q_FOREACH ( const QString& connName, settings.childGroups() )
   {
-    connections << new QgsMssqlConnectionItem( this, connName, mPath + "/" + connName );
+    connections << new QgsMssqlConnectionItem( this, connName, mPath + '/' + connName );
   }
   return connections;
 }

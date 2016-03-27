@@ -3,7 +3,7 @@
     ---------------------
     begin                : August 2012
     copyright            : (C) 2012 by Matthias Kuhn
-    email                : matthias dot kuhn at gmx dot ch
+    email                : matthias at opengis dot ch
  ***************************************************************************
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -15,6 +15,7 @@
 #include "qgshistogramdiagram.h"
 #include "qgsdiagramrendererv2.h"
 #include "qgsrendercontext.h"
+#include "qgsexpression.h"
 
 #include <QPainter>
 
@@ -29,20 +30,33 @@ QgsHistogramDiagram::~QgsHistogramDiagram()
 {
 }
 
-QSizeF QgsHistogramDiagram::diagramSize( const QgsAttributes& attributes, const QgsRenderContext& c, const QgsDiagramSettings& s, const QgsDiagramInterpolationSettings& is )
+QgsHistogramDiagram* QgsHistogramDiagram::clone() const
 {
-  Q_UNUSED( c );
-  QSize size;
-  if ( attributes.count() == 0 )
+  return new QgsHistogramDiagram( *this );
+}
+
+QSizeF QgsHistogramDiagram::diagramSize( const QgsFeature& feature, const QgsRenderContext& c, const QgsDiagramSettings& s, const QgsDiagramInterpolationSettings& is )
+{
+  QSizeF size;
+  if ( feature.attributes().isEmpty() )
   {
-    return QSizeF(); //zero size if no attributes
+    return size; //zero size if no attributes
   }
 
-  double maxValue = attributes[0].toDouble();
+  if ( is.upperValue - is.lowerValue == 0 )
+    return size; // invalid value range => zero size
 
-  for ( int i = 1; i < attributes.count(); ++i )
+  double maxValue = 0;
+
+  QgsExpressionContext expressionContext = c.expressionContext();
+  expressionContext.setFeature( feature );
+  if ( feature.fields() )
+    expressionContext.setFields( *feature.fields() );
+
+  Q_FOREACH ( const QString& cat, s.categoryAttributes )
   {
-    maxValue = qMax( attributes[i].toDouble(), maxValue );
+    QgsExpression* expression = getExpression( cat, expressionContext );
+    maxValue = qMax( expression->evaluate( &expressionContext ).toDouble(), maxValue );
   }
 
   // Scale, if extension is smaller than the specified minimum
@@ -56,13 +70,13 @@ QSizeF QgsHistogramDiagram::diagramSize( const QgsAttributes& attributes, const 
     case QgsDiagramSettings::Up:
     case QgsDiagramSettings::Down:
       mScaleFactor = (( is.upperSize.width() - is.lowerSize.height() ) / ( is.upperValue - is.lowerValue ) );
-      size.scale( s.barWidth * attributes.size(), maxValue * mScaleFactor, Qt::IgnoreAspectRatio );
+      size.scale( s.barWidth * s.categoryAttributes.size(), maxValue * mScaleFactor, Qt::IgnoreAspectRatio );
       break;
 
     case QgsDiagramSettings::Right:
     case QgsDiagramSettings::Left:
       mScaleFactor = (( is.upperSize.width() - is.lowerSize.width() ) / ( is.upperValue - is.lowerValue ) );
-      size.scale( maxValue * mScaleFactor, s.barWidth * attributes.size(), Qt::IgnoreAspectRatio );
+      size.scale( maxValue * mScaleFactor, s.barWidth * s.categoryAttributes.size(), Qt::IgnoreAspectRatio );
       break;
   }
 
@@ -74,16 +88,16 @@ QSizeF QgsHistogramDiagram::diagramSize( const QgsAttributes& attributes, const 
   Q_UNUSED( c );
   QSizeF size;
 
-  if ( attributes.count() == 0 )
+  if ( attributes.isEmpty() )
   {
     return QSizeF(); //zero size if no attributes
   }
 
-  double maxValue = attributes[0].toDouble();
+  double maxValue = attributes.at( 0 ).toDouble();
 
   for ( int i = 0; i < attributes.count(); ++i )
   {
-    maxValue = qMax( attributes[i].toDouble(), maxValue );
+    maxValue = qMax( attributes.at( i ).toDouble(), maxValue );
   }
 
   switch ( s.diagramOrientation )
@@ -105,7 +119,7 @@ QSizeF QgsHistogramDiagram::diagramSize( const QgsAttributes& attributes, const 
   return size;
 }
 
-void QgsHistogramDiagram::renderDiagram( const QgsAttributes& att, QgsRenderContext& c, const QgsDiagramSettings& s, const QPointF& position )
+void QgsHistogramDiagram::renderDiagram( const QgsFeature& feature, QgsRenderContext& c, const QgsDiagramSettings& s, const QPointF& position )
 {
   QPainter* p = c.painter();
   if ( !p )
@@ -114,13 +128,22 @@ void QgsHistogramDiagram::renderDiagram( const QgsAttributes& att, QgsRenderCont
   }
 
   QList<double> values;
+  double maxValue = 0;
 
-  QList<int>::const_iterator catIt = s.categoryIndices.constBegin();
-  for ( ; catIt != s.categoryIndices.constEnd(); ++catIt )
+  QgsExpressionContext expressionContext = c.expressionContext();
+  expressionContext.setFeature( feature );
+  if ( feature.fields() )
+    expressionContext.setFields( *feature.fields() );
+
+  Q_FOREACH ( const QString& cat, s.categoryAttributes )
   {
-    double currentVal = att[*catIt].toDouble();
+    QgsExpression* expression = getExpression( cat, expressionContext );
+    double currentVal = expression->evaluate( &expressionContext ).toDouble();
     values.push_back( currentVal );
+    maxValue = qMax( currentVal, maxValue );
   }
+
+  double scaledMaxVal = sizePainterUnits( maxValue * mScaleFactor, s, c );
 
   double currentOffset = 0;
   double scaledWidth = sizePainterUnits( s.barWidth, s, c );
@@ -144,19 +167,19 @@ void QgsHistogramDiagram::renderDiagram( const QgsAttributes& att, QgsRenderCont
     switch ( s.diagramOrientation )
     {
       case QgsDiagramSettings::Up:
-        p->drawRect( baseX + currentOffset, baseY, scaledWidth, 0 - length );
+        p->drawRect( baseX + currentOffset, baseY, scaledWidth, length * -1 );
         break;
 
       case QgsDiagramSettings::Down:
-        p->drawRect( baseX + currentOffset, baseY, scaledWidth, length );
+        p->drawRect( baseX + currentOffset, baseY - scaledMaxVal, scaledWidth, length );
         break;
 
       case QgsDiagramSettings::Right:
-        p->drawRect( baseX, baseY + currentOffset, length, scaledWidth );
+        p->drawRect( baseX, baseY - currentOffset, length, scaledWidth * -1 );
         break;
 
       case QgsDiagramSettings::Left:
-        p->drawRect( baseX, baseY + currentOffset, 0 - length, scaledWidth );
+        p->drawRect( baseX + scaledMaxVal, baseY - currentOffset, 0 - length, scaledWidth * -1 );
         break;
     }
 

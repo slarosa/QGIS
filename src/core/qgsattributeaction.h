@@ -25,9 +25,10 @@
 #define QGSATTRIBUTEACTION_H
 
 #include <QString>
-#include <QObject>
+#include <QIcon>
 
-#include <qgsfeature.h>
+#include "qgsfeature.h"
+#include "qgsexpressioncontext.h"
 
 class QDomNode;
 class QDomDocument;
@@ -50,11 +51,20 @@ class CORE_EXPORT QgsAction
       OpenUrl,
     };
 
-    QgsAction( ActionType type, QString name, QString action, bool capture ) :
+    QgsAction( ActionType type, const QString& name, const QString& action, bool capture ) :
         mType( type ), mName( name ), mAction( action ), mCaptureOutput( capture ) {}
+
+    QgsAction( ActionType type, const QString& name, const QString& action, const QString& icon, bool capture ) :
+        mType( type ), mName( name ), mIcon( icon ), mAction( action ), mCaptureOutput( capture ) {}
 
     //! The name of the action
     QString name() const { return mName; }
+
+    //! The path to the icon
+    const QString iconPath() const { return mIcon; }
+
+    //! The icon
+    const QIcon icon() const { return QIcon( mIcon ); }
 
     //! The action
     QString action() const { return mAction; }
@@ -84,11 +94,12 @@ class CORE_EXPORT QgsAction
   private:
     ActionType mType;
     QString mName;
+    QString mIcon;
     QString mAction;
     bool mCaptureOutput;
 };
 
-/*! \class QgsAttributeAction
+/** \class QgsAttributeAction
  * \brief Storage and management of actions associated with Qgis layer
  * attributes.
  */
@@ -97,63 +108,71 @@ class  CORE_EXPORT QgsAttributeAction
 {
   public:
     //! Constructor
-    QgsAttributeAction( QgsVectorLayer *layer ) : mLayer( layer ) {}
+    QgsAttributeAction( QgsVectorLayer *layer ) : mLayer( layer ), mDefaultAction( -1 ) {}
 
     //! Destructor
     virtual ~QgsAttributeAction() {}
 
-    //! Add an action with the given name and action details.
-    // Will happily have duplicate names and actions. If
-    // capture is true, when running the action using doAction(),
-    // any stdout from the process will be captured and displayed in a
-    // dialog box.
-    void addAction( QgsAction::ActionType type, QString name, QString action, bool capture = false );
+    /** Add an action with the given name and action details.
+     * Will happily have duplicate names and actions. If
+     * capture is true, when running the action using doAction(),
+     * any stdout from the process will be captured and displayed in a
+     * dialog box.
+     */
+    void addAction( QgsAction::ActionType type, const QString& name, const QString& action, bool capture = false );
+
+    /** Add an action with the given name and action details.
+     * Will happily have duplicate names and actions. If
+     * capture is true, when running the action using doAction(),
+     * any stdout from the process will be captured and displayed in a
+     * dialog box.
+     */
+    void addAction( QgsAction::ActionType type, const QString& name, const QString& action, const QString& icon, bool capture = false );
 
     //! Remove an action at given index
     void removeAction( int index );
 
-    /*! Does the given values. defaultValueIndex is the index of the
+    /** Does the given values. defaultValueIndex is the index of the
      *  field to be used if the action has a $currfield placeholder.
-     *  @note added in 1.9
      *  @note available in python bindings as doActionFeature
      */
     void doAction( int index,
-                   QgsFeature &feat,
+                   const QgsFeature &feat,
                    int defaultValueIndex = 0 );
 
-    /*! Does the action using the expression builder to expand it
+    /** Does the action using the expression builder to expand it
      *  and getting values from the passed feature attribute map.
      *  substitutionMap is used to pass custom substitutions, to replace
      *  each key in the map with the associated value
-     *  @note added in 1.9
      *  @note available in python bindings as doActionFeatureWithSubstitution
      */
     void doAction( int index,
-                   QgsFeature &feat,
-                   const QMap<QString, QVariant> *substitutionMap = 0 );
+                   const QgsFeature &feat,
+                   const QMap<QString, QVariant> *substitutionMap );
 
     //! Removes all actions
     void clearActions() { mActions.clear(); }
 
+    //! List all actions
+    const QList<QgsAction>& listActions() { return mActions; }
+
     //! Return the layer
     QgsVectorLayer *layer() { return mLayer; }
 
-    /*! Expands the given action, replacing all %'s with the value as
+    /** Expands the given action, replacing all %'s with the value as
      *  given.
      */
     QString expandAction( QString action, const QgsAttributeMap &attributes, uint defaultValueIndex );
 
-    /*! Expands the given action using the expression builder
+    /** Expands the given action using the expression builder
      *  This function currently replaces each expression between [% and %]
      *  placeholders in the action with the result of its evaluation on
      *  the feature passed as argument.
      *
      *  Additional substitutions can be passed through the substitutionMap
      *  parameter
-     *
-     *  @note added in 1.9
      */
-    QString expandAction( QString action,
+    QString expandAction( const QString& action,
                           QgsFeature &feat,
                           const QMap<QString, QVariant> *substitutionMap = 0 );
 
@@ -168,11 +187,13 @@ class  CORE_EXPORT QgsAttributeAction
     QgsAction &at( int idx ) { return mActions[idx]; }
     QgsAction &operator[]( int idx ) { return mActions[idx]; }
 
-    //! @deprecated Initialize QgsPythonRunner instead
-    static void setPythonExecute( void ( * )( const QString & ) );
+    /** @deprecated Initialize QgsPythonRunner instead
+     * @note not available in Python bindings
+     */
+    Q_DECL_DEPRECATED static void setPythonExecute( void ( * )( const QString & ) );
 
     //! Whether the action is the default action
-    int defaultAction() const { return mDefaultAction < 0 || mDefaultAction >= size() ? 0 : mDefaultAction; }
+    int defaultAction() const { return mDefaultAction < 0 || mDefaultAction >= size() ? -1 : mDefaultAction; }
     void setDefaultAction( int actionNumber ) { mDefaultAction = actionNumber ; }
 
   private:
@@ -184,6 +205,8 @@ class  CORE_EXPORT QgsAttributeAction
                     void ( *executePython )( const QString & ) = 0 );
 
     int mDefaultAction;
+
+    QgsExpressionContext createExpressionContext() const;
 };
 
 #endif

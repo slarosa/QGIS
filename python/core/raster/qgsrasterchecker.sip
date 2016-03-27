@@ -1,5 +1,5 @@
 
-/**  Raster checker for tests in python */
+/** Raster checker for tests in python */
 
 class QgsRasterChecker
 {
@@ -10,11 +10,18 @@ class QgsRasterChecker
 
     QgsRasterChecker();
 
+    //! Destructor
     ~QgsRasterChecker();
 
     QString report();
-
-    bool runTest( QString theVerifiedKey, QString theVerifiedUri,
-                  QString theExpectedKey, QString theExpectedUri );
+    /**
+     * Test using renderer to generate the image to be compared.
+     * @param theVerifiedKey verified provider key
+     * @param theVerifiedUri URI of the raster to be verified
+     * @param theExpectedKey expected provider key
+     * @param theExpectedUri URI of the expected (control) raster
+     */
+    bool runTest( const QString& theVerifiedKey, QString theVerifiedUri,
+                  const QString& theExpectedKey, QString theExpectedUri );
 };
 

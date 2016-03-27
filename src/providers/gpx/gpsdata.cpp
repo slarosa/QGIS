@@ -33,11 +33,11 @@
 QString QgsGPSObject::xmlify( const QString& str )
 {
   QString tmp = str;
-  tmp.replace( "&", "&amp;" );
-  tmp.replace( "<", "&lt;" );
-  tmp.replace( ">", "&gt;" );
-  tmp.replace( "\"", "&quot;" );
-  tmp.replace( "\'", "&apos;" );
+  tmp.replace( '&', "&amp;" );
+  tmp.replace( '<', "&lt;" );
+  tmp.replace( '>', "&gt;" );
+  tmp.replace( '\"', "&quot;" );
+  tmp.replace( '\'', "&apos;" );
   return tmp;
 }
 
@@ -60,6 +60,8 @@ void QgsGPSObject::writeXML( QTextStream& stream )
 
 
 QgsGPSPoint::QgsGPSPoint()
+    : lat( 0. )
+    , lon( 0. )
 {
   ele = -std::numeric_limits<double>::max();
 }
@@ -76,11 +78,11 @@ void QgsGPSPoint::writeXML( QTextStream& stream )
 
 
 QgsGPSExtended::QgsGPSExtended()
-    : xMin( std::numeric_limits<double>::max() ),
-    xMax( -std::numeric_limits<double>::max() ),
-    yMin( std::numeric_limits<double>::max() ),
-    yMax( -std::numeric_limits<double>::max() ),
-    number( std::numeric_limits<int>::max() )
+    : xMin( std::numeric_limits<double>::max() )
+    , xMax( -std::numeric_limits<double>::max() )
+    , yMin( std::numeric_limits<double>::max() )
+    , yMax( -std::numeric_limits<double>::max() )
+    , number( std::numeric_limits<int>::max() )
 {
 
 }
@@ -107,7 +109,7 @@ void QgsRoute::writeXML( QTextStream& stream )
 {
   stream << "<rte>\n";
   QgsGPSExtended::writeXML( stream );
-  for ( unsigned int i = 0; i < points.size(); ++i )
+  for ( int i = 0; i < points.size(); ++i )
   {
     stream << "<rtept lat=\"" << QString::number( points[i].lat, 'f', OUTPUT_PRECISION )
     << "\" lon=\"" << QString::number( points[i].lon, 'f', OUTPUT_PRECISION ) << "\">\n";
@@ -122,10 +124,10 @@ void QgsTrack::writeXML( QTextStream& stream )
 {
   stream << "<trk>\n";
   QgsGPSExtended::writeXML( stream );
-  for ( unsigned int i = 0; i < segments.size(); ++i )
+  for ( int i = 0; i < segments.size(); ++i )
   {
     stream << "<trkseg>\n";
-    for ( unsigned int j = 0; j < segments[i].points.size(); ++j )
+    for ( int j = 0; j < segments[i].points.size(); ++j )
     {
       stream << "<trkpt lat=\"" <<
       QString::number( segments[i].points[j].lat, 'f', OUTPUT_PRECISION ) <<
@@ -223,7 +225,7 @@ QgsGPSData::TrackIterator QgsGPSData::tracksEnd()
 
 
 QgsGPSData::WaypointIterator QgsGPSData::addWaypoint( double lat, double lon,
-    QString name, double ele )
+    const QString& name, double ele )
 {
   QgsWaypoint wpt;
   wpt.lat = lat;
@@ -246,7 +248,7 @@ QgsGPSData::WaypointIterator QgsGPSData::addWaypoint( const QgsWaypoint& wpt )
 }
 
 
-QgsGPSData::RouteIterator QgsGPSData::addRoute( QString name )
+QgsGPSData::RouteIterator QgsGPSData::addRoute( const QString& name )
 {
   QgsRoute rte;
   rte.name = name;
@@ -266,7 +268,7 @@ QgsGPSData::RouteIterator QgsGPSData::addRoute( const QgsRoute& rte )
 }
 
 
-QgsGPSData::TrackIterator QgsGPSData::addTrack( QString name )
+QgsGPSData::TrackIterator QgsGPSData::addTrack( const QString& name )
 {
   QgsTrack trk;
   trk.name = name;
@@ -409,7 +411,7 @@ QgsGPSData* QgsGPSData::getData( const QString& fileName )
 
     data->setNoDataExtent();
 
-    dataObjects[fileName] = std::pair<QgsGPSData*, unsigned>( data, 0 );
+    dataObjects[fileName] = qMakePair<QgsGPSData*, unsigned>( data, 0 );
   }
   else
   {
@@ -418,8 +420,8 @@ QgsGPSData* QgsGPSData::getData( const QString& fileName )
 
   // return a pointer and increase the reference count for that file name
   DataMap::iterator iter = dataObjects.find( fileName );
-  ++( iter->second.second );
-  return ( QgsGPSData* )( iter->second.first );
+  ++( iter.value().second );
+  return ( QgsGPSData* )( iter.value().first );
 }
 
 
@@ -432,10 +434,10 @@ void QgsGPSData::releaseData( const QString& fileName )
   if ( iter != dataObjects.end() )
   {
     QgsDebugMsg( "unrefing " + fileName );
-    if ( --( iter->second.second ) == 0 )
+    if ( --( iter.value().second ) == 0 )
     {
       QgsDebugMsg( "No one's using " + fileName + ", I'll erase it" );
-      delete iter->second.first;
+      delete iter.value().first;
       dataObjects.erase( iter );
     }
   }

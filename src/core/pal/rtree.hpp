@@ -14,10 +14,6 @@
  *    - 2008 Portability issues fixed by Maxence Laurent
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #ifdef _MSC_VER
 #ifndef _CRT_SECURE_NO_DEPRECATE
 #define _CRT_SECURE_NO_DEPRECATE
@@ -31,14 +27,9 @@
 #include <cmath>
 #include <cassert>
 #include <cstdlib>
+#include <QtGlobal>
 
 #define ASSERT assert // RTree uses ASSERT( condition )
-#ifndef Min
-#define Min(a,b) (a<b?a:b)
-#endif //Min
-#ifndef Max
-#define Max(a,b) (a>b?a:b)
-#endif //Max
 
 //
 // RTree.h
@@ -144,6 +135,7 @@ namespace pal
 
           struct StackElement
           {
+            StackElement() : m_node( NULL ), m_branchIndex( 0 ) {}
             Node* m_node;
             int m_branchIndex;
           };
@@ -155,10 +147,10 @@ namespace pal
           ~Iterator()                                   { }
 
           /// Is iterator invalid
-          bool IsNull()                                 { return ( m_tos <= 0 ); }
+          bool IsNull() const                           { return ( m_tos <= 0 ); }
 
           /// Is iterator pointing to valid data
-          bool IsNotNull()                              { return ( m_tos > 0 ); }
+          bool IsNotNull() const                        { return ( m_tos > 0 ); }
 
           /// Access the current data element. Caller must be sure iterator is not NULL first.
           DATATYPE& operator*()
@@ -388,6 +380,9 @@ namespace pal
 
       bool OpenRead( const char* a_fileName )
       {
+        if ( m_file )
+          fclose( m_file );
+
         m_file = fopen( a_fileName, "rb" );
         if ( !m_file )
         {
@@ -398,6 +393,9 @@ namespace pal
 
       bool OpenWrite( const char* a_fileName )
       {
+        if ( m_file )
+          fclose( m_file );
+
         m_file = fopen( a_fileName, "wb" );
         if ( !m_file )
         {
@@ -972,7 +970,7 @@ namespace pal
   {
     ASSERT( a_node );
 
-    int firstTime = true;
+    bool firstTime = true;
     Rect rect;
     InitRect( &rect );
 
@@ -1087,8 +1085,8 @@ namespace pal
 
     for ( int index = 0; index < NUMDIMS; ++index )
     {
-      newRect.m_min[index] = Min( a_rectA->m_min[index], a_rectB->m_min[index] );
-      newRect.m_max[index] = Max( a_rectA->m_max[index], a_rectB->m_max[index] );
+      newRect.m_min[index] = qMin( a_rectA->m_min[index], a_rectB->m_min[index] );
+      newRect.m_max[index] = qMax( a_rectA->m_max[index], a_rectB->m_max[index] );
     }
 
     return newRect;

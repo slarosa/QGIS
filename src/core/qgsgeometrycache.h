@@ -1,14 +1,16 @@
 #ifndef QGSGEOMETRYCACHE_H
 #define QGSGEOMETRYCACHE_H
 
+#include "qgsgeometry.h"
 #include "qgsfeature.h"
+#include "qgsrectangle.h"
 
-#include "qgsvectorlayer.h"
+#include <QMap>
 
-class QgsGeometryCache
+class CORE_EXPORT QgsGeometryCache
 {
   public:
-    QgsGeometryCache( QgsVectorLayer* layer );
+    QgsGeometryCache();
     ~QgsGeometryCache();
 
     inline QgsGeometryMap& cachedGeometries() { return mCachedGeometries; }
@@ -31,14 +33,10 @@ class QgsGeometryCache
 
   protected:
 
-    inline QgsVectorLayerEditBuffer* editBuffer() { return L->editBuffer(); }
-
-    QgsVectorLayer* L;
-
-    /** cache of the committed geometries retrieved *for the current display* */
+    /** Cache of the committed geometries retrieved *for the current display* */
     QgsGeometryMap mCachedGeometries;
 
-    /** extent for which there are cached geometries */
+    /** Extent for which there are cached geometries */
     QgsRectangle mCachedGeometriesRect;
 
 };

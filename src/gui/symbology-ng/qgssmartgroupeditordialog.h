@@ -13,8 +13,8 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef QGSSMARTGROUPCONDITION_H
-#define QGSSMARTGROUPCONDITION_H
+#ifndef QGSSMARTGROUPEDITORDIALOG_H
+#define QGSSMARTGROUPEDITORDIALOG_H
 
 #include "ui_qgssmartgroupconditionwidget.h"
 
@@ -32,10 +32,10 @@ class GUI_EXPORT QgsSmartGroupCondition : public QWidget, private Ui::QgsSmartGr
     QString parameter();
 
     //! sets the given constraint
-    void setConstraint( QString constraint );
+    void setConstraint( const QString& constraint );
 
     //! sets the given param
-    void setParameter( QString param );
+    void setParameter( const QString& param );
 
     //! sets the remove button hidden state to 'hide'
     void hideRemoveButton( bool hide );
@@ -51,11 +51,6 @@ class GUI_EXPORT QgsSmartGroupCondition : public QWidget, private Ui::QgsSmartGr
 
 };
 
-#endif //QGSSMARTGROUPCONDITION
-
-
-#ifndef QGSSMARTGROUPEDITORDIALOG_H
-#define QGSSMARTGROUPEDITORDIALOG_H
 
 #include <QDialog>
 
@@ -87,10 +82,10 @@ class GUI_EXPORT QgsSmartGroupEditorDialog : public QDialog, private Ui::QgsSmar
     void setConditionMap( QgsSmartConditionMap );
 
     //! sets the operator AND/OR
-    void setOperator( QString );
+    void setOperator( const QString& );
 
     //! sets the smart group Name
-    void setSmartgroupName( QString );
+    void setSmartgroupName( const QString& );
 
   public slots:
 
@@ -113,4 +108,3 @@ class GUI_EXPORT QgsSmartGroupEditorDialog : public QDialog, private Ui::QgsSmar
 };
 
 #endif // QGSSMARTGROUPEDITORDIALOG_H
-

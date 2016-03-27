@@ -30,7 +30,7 @@ back to QgsVectorLayer.
 
 class QgsAttributeAction;
 
-class QgsAttributeActionDialog: public QWidget, private Ui::QgsAttributeActionDialogBase
+class APP_EXPORT QgsAttributeActionDialog: public QWidget, private Ui::QgsAttributeActionDialogBase
 {
     Q_OBJECT
 
@@ -39,7 +39,7 @@ class QgsAttributeActionDialog: public QWidget, private Ui::QgsAttributeActionDi
                               const QgsFields& fields,
                               QWidget* parent = 0 );
 
-    ~QgsAttributeActionDialog() {};
+    ~QgsAttributeActionDialog() {}
 
     void init();
 
@@ -58,10 +58,11 @@ class QgsAttributeActionDialog: public QWidget, private Ui::QgsAttributeActionDi
 
   private slots:
     void updateButtons();
+    void chooseIcon();
 
   private:
 
-    void insertRow( int row, QgsAction::ActionType type, const QString &name, const QString &action, bool capture );
+    void insertRow( int row, QgsAction::ActionType type, const QString &name, const QString &action, const QString& iconPath, bool capture );
     void swapRows( int row1, int row2 );
 
     void insert( int pos );

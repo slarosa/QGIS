@@ -45,12 +45,14 @@ static const QString sPluginIcon = ":/compass.svn";
  * @param qgis Pointer to the QGIS main window
  * @param _qI Pointer to the QGIS interface object
  */
-QgsCompassPlugin::QgsCompassPlugin( QgisInterface * themQGisIface )
-    : QgisPlugin( sName, sDescription, sCategory, sPluginVersion, sPluginType ),
-    mQGisIface( themQGisIface )
+QgsCompassPlugin::QgsCompassPlugin( QgisInterface *themQGisIface )
+    : QgisPlugin( sName, sDescription, sCategory, sPluginVersion, sPluginType )
+    , mQGisIface( themQGisIface )
+    , mActionRunCompass( 0 )
+    , mActionAboutCompass( 0 )
+    , mQgsCompassPluginGui( 0 )
+    , mDock( 0 )
 {
-  /** Initialize the plugin */
-  mDock = NULL;
 }
 
 QgsCompassPlugin::~QgsCompassPlugin()
@@ -100,9 +102,11 @@ void QgsCompassPlugin::initGui()
 
   // Create the action for tool
   mActionRunCompass = new QAction( QIcon(), tr( "Show compass" ), this );
+  mActionRunCompass->setObjectName( "mActionRunCompass" );
   connect( mActionRunCompass, SIGNAL( triggered() ), this, SLOT( run() ) );
 
   mActionAboutCompass = new QAction( QIcon(), tr( "&About" ), this );
+  mActionAboutCompass->setObjectName( "mActionAboutCompass" );
   connect( mActionAboutCompass, SIGNAL( triggered() ), this, SLOT( about() ) );
 
   setCurrentTheme( "" );
@@ -145,15 +149,21 @@ void QgsCompassPlugin::unload()
   mQGisIface->removePluginMenu( sName, mActionAboutCompass );
 
   delete mActionRunCompass;
+  mActionRunCompass = 0;
   delete mActionAboutCompass;
+  mActionAboutCompass = 0;
   delete mDock;
+  mDock = 0;
 }
 
 //! Set icons to the current theme
 void QgsCompassPlugin::setCurrentTheme( QString )
 {
-  mActionRunCompass->setIcon( getThemeIcon( "/mCompassRun.png" ) );
-  mActionAboutCompass->setIcon( getThemeIcon( "/mActionAbout.png" ) );
+  if ( mActionRunCompass && mActionAboutCompass )
+  {
+    mActionRunCompass->setIcon( getThemeIcon( "/mCompassRun.png" ) );
+    mActionAboutCompass->setIcon( getThemeIcon( "/mActionAbout.png" ) );
+  }
 }
 
 QIcon QgsCompassPlugin::getThemeIcon( const QString &theName )
@@ -172,7 +182,7 @@ QIcon QgsCompassPlugin::getThemeIcon( const QString &theName )
   }
 }
 
-void QgsCompassPlugin::about( )
+void QgsCompassPlugin::about()
 {
   QString title = QString( "About Internal Compass" );
   // sort by date of contribution

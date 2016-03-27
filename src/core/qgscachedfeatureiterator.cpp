@@ -3,7 +3,7 @@
      --------------------------------------
     Date                 : 12.2.2013
     Copyright            : (C) 2013 Matthias Kuhn
-    Email                : matthias dot kuhn at gmx dot ch
+    Email                : matthias at opengis dot ch
  ***************************************************************************
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -16,49 +16,79 @@
 #include "qgscachedfeatureiterator.h"
 #include "qgsvectorlayercache.h"
 
-QgsCachedFeatureIterator::QgsCachedFeatureIterator( QgsVectorLayerCache *vlCache, QgsFeatureRequest featureRequest, QgsFeatureIds featureIds )
+QgsCachedFeatureIterator::QgsCachedFeatureIterator( QgsVectorLayerCache *vlCache, const QgsFeatureRequest& featureRequest, const QgsFeatureIds& featureIds )
     : QgsAbstractFeatureIterator( featureRequest )
     , mFeatureIds( featureIds )
     , mVectorLayerCache( vlCache )
 {
-  mFeatureIdIterator = featureIds.begin();
+  mFeatureIdIterator = featureIds.constBegin();
+
+  if ( mFeatureIdIterator == featureIds.constEnd() )
+    close();
 }
 
-bool QgsCachedFeatureIterator::nextFeature( QgsFeature& f )
+QgsCachedFeatureIterator::QgsCachedFeatureIterator( QgsVectorLayerCache *vlCache, const QgsFeatureRequest& featureRequest )
+    : QgsAbstractFeatureIterator( featureRequest )
+    , mVectorLayerCache( vlCache )
 {
-  mFeatureIdIterator++;
-
-  if ( mFeatureIdIterator == mFeatureIds.end() )
+  switch ( featureRequest.filterType() )
   {
-    return false;
+    case QgsFeatureRequest::FilterFids:
+      mFeatureIds = featureRequest.filterFids();
+      break;
+
+    case QgsFeatureRequest::FilterFid:
+      mFeatureIds = QgsFeatureIds() << featureRequest.filterFid();
+      break;
+
+    default:
+      mFeatureIds = mVectorLayerCache->mCache.keys().toSet();
+      break;
   }
-  else
+
+  mFeatureIdIterator = mFeatureIds.constBegin();
+
+  if ( mFeatureIdIterator == mFeatureIds.constEnd() )
+    close();
+}
+
+bool QgsCachedFeatureIterator::fetchFeature( QgsFeature& f )
+{
+  if ( mClosed )
+    return false;
+
+  while ( mFeatureIdIterator != mFeatureIds.constEnd() )
   {
     f = QgsFeature( *mVectorLayerCache->mCache[*mFeatureIdIterator]->feature() );
-    return true;
+    ++mFeatureIdIterator;
+    if ( mRequest.acceptFeature( f ) )
+      return true;
   }
+  close();
+  return false;
 }
 
 bool QgsCachedFeatureIterator::rewind()
 {
-  mFeatureIdIterator = mFeatureIds.begin();
+  mFeatureIdIterator = mFeatureIds.constBegin();
   return true;
 }
 
 bool QgsCachedFeatureIterator::close()
 {
-  // Nothing to clean...
+  mClosed = true;
+  mFeatureIds.clear();
   return true;
 }
 
-QgsCachedFeatureWriterIterator::QgsCachedFeatureWriterIterator( QgsVectorLayerCache *vlCache, QgsFeatureRequest featureRequest )
+QgsCachedFeatureWriterIterator::QgsCachedFeatureWriterIterator( QgsVectorLayerCache *vlCache, const QgsFeatureRequest& featureRequest )
     : QgsAbstractFeatureIterator( featureRequest )
     , mVectorLayerCache( vlCache )
 {
   mFeatIt = vlCache->layer()->getFeatures( featureRequest );
 }
 
-bool QgsCachedFeatureWriterIterator::nextFeature( QgsFeature& f )
+bool QgsCachedFeatureWriterIterator::fetchFeature( QgsFeature& f )
 {
   if ( mFeatIt.nextFeature( f ) )
   {
@@ -84,5 +114,6 @@ bool QgsCachedFeatureWriterIterator::rewind()
 
 bool QgsCachedFeatureWriterIterator::close()
 {
+  mClosed = true;
   return mFeatIt.close();
 }

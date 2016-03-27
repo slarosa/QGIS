@@ -17,6 +17,7 @@
 
 #include "qgsabout.h"
 #include "qgsapplication.h"
+#include "qgsauthmethodregistry.h"
 #include "qgsproviderregistry.h"
 #include "qgslogger.h"
 #include <QDesktopServices>
@@ -24,6 +25,7 @@
 #include <QTextStream>
 #include <QImageReader>
 #include <QSqlDatabase>
+#include <QTcpSocket>
 
 /* Uncomment this block to use preloaded images
 #include <map>
@@ -31,13 +33,14 @@ std::map<QString, QPixmap> mugs;
 */
 #ifdef Q_OS_MACX
 QgsAbout::QgsAbout( QWidget *parent )
-    : QDialog( parent, Qt::WindowSystemMenuHint )  // Modeless dialog with close button only
+    : QgsOptionsDialogBase( "about", parent, Qt::WindowSystemMenuHint )  // Modeless dialog with close button only
 #else
 QgsAbout::QgsAbout( QWidget *parent )
-    : QDialog( parent )  // Normal dialog in non Mac-OS
+    : QgsOptionsDialogBase( "about", parent )  // Normal dialog in non Mac-OS
 #endif
 {
   setupUi( this );
+  initOptionsBase( true, QString( "%1 - %2 Bit" ).arg( windowTitle() ).arg( QSysInfo::WordSize ) );
   init();
 }
 
@@ -49,9 +52,27 @@ void QgsAbout::init()
 {
   setPluginInfo();
 
+  // check internet connection in order to hide/show the developers map widget
+  int DEVELOPERS_MAP_INDEX = 5;
+  QTcpSocket socket;
+  socket.connectToHost( QgsApplication::QGIS_ORGANIZATION_DOMAIN, 80 );
+  if ( socket.waitForConnected( 1000 ) )
+  {
+    setDevelopersMap();
+  }
+  else
+  {
+    mOptionsListWidget->item( DEVELOPERS_MAP_INDEX )->setHidden( true );
+    QModelIndex firstItem = mOptionsListWidget->model()->index( 0, 0, QModelIndex() );
+    mOptionsListWidget->setCurrentIndex( firstItem );
+  }
+  developersMapView->page()->setLinkDelegationPolicy( QWebPage::DelegateAllLinks );
+  developersMapView->setContextMenuPolicy( Qt::NoContextMenu );
+
+  connect( developersMapView, SIGNAL( linkClicked( const QUrl & ) ), this, SLOT( openUrl( const QUrl & ) ) );
+
   // set the 60x60 icon pixmap
-  QPixmap icon( QgsApplication::iconsPath() + "qgis-icon-60x60.png" );
-  qgisIcon->setPixmap( icon );
+  qgisIcon->setPixmap( QPixmap( QgsApplication::appIconPath() ) );
 
   //read the authors file to populate the svn committers list
   QStringList lines;
@@ -72,7 +93,7 @@ void QgsAbout::init()
       //ignore the line if it starts with a hash....
       if ( line.left( 1 ) == "#" )
         continue;
-      QStringList myTokens = line.split( "\t", QString::SkipEmptyParts );
+      QStringList myTokens = line.split( '\t', QString::SkipEmptyParts );
       lines << myTokens[0];
     }
     file.close();
@@ -128,8 +149,8 @@ void QgsAbout::init()
     QString donorsHTML = ""
                          + tr( "<p>For a list of individuals and institutions who have contributed "
                                "money to fund QGIS development and other project costs see "
-                               "<a href=\"http://qgis.org/en/sponsorship/donors.html\">"
-                               "http://qgis.org/en/sponsorship/donors.html</a></p>" );
+                               "<a href=\"http://qgis.org/en/site/about/sponsorship.html#list-of-donors\">"
+                               "http://qgis.org/en/site/about/sponsorship.html#list-of-donors</a></p>" );
 #if 0
     QString website;
     QTextStream donorsStream( &donorsFile );
@@ -142,7 +163,7 @@ void QgsAbout::init()
       //ignore the line if it starts with a hash....
       if ( sline.left( 1 ) == "#" )
         continue;
-      QStringList myTokens = sline.split( "|", QString::SkipEmptyParts );
+      QStringList myTokens = sline.split( '|', QString::SkipEmptyParts );
       if ( myTokens.size() > 1 )
       {
         website = "<a href=\"" + myTokens[1].remove( ' ' ) + "\">" + myTokens[1] + "</a>";
@@ -159,9 +180,8 @@ void QgsAbout::init()
     donorsHTML += "</table>";
 #endif
 
-    QString myStyle = QgsApplication::reportStyleSheet();
     txtDonors->clear();
-    txtDonors->document()->setDefaultStyleSheet( myStyle );
+    txtDonors->document()->setDefaultStyleSheet( QgsApplication::reportStyleSheet() );
     txtDonors->setHtml( donorsHTML );
     QgsDebugMsg( QString( "donorsHTML:%1" ).arg( donorsHTML.toAscii().constData() ) );
   }
@@ -188,20 +208,34 @@ void QgsAbout::init()
     QgsDebugMsg( QString( "translatorHTML:%1" ).arg( translatorHTML.toAscii().constData() ) );
   }
   setWhatsNew();
+  setLicence();
 }
 
-void QgsAbout::setVersion( QString v )
+void QgsAbout::setLicence()
+{
+  // read the DONORS file and populate the text widget
+  QFile licenceFile( QgsApplication::licenceFilePath() );
+#ifdef QGISDEBUG
+  printf( "Reading licence file %s.............................................\n",
+          licenceFile.fileName().toLocal8Bit().constData() );
+#endif
+  if ( licenceFile.open( QIODevice::ReadOnly ) )
+  {
+    txtLicense->setText( licenceFile.readAll() );
+  }
+}
+
+void QgsAbout::setVersion( const QString& v )
 {
   txtVersion->setBackgroundRole( QPalette::NoRole );
   txtVersion->setAutoFillBackground( true );
   txtVersion->setHtml( v );
 }
 
-void QgsAbout::setWhatsNew( )
+void QgsAbout::setWhatsNew()
 {
-  QString myStyle = QgsApplication::reportStyleSheet();
   txtWhatsNew->clear();
-  txtWhatsNew->document()->setDefaultStyleSheet( myStyle );
+  txtWhatsNew->document()->setDefaultStyleSheet( QgsApplication::reportStyleSheet() );
   txtWhatsNew->setSource( "file:///" + QgsApplication::pkgDataPath() + "/doc/news.html" );
 }
 
@@ -211,6 +245,8 @@ void QgsAbout::setPluginInfo()
   //provide info about the plugins available
   myString += "<b>" + tr( "Available QGIS Data Provider Plugins" ) + "</b><br>";
   myString += QgsProviderRegistry::instance()->pluginList( true );
+  myString += "<b>" + tr( "Available QGIS Authentication Method Plugins" ) + "</b><br>";
+  myString += QgsAuthMethodRegistry::instance()->pluginList( true );
   //qt database plugins
   myString += "<b>" + tr( "Available Qt Database Plugins" ) + "</b><br>";
   myString += "<ol>\n<li>\n";
@@ -240,17 +276,15 @@ void QgsAbout::setPluginInfo()
 
 void QgsAbout::on_btnQgisUser_clicked()
 {
-  // find a browser
-  QString url = "http://lists.osgeo.org/mailman/listinfo/qgis-user";
-  openUrl( url );
+  openUrl( QString( "http://lists.osgeo.org/mailman/listinfo/qgis-user" ) );
 }
 
 void QgsAbout::on_btnQgisHome_clicked()
 {
-  openUrl( "http://qgis.org" );
+  openUrl( QString( "http://qgis.org" ) );
 }
 
-void QgsAbout::openUrl( QString url )
+void QgsAbout::openUrl( const QUrl &url )
 {
   //use the users default browser
   QDesktopServices::openUrl( url );
@@ -262,7 +296,7 @@ void QgsAbout::openUrl( QString url )
  * Step 2: Replace all bytes of the UTF-8 above 0x7f with the hexcode in lower case.
  * Step 2: Replace all non [a-z][a-Z][0-9] with underscore (backward compatibility)
  */
-QString QgsAbout::fileSystemSafe( QString fileName )
+QString QgsAbout::fileSystemSafe( const QString& fileName )
 {
   QString result;
   QByteArray utf8 = fileName.toUtf8();
@@ -284,4 +318,11 @@ QString QgsAbout::fileSystemSafe( QString fileName )
   QgsDebugMsg( result );
 
   return result;
+}
+
+void QgsAbout::setDevelopersMap()
+{
+  developersMapView->settings()->setAttribute( QWebSettings::JavascriptEnabled, true );
+  QUrl url = QUrl::fromLocalFile( QgsApplication::developersMapFilePath() );
+  developersMapView->load( url );
 }

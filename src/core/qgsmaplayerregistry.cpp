@@ -22,14 +22,10 @@
 //
 // Static calls to enforce singleton behaviour
 //
-QgsMapLayerRegistry *QgsMapLayerRegistry::mInstance = 0;
 QgsMapLayerRegistry *QgsMapLayerRegistry::instance()
 {
-  if ( mInstance == 0 )
-  {
-    mInstance = new QgsMapLayerRegistry();
-  }
-  return mInstance;
+  static QgsMapLayerRegistry sInstance;
+  return &sInstance;
 }
 
 //
@@ -52,15 +48,15 @@ int QgsMapLayerRegistry::count()
   return mMapLayers.size();
 }
 
-QgsMapLayer * QgsMapLayerRegistry::mapLayer( QString theLayerId )
+QgsMapLayer * QgsMapLayerRegistry::mapLayer( const QString& theLayerId )
 {
   return mMapLayers.value( theLayerId );
 }
 
-QList<QgsMapLayer *> QgsMapLayerRegistry::mapLayersByName( QString layerName )
+QList<QgsMapLayer *> QgsMapLayerRegistry::mapLayersByName( const QString& layerName )
 {
   QList<QgsMapLayer *> myResultList;
-  foreach ( QgsMapLayer* layer, mMapLayers )
+  Q_FOREACH ( QgsMapLayer* layer, mMapLayers )
   {
     if ( layer->name() == layerName )
     {
@@ -72,8 +68,9 @@ QList<QgsMapLayer *> QgsMapLayerRegistry::mapLayersByName( QString layerName )
 
 //introduced in 1.8
 QList<QgsMapLayer *> QgsMapLayerRegistry::addMapLayers(
-  QList<QgsMapLayer *> theMapLayers,
-  bool addToLegend )
+  const QList<QgsMapLayer *>& theMapLayers,
+  bool addToLegend,
+  bool takeOwnership )
 {
   QList<QgsMapLayer *> myResultList;
   for ( int i = 0; i < theMapLayers.size(); ++i )
@@ -85,18 +82,16 @@ QList<QgsMapLayer *> QgsMapLayerRegistry::addMapLayers(
       continue;
     }
     //check the layer is not already registered!
-    QMap<QString, QgsMapLayer*>::iterator myIterator =
-      mMapLayers.find( myLayer->id() );
-    //if myIterator returns mMapLayers.end() then it
-    //does not exist in registry and its safe to add it
-    if ( myIterator == mMapLayers.end() )
+    if ( !mMapLayers.contains( myLayer->id() ) )
     {
       mMapLayers[myLayer->id()] = myLayer;
       myResultList << mMapLayers[myLayer->id()];
+      if ( takeOwnership )
+        mOwnedLayers << myLayer;
       emit layerWasAdded( myLayer );
     }
   }
-  if ( myResultList.count() > 0 )
+  if ( !myResultList.isEmpty() )
   {
     emit layersAdded( myResultList );
 
@@ -109,32 +104,70 @@ QList<QgsMapLayer *> QgsMapLayerRegistry::addMapLayers(
 //this is just a thin wrapper for addMapLayers
 QgsMapLayer *
 QgsMapLayerRegistry::addMapLayer( QgsMapLayer* theMapLayer,
-                                  bool addToLegend )
+                                  bool addToLegend,
+                                  bool takeOwnership )
 {
   QList<QgsMapLayer *> addedLayers;
-  addedLayers = addMapLayers( QList<QgsMapLayer*>() << theMapLayer, addToLegend );
+  addedLayers = addMapLayers( QList<QgsMapLayer*>() << theMapLayer, addToLegend, takeOwnership );
   return addedLayers.isEmpty() ? 0 : addedLayers[0];
 }
 
 
 //introduced in 1.8
-void QgsMapLayerRegistry::removeMapLayers( QStringList theLayerIds )
+void QgsMapLayerRegistry::removeMapLayers( const QStringList& theLayerIds )
 {
-  emit layersWillBeRemoved( theLayerIds );
-
-  foreach ( const QString &myId, theLayerIds )
+  QList<QgsMapLayer*> layers;
+  Q_FOREACH ( const QString &myId, theLayerIds )
   {
-    emit layerWillBeRemoved( myId );
-    delete mMapLayers[myId];
-    mMapLayers.remove( myId );
+    layers << mMapLayers.value( myId );
   }
+
+  removeMapLayers( layers );
+}
+
+void QgsMapLayerRegistry::removeMapLayers( const QList<QgsMapLayer*>& layers )
+{
+  QStringList layerIds;
+
+  Q_FOREACH ( QgsMapLayer* layer, layers )
+  {
+    if ( layer )
+      layerIds << layer->id();
+  }
+
+  emit layersWillBeRemoved( layerIds );
+  emit layersWillBeRemoved( layers );
+
+  Q_FOREACH ( QgsMapLayer* lyr, layers )
+  {
+    if ( !lyr )
+      continue;
+
+    QString myId( lyr->id() );
+    if ( mOwnedLayers.contains( lyr ) )
+    {
+      emit layerWillBeRemoved( myId );
+      emit layerWillBeRemoved( lyr );
+      delete lyr;
+      mOwnedLayers.remove( lyr );
+    }
+    mMapLayers.remove( myId );
+    emit layerRemoved( myId );
+  }
+
+  emit layersRemoved( layerIds );
 }
 
 void QgsMapLayerRegistry::removeMapLayer( const QString& theLayerId )
 {
-  removeMapLayers( QStringList( theLayerId ) );
+  removeMapLayers( QList<QgsMapLayer*>() << mMapLayers.value( theLayerId ) );
 }
 
+void QgsMapLayerRegistry::removeMapLayer( QgsMapLayer* layer )
+{
+  if ( layer )
+    removeMapLayers( QList<QgsMapLayer*>() << layer );
+}
 
 void QgsMapLayerRegistry::removeAllMapLayers()
 {
@@ -144,17 +177,6 @@ void QgsMapLayerRegistry::removeAllMapLayers()
   removeMapLayers( mMapLayers.keys() );
   mMapLayers.clear();
 } // QgsMapLayerRegistry::removeAllMapLayers()
-
-//Added in QGIS 1.4
-void QgsMapLayerRegistry::clearAllLayerCaches()
-{
-  QMap<QString, QgsMapLayer *>::iterator it;
-  for ( it = mMapLayers.begin(); it != mMapLayers.end() ; ++it )
-  {
-    //the map layer will take care of deleting the QImage
-    it.value()->setCacheImage( 0 );
-  }
-} // QgsMapLayerRegistry::clearAllLayerCaches()
 
 void QgsMapLayerRegistry::reloadAllLayers()
 {
@@ -175,9 +197,10 @@ const QMap<QString, QgsMapLayer*>& QgsMapLayerRegistry::mapLayers()
 }
 
 
-
+#if 0
 void QgsMapLayerRegistry::connectNotify( const char * signal )
 {
   Q_UNUSED( signal );
   //QgsDebugMsg("QgsMapLayerRegistry connected to " + QString(signal));
 } //  QgsMapLayerRegistry::connectNotify
+#endif

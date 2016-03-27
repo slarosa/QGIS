@@ -14,12 +14,14 @@
 #include "qgisgui.h"
 #include "qgsfield.h"
 
-class QgsSaveStyleToDbDialog : public QDialog, private Ui::QgsSaveToDBDialog
+class APP_EXPORT QgsSaveStyleToDbDialog : public QDialog, private Ui::QgsSaveToDBDialog
 {
     QString mUIFileContent;
     Q_OBJECT
   public:
     explicit QgsSaveStyleToDbDialog( QWidget *parent = 0 );
+
+    ~QgsSaveStyleToDbDialog();
 
   signals:
 
@@ -29,7 +31,7 @@ class QgsSaveStyleToDbDialog : public QDialog, private Ui::QgsSaveToDBDialog
     QString getDescription();
     bool isDefault();
     void on_mFilePickButton_clicked();
-    void accept();
+    void accept() override;
 };
 
 #endif // QGSSAVESTYLETODBDIALOG_H

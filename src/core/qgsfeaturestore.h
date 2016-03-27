@@ -45,14 +45,20 @@ class CORE_EXPORT QgsFeatureStore
     /** Get fields list */
     QgsFields& fields() { return mFields; }
 
-    /** Set fields */
-    void setFields( const QgsFields & fields ) { mFields = fields; }
+    /** Set fields. Resets feature's fields to pointer to new internal fields. */
+    void setFields( const QgsFields & fields );
 
     /** Get crs */
     QgsCoordinateReferenceSystem crs() const { return mCrs; }
 
     /** Set crs */
     void setCrs( const QgsCoordinateReferenceSystem& crs ) { mCrs = crs; }
+
+    /** Add feature. Feature's fields will be set to pointer to the store fields.
+     * @param feature
+     * @note added in 2.1
+     */
+    void addFeature( const QgsFeature& feature );
 
     /** Get features list reference */
     QgsFeatureList& features() { return mFeatures; }
@@ -76,8 +82,8 @@ class CORE_EXPORT QgsFeatureStore
 
 typedef QList<QgsFeatureStore> QgsFeatureStoreList;
 
-Q_DECLARE_METATYPE( QgsFeatureStore );
+Q_DECLARE_METATYPE( QgsFeatureStore )
 
-Q_DECLARE_METATYPE( QgsFeatureStoreList );
+Q_DECLARE_METATYPE( QgsFeatureStoreList )
 
 #endif

@@ -16,6 +16,7 @@
 
 #include "MathUtils.h"
 #include "qgslogger.h"
+#include <qmath.h>
 
 bool MathUtils::calcBarycentricCoordinates( double x, double y, Point3D* p1, Point3D* p2, Point3D* p3, Point3D* result )
 {
@@ -104,7 +105,7 @@ double MathUtils::calcBernsteinPoly( int n, int i, double t )
     return 0;
   }
 
-  return lower( n, i )*power( t, i )*power(( 1 - t ), ( n - i ) );
+  return lower( n, i )*qPow( t, i )*qPow(( 1 - t ), ( n - i ) );
 }
 
 double MathUtils::cFDerBernsteinPoly( int n, int i, double t )
@@ -267,21 +268,8 @@ bool MathUtils::inCircle( Point3D* testp, Point3D* p1, Point3D* p2, Point3D* p3 
     aValue = aValue - (( bx * bx + by * by ) * triArea( p1, p3, testp ) );
     aValue = aValue + (( cx * cx + cy * cy ) * triArea( p1, p2, testp ) );
     aValue = aValue - (( px * px + py * py ) * triArea( p1, p2, p3 ) );
-    //return aValue>0.0;
-    if ( aValue > tolerance )
-    {
-      return true;
-    }
-    else if ( aValue < -tolerance )
-    {
-      return false;
-    }
-    else//point is approximately on the circle
-    {
-      //cout << "aValue " << aValue << endl << flush;
-      //return aValue>0.0;
-      return false;
-    }
+
+    return aValue > tolerance;
   }
   else
   {

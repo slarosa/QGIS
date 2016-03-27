@@ -102,12 +102,12 @@ bool QgsRasterInterface::hasStatistics( int theBandNo,
                                         int theSampleSize )
 {
   QgsDebugMsg( QString( "theBandNo = %1 theStats = %2 theSampleSize = %3" ).arg( theBandNo ).arg( theStats ).arg( theSampleSize ) );
-  if ( mStatistics.size() == 0 ) return false;
+  if ( mStatistics.isEmpty() ) return false;
 
   QgsRasterBandStats myRasterBandStats;
   initStatistics( myRasterBandStats, theBandNo, theStats, theExtent, theSampleSize );
 
-  foreach ( QgsRasterBandStats stats, mStatistics )
+  Q_FOREACH ( const QgsRasterBandStats& stats, mStatistics )
   {
     if ( stats.contains( myRasterBandStats ) )
     {
@@ -130,7 +130,7 @@ QgsRasterBandStats QgsRasterInterface::bandStatistics( int theBandNo,
   QgsRasterBandStats myRasterBandStats;
   initStatistics( myRasterBandStats, theBandNo, theStats, theExtent, theSampleSize );
 
-  foreach ( QgsRasterBandStats stats, mStatistics )
+  Q_FOREACH ( const QgsRasterBandStats& stats, mStatistics )
   {
     if ( stats.contains( myRasterBandStats ) )
     {
@@ -186,7 +186,7 @@ QgsRasterBandStats QgsRasterInterface::bandStatistics( int theBandNo,
       QgsRasterBlock* blk = block( theBandNo, myPartExtent, myBlockWidth, myBlockHeight );
 
       // Collect the histogram counts.
-      for ( size_t i = 0; i < (( size_t ) myBlockHeight ) * myBlockWidth; i++ )
+      for ( qgssize i = 0; i < (( qgssize ) myBlockHeight ) * myBlockWidth; i++ )
       {
         if ( blk->isNoData( i ) ) continue; // NULL
 
@@ -273,7 +273,7 @@ void QgsRasterInterface::initHistogram( QgsRasterHistogram &theHistogram,
       // We need statistics -> avoid histogramDefaults in hasHistogram if possible
       // TODO: use approximated statistics if aproximated histogram is requested
       // (theSampleSize > 0)
-      QgsRasterBandStats stats =  bandStatistics( theBandNo, QgsRasterBandStats::Min, theExtent, theSampleSize );
+      QgsRasterBandStats stats = bandStatistics( theBandNo, QgsRasterBandStats::Min, theExtent, theSampleSize );
       theHistogram.minimum = stats.minimumValue;
     }
   }
@@ -285,7 +285,7 @@ void QgsRasterInterface::initHistogram( QgsRasterHistogram &theHistogram,
     }
     else
     {
-      QgsRasterBandStats stats =  bandStatistics( theBandNo, QgsRasterBandStats::Max, theExtent, theSampleSize );
+      QgsRasterBandStats stats = bandStatistics( theBandNo, QgsRasterBandStats::Max, theExtent, theSampleSize );
       theHistogram.maximum = stats.maximumValue;
     }
   }
@@ -349,6 +349,16 @@ void QgsRasterInterface::initHistogram( QgsRasterHistogram &theHistogram,
       // There is no best default value, to display something reasonable in histogram chart, binCount should be small, OTOH, to get precise data for cumulative cut, the number should be big. Because it is easier to define fixed lower value for the chart, we calc optimum binCount for higher resolution (to avoid calculating that where histogram() is used. In any any case, it does not make sense to use more than width*height;
       myBinCount = theHistogram.width * theHistogram.height;
       if ( myBinCount > 1000 )  myBinCount = 1000;
+
+      // for Int16/Int32 make sure bin count <= actual range, because there is no sense in having
+      // bins at fractional values
+      if ( !mInput && (
+             mySrcDataType == QGis::Int16 || mySrcDataType == QGis::Int32 ||
+             mySrcDataType == QGis::UInt16 || mySrcDataType == QGis::UInt32 ) )
+      {
+        if ( myBinCount > theHistogram.maximum - theHistogram.minimum + 1 )
+          myBinCount = int( ceil( theHistogram.maximum - theHistogram.minimum + 1 ) );
+      }
     }
   }
   theHistogram.binCount = myBinCount;
@@ -366,12 +376,12 @@ bool QgsRasterInterface::hasHistogram( int theBandNo,
   QgsDebugMsg( QString( "theBandNo = %1 theBinCount = %2 theMinimum = %3 theMaximum = %4 theSampleSize = %5" ).arg( theBandNo ).arg( theBinCount ).arg( theMinimum ).arg( theMaximum ).arg( theSampleSize ) );
   // histogramDefaults() needs statistics if theMinimum or theMaximum is NaN ->
   // do other checks which don't need statistics before histogramDefaults()
-  if ( mHistograms.size() == 0 ) return false;
+  if ( mHistograms.isEmpty() ) return false;
 
   QgsRasterHistogram myHistogram;
   initHistogram( myHistogram, theBandNo, theBinCount, theMinimum, theMaximum, theExtent, theSampleSize, theIncludeOutOfRange );
 
-  foreach ( QgsRasterHistogram histogram, mHistograms )
+  Q_FOREACH ( const QgsRasterHistogram& histogram, mHistograms )
   {
     if ( histogram == myHistogram )
     {
@@ -395,7 +405,7 @@ QgsRasterHistogram QgsRasterInterface::histogram( int theBandNo,
   initHistogram( myHistogram, theBandNo, theBinCount, theMinimum, theMaximum, theExtent, theSampleSize, theIncludeOutOfRange );
 
   // Find cached
-  foreach ( QgsRasterHistogram histogram, mHistograms )
+  Q_FOREACH ( const QgsRasterHistogram& histogram, mHistograms )
   {
     if ( histogram == myHistogram )
     {
@@ -458,7 +468,7 @@ QgsRasterHistogram QgsRasterInterface::histogram( int theBandNo,
       QgsRasterBlock* blk = block( theBandNo, myPartExtent, myBlockWidth, myBlockHeight );
 
       // Collect the histogram counts.
-      for ( size_t i = 0; i < (( size_t ) myBlockHeight ) * myBlockWidth; i++ )
+      for ( qgssize i = 0; i < (( qgssize ) myBlockHeight ) * myBlockWidth; i++ )
       {
         if ( blk->isNoData( i ) )
         {
@@ -466,7 +476,7 @@ QgsRasterHistogram QgsRasterInterface::histogram( int theBandNo,
         }
         double myValue = blk->value( i );
 
-        int myBinIndex = static_cast <int>( qFloor(( myValue - myMinimum ) /  myBinSize ) ) ;
+        int myBinIndex = static_cast <int>( qFloor(( myValue - myMinimum ) /  myBinSize ) );
 
         if (( myBinIndex < 0 || myBinIndex > ( myBinCount - 1 ) ) && !theIncludeOutOfRange )
         {
@@ -489,7 +499,7 @@ QgsRasterHistogram QgsRasterInterface::histogram( int theBandNo,
   QString hist;
   for ( int i = 0; i < qMin( myHistogram.histogramVector.size(), 500 ); i++ )
   {
-    hist += QString::number( myHistogram.histogramVector.value( i ) ) + " ";
+    hist += QString::number( myHistogram.histogramVector.value( i ) ) + ' ';
   }
   QgsDebugMsg( "Histogram (max first 500 bins): " + hist );
 #endif
@@ -505,11 +515,21 @@ void QgsRasterInterface::cumulativeCut( int theBandNo,
 {
   QgsDebugMsg( QString( "theBandNo = %1 theLowerCount = %2 theUpperCount = %3 theSampleSize = %4" ).arg( theBandNo ).arg( theLowerCount ).arg( theUpperCount ).arg( theSampleSize ) );
 
-  QgsRasterHistogram myHistogram = histogram( theBandNo, 0, std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(), theExtent, theSampleSize );
+  int mySrcDataType = srcDataType( theBandNo );
 
   // Init to NaN is better than histogram min/max to catch errors
   theLowerValue = std::numeric_limits<double>::quiet_NaN();
   theUpperValue = std::numeric_limits<double>::quiet_NaN();
+
+  //get band stats to specify real histogram min/max (fix #9793 Byte bands)
+  QgsRasterBandStats stats = bandStatistics( theBandNo, QgsRasterBandStats::Min, theExtent, theSampleSize );
+  if ( stats.maximumValue < stats.minimumValue )
+    return;
+
+  // for byte bands make sure bin count == actual range
+  int myBinCount = ( mySrcDataType == QGis::Byte ) ? int( ceil( stats.maximumValue - stats.minimumValue + 1 ) ) : 0;
+  QgsRasterHistogram myHistogram = histogram( theBandNo, myBinCount, stats.minimumValue, stats.maximumValue, theExtent, theSampleSize );
+  //QgsRasterHistogram myHistogram = histogram( theBandNo, 0, std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN(), theExtent, theSampleSize );
 
   double myBinXStep = ( myHistogram.maximum - myHistogram.minimum ) / myHistogram.binCount;
   int myCount = 0;
@@ -527,12 +547,25 @@ void QgsRasterInterface::cumulativeCut( int theBandNo,
     {
       theLowerValue = myHistogram.minimum + myBin * myBinXStep;
       myLowerFound = true;
+      QgsDebugMsg( QString( "found lowerValue %1 at bin %2" ).arg( theLowerValue ).arg( myBin ) );
     }
     if ( myCount >= myMaxCount )
     {
       theUpperValue = myHistogram.minimum + myBin * myBinXStep;
+      QgsDebugMsg( QString( "found upperValue %1 at bin %2" ).arg( theUpperValue ).arg( myBin ) );
       break;
     }
+  }
+
+  // fix integer data - round down/up
+  if ( mySrcDataType == QGis::Byte ||
+       mySrcDataType == QGis::Int16 || mySrcDataType == QGis::Int32 ||
+       mySrcDataType == QGis::UInt16 || mySrcDataType == QGis::UInt32 )
+  {
+    if ( theLowerValue != std::numeric_limits<double>::quiet_NaN() )
+      theLowerValue = floor( theLowerValue );
+    if ( theUpperValue != std::numeric_limits<double>::quiet_NaN() )
+      theUpperValue = ceil( theUpperValue );
   }
 }
 
