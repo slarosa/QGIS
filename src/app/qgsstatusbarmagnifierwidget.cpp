@@ -86,3 +86,8 @@ void QgsStatusBarMagnifierWidget::setMagnification( double value )
 {
   emit magnificationChanged( value / 100 );
 }
+
+int QgsStatusBarMagnifierWidget::magnification()
+{
+  mSpinBox->value();
+}
