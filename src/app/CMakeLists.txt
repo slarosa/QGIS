@@ -119,22 +119,6 @@ SET(QGIS_APP_SRCS
   qgsmaptoolsvgannotation.cpp
   qgsmaptooltextannotation.cpp
 
-  decorations/qgsdecorationitem.cpp
-  decorations/qgsdecorationtitle.cpp
-  decorations/qgsdecorationtitledialog.cpp
-  decorations/qgsdecorationcopyright.cpp
-  decorations/qgsdecorationcopyrightdialog.cpp
-  decorations/qgsdecorationimage.cpp
-  decorations/qgsdecorationimagedialog.cpp
-  decorations/qgsdecorationlayoutextent.cpp
-  decorations/qgsdecorationlayoutextentdialog.cpp
-  decorations/qgsdecorationnortharrow.cpp
-  decorations/qgsdecorationnortharrowdialog.cpp
-  decorations/qgsdecorationscalebar.cpp
-  decorations/qgsdecorationscalebardialog.cpp
-  decorations/qgsdecorationgrid.cpp
-  decorations/qgsdecorationgriddialog.cpp
-
   vertextool/qgslockedfeature.cpp
   vertextool/qgsvertexeditor.cpp
   vertextool/qgsvertextool.cpp
@@ -385,22 +369,6 @@ SET (QGIS_APP_MOC_HDRS
   qgsmaptoolregularpolygon2points.h
   qgsmaptoolregularpolygoncenterpoint.h
   qgsmaptoolregularpolygoncentercorner.h
-
-  decorations/qgsdecorationitem.h
-  decorations/qgsdecorationtitle.h
-  decorations/qgsdecorationtitledialog.h
-  decorations/qgsdecorationcopyright.h
-  decorations/qgsdecorationcopyrightdialog.h
-  decorations/qgsdecorationimage.h
-  decorations/qgsdecorationimagedialog.h
-  decorations/qgsdecorationlayoutextent.h
-  decorations/qgsdecorationlayoutextentdialog.h
-  decorations/qgsdecorationnortharrow.h
-  decorations/qgsdecorationnortharrowdialog.h
-  decorations/qgsdecorationscalebar.h
-  decorations/qgsdecorationscalebardialog.h
-  decorations/qgsdecorationgrid.h
-  decorations/qgsdecorationgriddialog.h
 
   vertextool/qgslockedfeature.h
   vertextool/qgsvertexeditor.h
@@ -684,7 +652,6 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_SOURCE_DIR}/external
 
   ${CMAKE_SOURCE_DIR}/src/app
-  ${CMAKE_SOURCE_DIR}/src/app/decorations
   ${CMAKE_SOURCE_DIR}/src/app/layout
   ${CMAKE_SOURCE_DIR}/src/app/pluginmanager
   ${CMAKE_SOURCE_DIR}/src/app/gps
@@ -714,6 +681,7 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_SOURCE_DIR}/src/core/validity
   ${CMAKE_SOURCE_DIR}/src/gui
   ${CMAKE_SOURCE_DIR}/src/gui/symbology
+  ${CMAKE_SOURCE_DIR}/src/gui/decorations
   ${CMAKE_SOURCE_DIR}/src/gui/attributetable
   ${CMAKE_SOURCE_DIR}/src/gui/auth
   ${CMAKE_SOURCE_DIR}/src/gui/ogr

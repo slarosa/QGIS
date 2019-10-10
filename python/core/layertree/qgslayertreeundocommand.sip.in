@@ -1,0 +1,108 @@
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/core/layertree/qgslayertreeundocommand.h                         *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/
+
+
+
+
+
+class QgsLayerTreeUndoCommand : QUndoCommand
+{
+%Docstring
+ Base class for undo commands within a QgsVectorLayerEditBuffer.
+%End
+
+%TypeHeaderCode
+#include "qgslayertreeundocommand.h"
+%End
+  public:
+
+    QgsLayerTreeUndoCommand( QgsLayerTreeModel *model, QList<QgsLayerTreeNode *> nodes, const QString &text, QUndoCommand *parent );
+%Docstring
+Constructor for :py:class:`QgsVectorLayerUndoCommand`
+
+:param buffer: associated edit buffer
+%End
+
+
+    virtual bool mergeWith( const QUndoCommand * );
+
+  protected:
+
+};
+
+class QgsLayerTreeAddCommand: QgsLayerTreeUndoCommand
+{
+%Docstring
+A layout undo command class for grouping / ungrouping layout items.
+
+.. versionadded:: 3.0
+%End
+
+%TypeHeaderCode
+#include "qgslayertreeundocommand.h"
+%End
+  public:
+
+    QgsLayerTreeAddCommand( QgsLayerTreeModel *model, QList<QgsLayerTreeNode *> nodes, const QString &text, QUndoCommand *parent /TransferThis/ = 0 );
+%Docstring
+Create a group or ungroup command
+
+:param s: command kind (see State)
+:param item: the group item being created or ungrouped
+:param c: the composition including this group
+:param text: command label
+:param parent: parent command, if any
+%End
+    ~QgsLayerTreeAddCommand();
+
+    virtual void redo();
+
+    virtual void undo();
+
+
+};
+
+
+class QgsLayerTreeRemoveCommand: QgsLayerTreeUndoCommand
+{
+%Docstring
+A layout undo command class for grouping / ungrouping layout items.
+
+.. versionadded:: 3.0
+%End
+
+%TypeHeaderCode
+#include "qgslayertreeundocommand.h"
+%End
+  public:
+
+    QgsLayerTreeRemoveCommand( QgsLayerTreeModel *model, QList<QgsLayerTreeNode *> nodes, const QString &text, QUndoCommand *parent /TransferThis/ = 0 );
+%Docstring
+Create a group or ungroup command
+
+:param s: command kind (see State)
+:param item: the group item being created or ungrouped
+:param c: the composition including this group
+:param text: command label
+:param parent: parent command, if any
+%End
+
+    virtual void redo();
+
+    virtual void undo();
+
+
+};
+
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/core/layertree/qgslayertreeundocommand.h                         *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/

@@ -226,6 +226,22 @@ SET(QGIS_GUI_SRCS
   providers/ogr/qgsogritemguiprovider.cpp
   providers/ogr/qgsgeopackageprojectstorageguiprovider.cpp
 
+  decorations/qgsdecorationtitle.cpp
+  decorations/qgsdecorationtitledialog.cpp
+  decorations/qgsdecorationitem.cpp
+  decorations/qgsdecorationcopyright.cpp
+  decorations/qgsdecorationcopyrightdialog.cpp
+  decorations/qgsdecorationimage.cpp
+  decorations/qgsdecorationimagedialog.cpp
+  decorations/qgsdecorationlayoutextent.cpp
+  decorations/qgsdecorationlayoutextentdialog.cpp
+  decorations/qgsdecorationnortharrow.cpp
+  decorations/qgsdecorationnortharrowdialog.cpp
+  decorations/qgsdecorationscalebar.cpp
+  decorations/qgsdecorationscalebardialog.cpp
+  decorations/qgsdecorationgrid.cpp
+  decorations/qgsdecorationgriddialog.cpp
+
   qgisinterface.cpp
   qgsactionmenu.cpp
   qgsadvanceddigitizingcanvasitem.cpp
@@ -806,6 +822,22 @@ SET(QGIS_GUI_MOC_HDRS
   providers/ogr/qgsgeopackageprojectstoragedialog.h
   providers/ogr/qgsgeopackageitemguiprovider.h
   providers/ogr/qgsogritemguiprovider.h
+
+  decorations/qgsdecorationitem.h
+  decorations/qgsdecorationtitle.h
+  decorations/qgsdecorationtitledialog.h
+  decorations/qgsdecorationcopyright.h
+  decorations/qgsdecorationcopyrightdialog.h
+  decorations/qgsdecorationimage.h
+  decorations/qgsdecorationimagedialog.h
+  decorations/qgsdecorationlayoutextent.h
+  decorations/qgsdecorationlayoutextentdialog.h
+  decorations/qgsdecorationnortharrow.h
+  decorations/qgsdecorationnortharrowdialog.h
+  decorations/qgsdecorationscalebar.h
+  decorations/qgsdecorationscalebardialog.h
+  decorations/qgsdecorationgrid.h
+  decorations/qgsdecorationgriddialog.h
 )
 FIND_PACKAGE(Qt5Qml REQUIRED)
 FIND_PACKAGE(Qt5QuickWidgets REQUIRED)
@@ -948,6 +980,13 @@ SET(QGIS_GUI_UI_HDRS
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsauthauthoritieseditor.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsauthcertificateinfo.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsauthcertificatemanager.h
+  ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsdecorationtitledialog.h
+  ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsdecorationcopyrightdialog.h
+  ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsdecorationimagedialog.h
+  ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsdecorationlayoutextentdialog.h
+  ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsdecorationnortharrowdialog.h
+  ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsdecorationscalebardialog.h
+  ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsdecorationgriddialog.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsauthconfigedit.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsauthconfigeditor.h
   ${CMAKE_CURRENT_BINARY_DIR}/../ui/ui_qgsauthconfigidedit.h
@@ -994,6 +1033,7 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_SOURCE_DIR}/src/gui/symbology
   ${CMAKE_SOURCE_DIR}/src/gui/attributetable
   ${CMAKE_SOURCE_DIR}/src/gui/auth
+  ${CMAKE_SOURCE_DIR}/src/gui/decorations
   ${CMAKE_SOURCE_DIR}/src/gui/editorwidgets
   ${CMAKE_SOURCE_DIR}/src/gui/editorwidgets/core
   ${CMAKE_SOURCE_DIR}/src/gui/effects

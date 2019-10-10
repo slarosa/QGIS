@@ -1,0 +1,16 @@
+***************
+*** 731,736 ****
+    qgis_native
+    libdxfrw
+  )
+  
+  IF (WITH_3D)
+    TARGET_LINK_LIBRARIES(qgis_app
+--- 731,737 ----
+    qgis_native
+    libdxfrw
+  )
++ QT5_USE_MODULES(qgis_app Multimedia MultimediaWidgets)
+  
+  IF (WITH_3D)
+    TARGET_LINK_LIBRARIES(qgis_app

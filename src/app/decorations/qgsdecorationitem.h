@@ -46,7 +46,7 @@ class APP_EXPORT QgsDecorationItem : public QObject, public QgsMapDecoration
     };
 
     //! Constructor
-    QgsDecorationItem( QObject *parent = nullptr );
+    QgsDecorationItem( QObject *parent SIP_TRANSFERTHIS = nullptr );
 
     void setEnabled( bool enabled ) { mEnabled = enabled; }
     bool enabled() const { return mEnabled; }
