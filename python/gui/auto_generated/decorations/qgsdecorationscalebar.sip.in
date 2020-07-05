@@ -1,0 +1,64 @@
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationscalebar.h                          *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/
+
+
+
+
+
+class QgsDecorationScaleBar: QgsDecorationItem
+{
+%Docstring
+Main class for scale bar map decoration
+
+.. versionadded:: 3.16
+%End
+
+%TypeHeaderCode
+#include "qgsdecorationscalebar.h"
+%End
+  public:
+    QgsDecorationScaleBar( QObject *parent /TransferThis/ = 0 );
+%Docstring
+Constructor
+%End
+
+  public slots:
+    virtual void projectRead();
+
+%Docstring
+Sets values on the gui when a project is read or the gui first loaded
+%End
+    virtual void saveToProject();
+
+%Docstring
+save values to the project
+%End
+    virtual void render( const QgsMapSettings &mapSettings, QgsRenderContext &context );
+
+%Docstring
+this does the meaty bit of the work
+%End
+    virtual void run();
+
+%Docstring
+Show the dialog box
+%End
+    void setupScaleBar();
+%Docstring
+Setup the QgsScaleBarSettings object
+%End
+
+};
+
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationscalebar.h                          *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/

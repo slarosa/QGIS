@@ -1,0 +1,35 @@
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationgriddialog.h                        *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/
+
+
+
+
+
+class QgsDecorationGridDialog : QDialog
+{
+%Docstring
+Dialog for grid map decoration
+
+.. versionadded:: 3.16
+%End
+
+%TypeHeaderCode
+#include "qgsdecorationgriddialog.h"
+%End
+  public:
+    QgsDecorationGridDialog( QgsDecorationGrid &decoGrid, QWidget *parent /TransferThis/ = 0 );
+
+};
+
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationgriddialog.h                        *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/

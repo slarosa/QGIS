@@ -123,6 +123,22 @@ set(QGIS_GUI_SRCS
   codeeditors/qgscodeeditorsql.cpp
   codeeditors/qgscodeeditorexpression.cpp
 
+  decorations/qgsdecorationtitle.cpp
+  decorations/qgsdecorationtitledialog.cpp
+  decorations/qgsdecorationitem.cpp
+  decorations/qgsdecorationcopyright.cpp
+  decorations/qgsdecorationcopyrightdialog.cpp
+  decorations/qgsdecorationimage.cpp
+  decorations/qgsdecorationimagedialog.cpp
+  decorations/qgsdecorationlayoutextent.cpp
+  decorations/qgsdecorationlayoutextentdialog.cpp
+  decorations/qgsdecorationnortharrow.cpp
+  decorations/qgsdecorationnortharrowdialog.cpp
+  decorations/qgsdecorationscalebar.cpp
+  decorations/qgsdecorationscalebardialog.cpp
+  decorations/qgsdecorationgrid.cpp
+  decorations/qgsdecorationgriddialog.cpp
+
   devtools/qgsdevtoolwidget.cpp
   devtools/qgsdevtoolwidgetfactory.cpp
 
@@ -1375,6 +1391,7 @@ target_include_directories(qgis_gui SYSTEM PRIVATE
 target_include_directories(qgis_gui PUBLIC
   ${CMAKE_SOURCE_DIR}/src/gui
   ${CMAKE_SOURCE_DIR}/src/gui/attributeformconfig
+  ${CMAKE_SOURCE_DIR}/src/gui/decorations
   ${CMAKE_SOURCE_DIR}/src/gui/symbology
   ${CMAKE_SOURCE_DIR}/src/gui/attributetable
   ${CMAKE_SOURCE_DIR}/src/gui/auth

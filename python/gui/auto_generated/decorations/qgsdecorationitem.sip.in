@@ -1,0 +1,110 @@
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationitem.h                              *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/
+
+
+
+
+
+
+class QgsDecorationItem : QObject, QgsMapDecoration
+{
+%Docstring
+Interface for map decorations.
+
+.. versionadded:: 3.16
+%End
+
+%TypeHeaderCode
+#include "qgsdecorationitem.h"
+%End
+  public:
+
+    enum Placement
+    {
+      BottomLeft,
+      TopLeft,
+      TopRight,
+      BottomRight,
+      TopCenter,
+      BottomCenter
+    };
+
+    QgsDecorationItem( QObject *parent /TransferThis/ = 0 );
+%Docstring
+Constructor
+%End
+
+    void setEnabled( bool enabled );
+    bool enabled() const;
+
+    Placement placement() const;
+%Docstring
+Returns the current placement for the item.
+
+.. seealso:: :py:func:`setPlacement`
+%End
+
+    void setPlacement( Placement placement );
+%Docstring
+Sets the placement of the item.
+
+.. seealso:: :py:func:`placement`
+%End
+
+    void setMapCanvas( QgsMapCanvas *canvas );
+%Docstring
+Sets the map canvas associated with the decoration item.
+
+:param canvas: map canvas
+%End
+
+    void setMessageBar( QgsMessageBar *messagebar );
+%Docstring
+Sets the messagebar associated with the decoration item.
+%End
+
+    QgsMapCanvas *mCanvas;
+
+    QgsMessageBar *mMessageBar;
+
+  signals:
+    void toggled( bool t );
+
+  public slots:
+    virtual void projectRead();
+%Docstring
+Sets values on the gui when a project is read or the gui first loaded
+%End
+    virtual void saveToProject();
+%Docstring
+save values to the project
+%End
+
+    virtual void run();
+%Docstring
+Show the dialog box
+%End
+
+    void update();
+%Docstring
+Redraws the decoration
+%End
+
+  protected:
+
+
+
+};
+
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationitem.h                              *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/

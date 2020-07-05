@@ -1,0 +1,207 @@
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationgrid.h                              *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/
+
+
+
+
+
+class QgsDecorationGrid: QgsDecorationItem
+{
+%Docstring
+Main class for grid map decoration
+
+.. versionadded:: 3.16
+%End
+
+%TypeHeaderCode
+#include "qgsdecorationgrid.h"
+%End
+  public:
+
+    QgsDecorationGrid( QObject *parent /TransferThis/ = 0 );
+%Docstring
+Constructor
+%End
+    ~ QgsDecorationGrid();
+
+    enum GridStyle
+    {
+      Line,
+      Marker
+    };
+
+    enum GridAnnotationDirection
+    {
+      Horizontal,
+      Vertical,
+      HorizontalAndVertical,
+      BoundaryDirection
+    };
+
+    QgsTextFormat textFormat() const;
+%Docstring
+Returns the title text format.
+
+.. seealso:: :py:func:`setTextFormat`
+
+.. seealso:: :py:func:`labelExtents`
+%End
+
+    void setTextFormat( const QgsTextFormat &format );
+%Docstring
+Sets the title text ``format``.
+
+.. seealso:: :py:func:`textFormat`
+
+.. seealso:: :py:func:`setLabelExtents`
+%End
+
+    void setGridStyle( GridStyle style );
+%Docstring
+Sets coordinate grid style.
+%End
+    GridStyle gridStyle() const;
+
+    void setGridIntervalX( double interval );
+%Docstring
+Sets coordinate interval in x-direction for composergrid.
+%End
+    double gridIntervalX() const;
+
+    void setGridIntervalY( double interval );
+%Docstring
+Sets coordinate interval in y-direction for composergrid.
+%End
+    double gridIntervalY() const;
+
+    void setGridOffsetX( double offset );
+%Docstring
+Sets x-coordinate offset for composer grid
+%End
+    double gridOffsetX() const;
+
+    void setGridOffsetY( double offset );
+%Docstring
+Sets y-coordinate offset for composer grid
+%End
+    double gridOffsetY() const;
+
+    void setGridPen( const QPen &p );
+%Docstring
+Sets the pen to draw composer grid
+%End
+    QPen gridPen() const;
+    void setGridPenWidth( double w );
+%Docstring
+Sets with of grid pen
+%End
+    void setGridPenColor( const QColor &c );
+%Docstring
+Sets the color of the grid pen
+%End
+
+    void setGridAnnotationFont( const QFont &f );
+%Docstring
+Sets font for grid annotations
+%End
+    QFont gridAnnotationFont() const;
+
+    void setGridAnnotationPrecision( int p );
+%Docstring
+Sets coordinate precision for grid annotations
+%End
+    int gridAnnotationPrecision() const;
+
+    void setShowGridAnnotation( bool show );
+%Docstring
+Sets flag if grid annotation should be shown
+%End
+    bool showGridAnnotation() const;
+
+    void setAnnotationFrameDistance( double d );
+%Docstring
+Sets distance between map frame and annotations
+%End
+    double annotationFrameDistance() const;
+
+    void setGridAnnotationDirection( GridAnnotationDirection d );
+%Docstring
+Sets grid annotation direction. Can be horizontal, vertical, direction of axis and horizontal and vertical
+%End
+    GridAnnotationDirection gridAnnotationDirection() const;
+
+    void setLineSymbol( QgsLineSymbol *symbol );
+%Docstring
+Sets symbol that is used to draw grid lines. Takes ownership
+%End
+    const QgsLineSymbol *lineSymbol() const;
+
+    void setMarkerSymbol( QgsMarkerSymbol *symbol );
+%Docstring
+Sets symbol that is used to draw markers. Takes ownership
+%End
+    const QgsMarkerSymbol *markerSymbol() const;
+
+    void setMapUnits( QgsUnitTypes::DistanceUnit t );
+%Docstring
+Sets map unit type
+%End
+    QgsUnitTypes::DistanceUnit mapUnits();
+
+    void setDirty( bool dirty = true );
+%Docstring
+Sets mapUnits value
+%End
+    bool isDirty();
+
+    bool getIntervalFromExtent( double *values, bool useXAxis = true );
+%Docstring
+Computes interval that is approx. 1/5 of canvas extent
+%End
+    bool getIntervalFromCurrentLayer( double *values );
+%Docstring
+Computes interval from current raster layer
+%End
+
+  public slots:
+    virtual void projectRead();
+
+%Docstring
+Sets values on the gui when a project is read or the gui first loaded
+%End
+    virtual void saveToProject();
+
+%Docstring
+save values to the project
+%End
+
+    virtual void render( const QgsMapSettings &mapSettings, QgsRenderContext &context );
+
+%Docstring
+this does the meaty bit of the work
+%End
+    virtual void run();
+
+%Docstring
+Show the dialog box
+%End
+
+    void checkMapUnitsChanged();
+%Docstring
+check that map units changed and disable if necessary
+%End
+
+};
+
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationgrid.h                              *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/

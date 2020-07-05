@@ -1,0 +1,35 @@
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationtitledialog.h                       *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/
+
+
+
+
+
+class QgsDecorationTitleDialog : QDialog
+{
+%Docstring
+Dialog for title map decoration
+
+.. versionadded:: 3.16
+%End
+
+%TypeHeaderCode
+#include "qgsdecorationtitledialog.h"
+%End
+  public:
+    QgsDecorationTitleDialog( QgsDecorationTitle &deco, QWidget *parent /TransferThis/ = 0 );
+
+};
+
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationtitledialog.h                       *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/

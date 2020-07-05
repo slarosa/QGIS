@@ -4994,24 +4994,33 @@ void QgisApp::setMapTipsDelay( int timerInterval )
 void QgisApp::createDecorations()
 {
   QgsDecorationTitle *decorationTitle = new QgsDecorationTitle( this );
+  decorationTitle->setMapCanvas( mapCanvas() );
   connect( mActionDecorationTitle, &QAction::triggered, decorationTitle, &QgsDecorationTitle::run );
 
   QgsDecorationCopyright *decorationCopyright = new QgsDecorationCopyright( this );
+  decorationCopyright->setMapCanvas( mapCanvas() );
   connect( mActionDecorationCopyright, &QAction::triggered, decorationCopyright, &QgsDecorationCopyright::run );
 
   QgsDecorationImage *decorationImage = new QgsDecorationImage( this );
+  decorationImage->setMapCanvas( mapCanvas() );
   connect( mActionDecorationImage, &QAction::triggered, decorationImage, &QgsDecorationImage::run );
 
   QgsDecorationNorthArrow *decorationNorthArrow = new QgsDecorationNorthArrow( this );
+  decorationNorthArrow->setMapCanvas( mapCanvas() );
   connect( mActionDecorationNorthArrow, &QAction::triggered, decorationNorthArrow, &QgsDecorationNorthArrow::run );
 
   QgsDecorationScaleBar *decorationScaleBar = new QgsDecorationScaleBar( this );
+  decorationScaleBar->setMapCanvas( mapCanvas() );
   connect( mActionDecorationScaleBar, &QAction::triggered, decorationScaleBar, &QgsDecorationScaleBar::run );
 
   QgsDecorationGrid *decorationGrid = new QgsDecorationGrid( this );
+  decorationGrid->setMapCanvas( mapCanvas() );
+  decorationGrid->setMessageBar( messageBar() );
   connect( mActionDecorationGrid, &QAction::triggered, decorationGrid, &QgsDecorationGrid::run );
 
   QgsDecorationLayoutExtent *decorationLayoutExtent = new QgsDecorationLayoutExtent( this );
+  decorationLayoutExtent->setMapCanvas( mapCanvas() );
+  decorationLayoutExtent->setMessageBar( messageBar() );
   connect( mActionDecorationLayoutExtent, &QAction::triggered, decorationLayoutExtent, &QgsDecorationLayoutExtent::run );
 
   // add the decorations in a particular order so they are rendered in that order

@@ -1,0 +1,100 @@
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationlayoutextent.h                      *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/
+
+
+
+
+
+class QgsDecorationLayoutExtent : QgsDecorationItem
+{
+%Docstring
+Main class for layout extent map decoration
+
+.. versionadded:: 3.16
+%End
+
+%TypeHeaderCode
+#include "qgsdecorationlayoutextent.h"
+%End
+  public:
+
+    QgsDecorationLayoutExtent( QObject *parent /TransferThis/ = 0 );
+%Docstring
+Constructor for QgsDecorationLayoutExtent.
+%End
+
+    QgsFillSymbol *symbol() const;
+%Docstring
+Returns the fill symbol used for shading layout extents.
+
+.. seealso:: :py:func:`setSymbol`
+%End
+
+    void setSymbol( QgsFillSymbol *symbol /Transfer/ );
+%Docstring
+Sets the fill ``symbol`` used for shading layout extents. Ownership of
+``symbol`` is transferred.
+
+.. seealso:: :py:func:`symbol`
+%End
+
+    QgsTextFormat textFormat() const;
+%Docstring
+Returns the text format for extent labels.
+
+.. seealso:: :py:func:`setTextFormat`
+
+.. seealso:: :py:func:`labelExtents`
+%End
+
+    void setTextFormat( const QgsTextFormat &format );
+%Docstring
+Sets the text ``format`` for extent labels.
+
+.. seealso:: :py:func:`textFormat`
+
+.. seealso:: :py:func:`setLabelExtents`
+%End
+
+    bool labelExtents() const;
+%Docstring
+Returns true if layout extents should be labeled with the name of the associated layout & map.
+
+.. seealso:: :py:func:`setLabelExtents`
+
+.. seealso:: :py:func:`textFormat`
+%End
+
+    void setLabelExtents( bool labelExtents );
+%Docstring
+Sets whether layout extents should be labeled with the name of the associated layout & map.
+
+.. seealso:: :py:func:`labelExtents`
+
+.. seealso:: :py:func:`setTextFormat`
+%End
+
+  public slots:
+    virtual void projectRead();
+
+    virtual void saveToProject();
+
+    virtual void run();
+
+    virtual void render( const QgsMapSettings &mapSettings, QgsRenderContext &context );
+
+
+};
+
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationlayoutextent.h                      *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/

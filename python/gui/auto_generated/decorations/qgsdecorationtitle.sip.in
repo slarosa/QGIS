@@ -1,0 +1,97 @@
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationtitle.h                             *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/
+
+
+
+
+
+
+class QgsDecorationTitle : QgsDecorationItem
+{
+%Docstring
+Main class for title map decoration
+
+.. versionadded:: 3.16
+%End
+
+%TypeHeaderCode
+#include "qgsdecorationtitle.h"
+%End
+  public:
+
+    QgsDecorationTitle( QObject *parent /TransferThis/ = 0 );
+%Docstring
+Constructor
+%End
+
+  public slots:
+    virtual void projectRead();
+
+%Docstring
+Sets values on the gui when a project is read or the gui first loaded
+%End
+    virtual void saveToProject();
+
+%Docstring
+save values to the project
+%End
+
+    virtual void run();
+
+%Docstring
+Show the dialog box
+%End
+    virtual void render( const QgsMapSettings &mapSettings, QgsRenderContext &context );
+
+%Docstring
+render the title label
+%End
+
+    void setLabel( const QString &label );
+%Docstring
+Sets the decoration title.
+Set the decoration title
+
+:param label: decoration title
+%End
+
+    QString label() const;
+%Docstring
+Get the decoration title
+
+:param label: decoration title
+%End
+
+
+    QgsTextFormat textFormat() const;
+%Docstring
+Returns the title text format.
+
+.. seealso:: :py:func:`setTextFormat`
+
+.. seealso:: :py:func:`labelExtents`
+%End
+
+    void setTextFormat( const QgsTextFormat &format );
+%Docstring
+Sets the title text ``format``.
+
+.. seealso:: :py:func:`textFormat`
+
+.. seealso:: :py:func:`setLabelExtents`
+%End
+
+};
+
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationtitle.h                             *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/

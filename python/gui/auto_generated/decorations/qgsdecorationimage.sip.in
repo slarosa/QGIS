@@ -1,0 +1,79 @@
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationimage.h                             *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/
+
+
+
+
+
+class QgsDecorationImage: QgsDecorationItem
+{
+%Docstring
+Main class for image map decoration
+
+.. versionadded:: 3.16
+%End
+
+%TypeHeaderCode
+#include "qgsdecorationimage.h"
+%End
+  public:
+
+    enum Format
+    {
+      FormatSVG,
+      FormatRaster,
+      FormatUnknown,
+    };
+
+    QgsDecorationImage( QObject *parent /TransferThis/ = 0 );
+%Docstring
+Constructor for QgsDecorationImage, with the specified ``parent`` object.
+%End
+
+  public slots:
+    virtual void projectRead();
+
+%Docstring
+Sets values on the GUI when a project is read or the GUI first loaded
+%End
+    virtual void saveToProject();
+
+%Docstring
+Save values to the project
+%End
+
+    virtual void run();
+
+%Docstring
+Show the dialog box
+%End
+    virtual void render( const QgsMapSettings &mapSettings, QgsRenderContext &context );
+
+%Docstring
+Draw some arbitrary text to the screen
+%End
+
+    void setImagePath( const QString &imagePath );
+%Docstring
+Sets the image path
+%End
+
+    QString imagePath();
+%Docstring
+Returns the image path
+%End
+
+};
+
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationimage.h                             *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/

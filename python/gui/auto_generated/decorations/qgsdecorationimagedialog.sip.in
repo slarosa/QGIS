@@ -1,0 +1,38 @@
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationimagedialog.h                       *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/
+
+
+
+
+class QgsDecorationImageDialog : QDialog
+{
+%Docstring
+Dialog for image map decoration
+
+.. versionadded:: 3.16
+%End
+
+%TypeHeaderCode
+#include "qgsdecorationimagedialog.h"
+%End
+  public:
+    QgsDecorationImageDialog( QgsDecorationImage &deco, QWidget *parent /TransferThis/ = 0 );
+
+  protected:
+    virtual void resizeEvent( QResizeEvent * ); //overloads qwidget
+
+
+};
+
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationimagedialog.h                       *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/

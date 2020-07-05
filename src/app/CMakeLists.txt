@@ -101,22 +101,6 @@ set(QGIS_APP_SRCS
   qgsmaptoolsvgannotation.cpp
   qgsmaptooltextannotation.cpp
 
-  decorations/qgsdecorationitem.cpp
-  decorations/qgsdecorationtitle.cpp
-  decorations/qgsdecorationtitledialog.cpp
-  decorations/qgsdecorationcopyright.cpp
-  decorations/qgsdecorationcopyrightdialog.cpp
-  decorations/qgsdecorationimage.cpp
-  decorations/qgsdecorationimagedialog.cpp
-  decorations/qgsdecorationlayoutextent.cpp
-  decorations/qgsdecorationlayoutextentdialog.cpp
-  decorations/qgsdecorationnortharrow.cpp
-  decorations/qgsdecorationnortharrowdialog.cpp
-  decorations/qgsdecorationscalebar.cpp
-  decorations/qgsdecorationscalebardialog.cpp
-  decorations/qgsdecorationgrid.cpp
-  decorations/qgsdecorationgriddialog.cpp
-
   pointcloud/qgspointcloudelevationpropertieswidget.cpp
   pointcloud/qgspointcloudlayerproperties.cpp
   pointcloud/qgspointcloudlayerstylewidget.cpp
@@ -455,7 +439,6 @@ target_include_directories(qgis_app PUBLIC
   ${CMAKE_SOURCE_DIR}/external/nmea
 
   ${CMAKE_SOURCE_DIR}/src/app
-  ${CMAKE_SOURCE_DIR}/src/app/decorations
   ${CMAKE_SOURCE_DIR}/src/app/devtools/networklogger
   ${CMAKE_SOURCE_DIR}/src/app/labeling
   ${CMAKE_SOURCE_DIR}/src/app/layout

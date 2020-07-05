@@ -1,0 +1,67 @@
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationnortharrow.h                        *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/
+
+
+
+
+
+class QgsDecorationNorthArrow: QgsDecorationItem
+{
+%Docstring
+Main class for north arrow map decoration
+
+.. versionadded:: 3.16
+%End
+
+%TypeHeaderCode
+#include "qgsdecorationnortharrow.h"
+%End
+  public:
+
+    QgsDecorationNorthArrow( QObject *parent /TransferThis/ = 0 );
+%Docstring
+Constructor for QgsDecorationNorthArrow, with the specified ``parent`` object.
+%End
+
+  public slots:
+    virtual void projectRead();
+
+%Docstring
+Sets values on the gui when a project is read or the gui first loaded
+%End
+    virtual void saveToProject();
+
+%Docstring
+Save values to the project
+%End
+
+    virtual void run();
+
+%Docstring
+Show the dialog box
+%End
+    virtual void render( const QgsMapSettings &mapSettings, QgsRenderContext &context );
+
+%Docstring
+Draw some arbitrary text to the screen
+%End
+
+    QString svgPath();
+%Docstring
+Returns the north arrow SVG path
+%End
+
+};
+
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationnortharrow.h                        *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/

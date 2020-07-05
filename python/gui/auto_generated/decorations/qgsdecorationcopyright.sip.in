@@ -1,0 +1,98 @@
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationcopyright.h                         *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/
+
+
+
+
+
+class QgsDecorationCopyright : QgsDecorationItem
+{
+%Docstring
+Main class for copyright map decoration
+
+.. versionadded:: 3.16
+%End
+
+%TypeHeaderCode
+#include "qgsdecorationcopyright.h"
+%End
+  public:
+
+    QgsDecorationCopyright( QObject *parent /TransferThis/ = 0 );
+%Docstring
+Constructor
+%End
+
+  public slots:
+    virtual void projectRead();
+
+%Docstring
+Sets values on the gui when a project is read or the gui first loaded
+%End
+    virtual void saveToProject();
+
+%Docstring
+save values to the project
+%End
+
+    virtual void run();
+
+%Docstring
+Show the dialog box
+%End
+    virtual void render( const QgsMapSettings &mapSettings, QgsRenderContext &context );
+
+%Docstring
+render the copyright label
+%End
+
+    void setLabel( const QString &label );
+%Docstring
+Set the decoration title
+
+:param label: decoration grid
+%End
+
+    QString label() const;
+%Docstring
+Get the decoration title
+
+:param label: decoration grid
+%End
+
+    QgsTextFormat textFormat() const;
+%Docstring
+Returns the text format for extent labels.
+
+.. seealso:: :py:func:`setTextFormat`
+
+.. seealso:: :py:func:`labelExtents`
+
+.. versionadded:: 3.2
+%End
+
+    void setTextFormat( const QgsTextFormat &format );
+%Docstring
+Sets the text ``format`` for extent labels.
+
+.. seealso:: :py:func:`textFormat`
+
+.. seealso:: :py:func:`setLabelExtents`
+
+.. versionadded:: 3.2
+%End
+
+};
+
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/gui/decorations/qgsdecorationcopyright.h                         *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/
