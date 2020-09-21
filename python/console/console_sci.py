@@ -19,7 +19,7 @@ email                : lrssvtml (at) gmail (dot) com
 Some portions of code were taken from https://code.google.com/p/pydee/
 """
 
-from qgis.PyQt.QtCore import Qt, QByteArray, QCoreApplication, QFile, QSize
+from qgis.PyQt.QtCore import Qt, QByteArray, QCoreApplication, QFile, QSize, QModelIndex, QItemSelectionModel, QSortFilterProxyModel, pyqtSlot
 from qgis.PyQt.QtWidgets import QDialog, QMenu, QShortcut, QApplication
 from qgis.PyQt.QtGui import QKeySequence, QFontMetrics, QStandardItemModel, QStandardItem, QClipboard
 from qgis.PyQt.Qsci import QsciScintilla
@@ -554,6 +554,7 @@ class ShellScintilla(QgsCodeEditorPython, code.InteractiveInterpreter):
 
 
 class HistoryDialog(QDialog, Ui_HistoryDialogPythonConsole):
+    NR_LINES_SNIPPET = 10
 
     def __init__(self, parent):
         QDialog.__init__(self, parent)
@@ -565,13 +566,58 @@ class HistoryDialog(QDialog, Ui_HistoryDialogPythonConsole):
                                                             "Double-click on item to execute"))
         self.model = QStandardItemModel(self.listView)
 
-        self._reloadHistory()
-
         self.deleteScut = QShortcut(QKeySequence(Qt.Key_Delete), self)
         self.deleteScut.activated.connect(self._deleteItem)
         self.listView.doubleClicked.connect(self._runHistory)
         self.reloadHistory.clicked.connect(self._reloadHistory)
         self.saveHistory.clicked.connect(self._saveHistory)
+
+        self.searchLineEdit.setShowSearchIcon(True)
+        self.searchLineEdit.setPlaceholderText(QCoreApplication.translate("PythonConsole", "Search…"))
+
+        self.filterProxy = QSortFilterProxyModel(self)
+        self.filterProxy.setSourceModel(self.model)
+        self.filterProxy.setFilterCaseSensitivity(Qt.CaseInsensitive)
+        self.listView.setModel(self.filterProxy)
+        self.searchLineEdit.textChanged.connect(self._search)
+        self.searchLineEdit.cleared.connect(self._restoreIndexOnFilterClear)
+
+        self.listView.selectionModel().currentChanged.connect(self._showSnippet)
+        self.txtPythonSnippet.hide()
+
+        self._reloadHistory()
+
+    @pyqtSlot(str)
+    def _search(self, text):
+        self.filterProxy.setFilterWildcard(text)
+        self.txtPythonSnippet.show()
+
+    def _showSnippet(self, current_index, previous_index):
+        row = self.filterProxy.mapToSource(current_index).row()
+        row_min = row - self.NR_LINES_SNIPPET if row >= self.NR_LINES_SNIPPET else 0
+        row_max = row + self.NR_LINES_SNIPPET
+        row_text = []
+        for r in range(row_min, row_max):
+            idx = self.model.index(r, 0)
+            if idx.isValid():
+                row_text.append(idx.data(Qt.DisplayRole))
+
+        self.txtPythonSnippet.setText('\n'.join(row_text))
+        if row >= self.NR_LINES_SNIPPET:
+            self.txtPythonSnippet.setSelection(self.NR_LINES_SNIPPET, 0, self.NR_LINES_SNIPPET,
+                                               len(current_index.data(Qt.DisplayRole)))
+            self.txtPythonSnippet.ensureLineVisible(self.NR_LINES_SNIPPET)
+        self.txtPythonSnippet.setReadOnly(True)
+
+    def _restoreIndexOnFilterClear(self):
+        self.txtPythonSnippet.hide()
+        index = self.listView.selectionModel().selectedRows()
+        if index:
+            idx = self.listView.model().index(self.filterProxy.mapToSource(index[0]).row(), 0)
+            self.listView.scrollTo(idx)
+            self.listView.setCurrentIndex(idx)
+        else:
+            self.listView.scrollToBottom()
 
     def _runHistory(self, item):
         cmd = item.data(Qt.DisplayRole)
@@ -588,7 +634,7 @@ class HistoryDialog(QDialog, Ui_HistoryDialogPythonConsole):
                 item.setSizeHint(QSize(18, 18))
             self.model.appendRow(item)
 
-        self.listView.setModel(self.model)
+        self.listView.setModel(self.filterProxy)
         self.listView.scrollToBottom()
 
     def _deleteItem(self):
